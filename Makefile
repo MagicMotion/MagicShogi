@@ -75,4 +75,46 @@ all: $(TARGETS)
 bin/aobak: src/usi-engine/aobak
 	cp $^ $@
 
-bin/autousi: $(a
+bin/autousi: $(addsuffix .o, $(AUTOUSI_BASES))
+	$(CXX) -o $@ $^ $(LDFLAGS) $(LIB_BLAS) $(LIB_OpenCL)
+
+bin/server: $(addsuffix .o, $(SERVER_BASES))
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+bin/gencode: $(addsuffix .o, $(GENCODE_BASES))
+	$(CXX) -o $@ $^ $(LDFLAGS)
+	./bin/gencode
+
+bin/playshogi: $(addsuffix .o, $(PLAYSHOGI_BASES))
+	$(CXX) -o $@ $^ $(LDFLAGS) $(LIB_BLAS) $(LIB_OpenCL)
+
+bin/crc64: $(addsuffix .o, $(CRC64_BASES))
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+bin/extract: $(addsuffix .o, $(EXTRACT_BASES))
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+bin/ocldevs: $(addsuffix .o, $(OCLDEVS_BASES))
+	$(CXX) -o $@ $^ $(LDFLAGS) $(LIB_OpenCL)
+
+bin/net-test: $(addsuffix .o, $(NET_TEST_BASES))
+	$(CXX) -o $@ $^ $(LDFLAGS) $(LIB_BLAS) $(LIB_OpenCL)
+
+.cpp.o:
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+
+clean:
+	-$(RM) $(TARGETS) $(OBJS) $(OBJS:.o=.d) $(INC_OUT) Makefile~ build_vs.bat~
+	cd src/usi-engine; $(MAKE) clean
+
+src/usi-engine/aobak: FORCE bin/gencode
+	cd src/usi-engine; $(MAKE)
+
+$(addsuffix .cpp, $(AUTOUSI_BASES))   : bin/gencode
+$(addsuffix .cpp, $(SERVER_BASES))    : bin/gencode
+$(addsuffix .cpp, $(PLAYSHOGI_BASES)) : bin/gencode
+$(addsuffix .cpp, $(NET_TEST_BASES))  : bin/gencode
+
+-include $(OBJS:.o=.d)
+FORCE:
+.PHONY: all clean FORCE
