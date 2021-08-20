@@ -541,4 +541,183 @@ layer {
   }
 }
 layer {
-  name:"bn12
+  name:"bn12"
+  type:"BatchNorm"
+  bottom:"conv12"
+  top:"bn12"
+}
+layer {
+  name: "mish12/bnll"
+  type: "BNLL"
+  bottom:"bn12"
+  top: "mish12/bnll"
+}
+layer {
+  name: "mish12/tanh"
+  type: "TanH"
+  bottom:"mish12/bnll"
+  top: "mish12/tanh"
+}
+layer {
+  name: "mish12"
+  type: "Eltwise"
+  bottom:"bn12"
+  bottom: "mish12/tanh"
+  top:"mish12"
+  eltwise_param { operation: PROD }
+}
+layer {
+  name:"conv13_3x3_192"
+  type:"Convolution"
+  bottom:"mish12"
+  top:"conv13"
+  convolution_param {
+    num_output: 192
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn13"
+  type:"BatchNorm"
+  bottom:"conv13"
+  top:"bn13"
+}
+layer {
+  name:"elt13"
+  type:"Eltwise"
+  bottom:"mish11"
+  bottom:"bn13"
+  top:"sum13"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name: "mish13/bnll"
+  type: "BNLL"
+  bottom:"sum13"
+  top: "mish13/bnll"
+}
+layer {
+  name: "mish13/tanh"
+  type: "TanH"
+  bottom:"mish13/bnll"
+  top: "mish13/tanh"
+}
+layer {
+  name: "mish13"
+  type: "Eltwise"
+  bottom:"sum13"
+  bottom: "mish13/tanh"
+  top:"mish13"
+  eltwise_param { operation: PROD }
+}
+layer {
+  name:"conv14_3x3_192"
+  type:"Convolution"
+  bottom:"mish13"
+  top:"conv14"
+  convolution_param {
+    num_output: 192
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn14"
+  type:"BatchNorm"
+  bottom:"conv14"
+  top:"bn14"
+}
+layer {
+  name: "mish14/bnll"
+  type: "BNLL"
+  bottom:"bn14"
+  top: "mish14/bnll"
+}
+layer {
+  name: "mish14/tanh"
+  type: "TanH"
+  bottom:"mish14/bnll"
+  top: "mish14/tanh"
+}
+layer {
+  name: "mish14"
+  type: "Eltwise"
+  bottom:"bn14"
+  bottom: "mish14/tanh"
+  top:"mish14"
+  eltwise_param { operation: PROD }
+}
+layer {
+  name:"conv15_3x3_192"
+  type:"Convolution"
+  bottom:"mish14"
+  top:"conv15"
+  convolution_param {
+    num_output: 192
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn15"
+  type:"BatchNorm"
+  bottom:"conv15"
+  top:"bn15"
+}
+layer {
+  name:"elt15"
+  type:"Eltwise"
+  bottom:"mish13"
+  bottom:"bn15"
+  top:"sum15"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name: "mish15/bnll"
+  type: "BNLL"
+  bottom:"sum15"
+  top: "mish15/bnll"
+}
+layer {
+  name: "mish15/tanh"
+  type: "TanH"
+  bottom:"mish15/bnll"
+  top: "mish15/tanh"
+}
+layer {
+  name: "mish15"
+  type: "Eltwise"
+  bottom:"sum15"
+  bottom: "mish15/tanh"
+  top:"mish15"
+  eltwise_param { operation: PROD }
+}
+layer {
+  name:"conv16_3x3_192"
+  type:"Convolution"
+  bottom:"mish15"
+  top:"conv16"
+  convolution_param {
+    num_output: 192
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn16"
+  type:"BatchNorm"
+  bottom:"conv16"
+  top:"bn16"
+}
+layer {
+  name: "mish16/bnll"
+  typ
