@@ -1060,4 +1060,88 @@ layer {
     kernel_size: 1
     pad: 0
     weight_filler { type: "msra" }
- 
+    bias_filler { type: "constant" }
+  }
+}
+layer {
+  name:"bn1_v"
+  type:"BatchNorm"
+  bottom:"conv1_v"
+  top:"bn1_v"
+}
+layer {
+  name: "mish1_v/bnll"
+  type: "BNLL"
+  bottom:"bn1_v"
+  top: "mish1_v/bnll"
+}
+layer {
+  name: "mish1_v/tanh"
+  type: "TanH"
+  bottom:"mish1_v/bnll"
+  top: "mish1_v/tanh"
+}
+layer {
+  name: "mish1_v"
+  type: "Eltwise"
+  bottom:"bn1_v"
+  bottom: "mish1_v/tanh"
+  top:"mish1_v"
+  eltwise_param { operation: PROD }
+}
+layer {
+  name: "ip2_v"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 256
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+  bottom: "mish1_v"
+  top: "ip2_v"
+}
+layer {
+  name: "mish2_v/bnll"
+  type: "BNLL"
+  bottom:"ip2_v"
+  top: "mish2_v/bnll"
+}
+layer {
+  name: "mish2_v/tanh"
+  type: "TanH"
+  bottom:"mish2_v/bnll"
+  top: "mish2_v/tanh"
+}
+layer {
+  name: "mish2_v"
+  type: "Eltwise"
+  bottom:"ip2_v"
+  bottom: "mish2_v/tanh"
+  top:"mish2_v"
+  eltwise_param { operation: PROD }
+}
+layer {
+  name: "ip3_v"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 1
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  }
+  bottom: "mish2_v"
+  top: "ip3_v"
+}
+layer {
+  name: "tanh_v"
+  type: "TanH"
+  bottom: "ip3_v"
+  top: "tanh_v"
+}
+layer {
+  name: "loss_value"
+  type: "EuclideanLoss"
+  bottom: "tanh_v"
+  bottom: "label_value"
+  top: "loss_value"
+  loss_weight: 2  # this cancels caffe's EuclideanLoss coefficient 0.5.
+}
