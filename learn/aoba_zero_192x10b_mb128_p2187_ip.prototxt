@@ -1,0 +1,16 @@
+name: "AobaZero"
+
+layer {
+  name: "data"
+  type: "MemoryData"
+  top: "data"
+  top: "dummy_label1"
+  memory_data_param {
+    batch_size: 128
+    channels: 362
+    height: 9
+    width: 9
+  }
+}
+layer {
+  name: "label_policy

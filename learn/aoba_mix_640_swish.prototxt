@@ -4122,3 +4122,81 @@ layer {
   type: "Convolution"
   bottom: "add19"
   top: "conv1_v"
+  convolution_param {
+    num_output: 4
+    kernel_size: 1
+    pad: 0
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+}
+layer {
+  name:"bn1_v"
+  type:"BatchNorm"
+  bottom:"conv1_v"
+  top:"bn1_v"
+}
+layer {
+  name: "swish1_v/sig"
+  type: "Sigmoid"
+  bottom:"bn1_v"
+  top: "swish1_v/sig"
+}
+layer {
+  name: "swish1_v"
+  type: "Eltwise"
+  bottom:"bn1_v"
+  bottom: "swish1_v/sig"
+  top:"swish1_v"
+  eltwise_param { operation: PROD }
+}
+layer {
+  name: "ip2_v"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 256
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+  bottom: "swish1_v"
+  top: "ip2_v"
+}
+layer {
+  name: "swish2_v/sig"
+  type: "Sigmoid"
+  bottom:"ip2_v"
+  top: "swish2_v/sig"
+}
+layer {
+  name: "swish2_v"
+  type: "Eltwise"
+  bottom:"ip2_v"
+  bottom: "swish2_v/sig"
+  top:"swish2_v"
+  eltwise_param { operation: PROD }
+}
+layer {
+  name: "ip3_v"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 1
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  }
+  bottom: "swish2_v"
+  top: "ip3_v"
+}
+layer {
+  name: "tanh_v"
+  type: "TanH"
+  bottom: "ip3_v"
+  top: "tanh_v"
+}
+layer {
+  name: "loss_value"
+  type: "EuclideanLoss"
+  bottom: "tanh_v"
+  bottom: "label_value"
+  top: "loss_value"
+  loss_weight: 2  # this cancels caffe's EuclideanLoss coefficient 0.5.
+}
