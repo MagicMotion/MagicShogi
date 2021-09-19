@@ -1,0 +1,120 @@
+name: "AobaZero"
+
+layer {
+  name: "data"
+  type: "MemoryData"
+  top: "data"
+  top: "dummy_label1"
+  memory_data_param {
+    batch_size: 64
+    channels: 362
+    height: 9
+    width: 9
+  }
+}
+layer {
+  name: "label_policy"
+  type: "MemoryData"
+  top: "p_label"
+  top: "dummy_label2"
+  memory_data_param {
+    batch_size: 64
+    channels: 11259
+    height: 1
+    width: 1
+  }
+}
+layer {
+  name: "flat_policy_label"
+  type: "Flatten"
+  bottom: "p_label"
+  top: "label_policy"
+}
+
+layer {
+  name: "label_value"
+  type: "MemoryData"
+  top: "label_value"
+  top: "dummy_label3"
+  memory_data_param {
+    batch_size: 64
+    channels: 1
+    height: 1
+    width: 1
+  }
+}
+
+layer {
+  name:"silence"
+  type:"Silence"
+# dummy_label1,2,3 must be 0. not to print log
+  bottom: "dummy_label1"
+  bottom: "dummy_label2"
+  bottom: "dummy_label3"
+}
+
+
+#this part should be the same in learning and prediction network
+layer {
+  name: "conv1_3x3_256"
+  type: "Convolution"
+  bottom: "data"
+  top: "conv1"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+}
+layer {
+  name: "bn1"
+  type: "BatchNorm"
+  bottom: "conv1"
+  top: "bn1"
+}
+layer {
+  name: "relu1"
+  type: "ReLU"
+  bottom: "bn1"
+  top: "relu1"
+}
+
+# ResNet starts from conv2.  conv2 and conv3 are one block.
+
+layer {
+  name:"conv2_3x3_256"
+  type:"Convolution"
+  bottom:"relu1"
+  top:"conv2"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn2"
+  type:"BatchNorm"
+  bottom:"conv2"
+  top:"bn2"
+}
+layer {
+  name:"relu2"
+  type:"ReLU"
+  bottom:"bn2"
+  top:"relu2"
+}
+layer {
+  name:"conv3_3x3_256"
+  type:"Convolution"
+  bottom:"relu2"
+  top:"conv3"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    w
