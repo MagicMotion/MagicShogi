@@ -1581,4 +1581,191 @@ layer {
   name:"elt53"
   type:"Eltwise"
   bottom:"relu51"
-  b
+  bottom:"bn53"
+  top:"sum53"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name:"relu53"
+  type:"ReLU"
+  bottom:"sum53"
+  top:"relu53"
+}
+layer {
+  name:"conv54_3x3_256"
+  type:"Convolution"
+  bottom:"relu53"
+  top:"conv54"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn54"
+  type:"BatchNorm"
+  bottom:"conv54"
+  top:"bn54"
+}
+layer {
+  name:"relu54"
+  type:"ReLU"
+  bottom:"bn54"
+  top:"relu54"
+}
+layer {
+  name:"conv55_3x3_256"
+  type:"Convolution"
+  bottom:"relu54"
+  top:"conv55"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn55"
+  type:"BatchNorm"
+  bottom:"conv55"
+  top:"bn55"
+}
+layer {
+  name:"elt55"
+  type:"Eltwise"
+  bottom:"relu53"
+  bottom:"bn55"
+  top:"sum55"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name:"relu55"
+  type:"ReLU"
+  bottom:"sum55"
+  top:"relu55"
+}
+layer {
+  name:"conv56_3x3_256"
+  type:"Convolution"
+  bottom:"relu55"
+  top:"conv56"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn56"
+  type:"BatchNorm"
+  bottom:"conv56"
+  top:"bn56"
+}
+layer {
+  name:"relu56"
+  type:"ReLU"
+  bottom:"bn56"
+  top:"relu56"
+}
+layer {
+  name:"conv57_3x3_256"
+  type:"Convolution"
+  bottom:"relu56"
+  top:"conv57"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn57"
+  type:"BatchNorm"
+  bottom:"conv57"
+  top:"bn57"
+}
+layer {
+  name:"elt57"
+  type:"Eltwise"
+  bottom:"relu55"
+  bottom:"bn57"
+  top:"sum57"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name:"relu57"
+  type:"ReLU"
+  bottom:"sum57"
+  top:"relu57"
+}
+layer {
+  name:"conv58_3x3_256"
+  type:"Convolution"
+  bottom:"relu57"
+  top:"conv58"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn58"
+  type:"BatchNorm"
+  bottom:"conv58"
+  top:"bn58"
+}
+layer {
+  name:"relu58"
+  type:"ReLU"
+  bottom:"bn58"
+  top:"relu58"
+}
+layer {
+  name:"conv59_3x3_256"
+  type:"Convolution"
+  bottom:"relu58"
+  top:"conv59"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn59"
+  type:"BatchNorm"
+  bottom:"conv59"
+  top:"bn59"
+}
+layer {
+  name:"elt59"
+  type:"Eltwise"
+  bottom:"relu57"
+  bottom:"bn59"
+  top:"sum59"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name:"relu59"
+  type:"ReLU"
+  bottom:"sum59"
+  top:"relu59"
+}
+layer {
+  name:"conv60_3x3_256"
+  type:"Convolution"
+  bottom
