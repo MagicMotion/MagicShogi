@@ -465,4 +465,188 @@ layer {
     num_output: 64
     kernel_size: 3
     pad: 1
-    weight_fille
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn15"
+  type:"BatchNorm"
+  bottom:"conv15"
+  top:"bn15"
+}
+layer {
+  name:"elt15"
+  type:"Eltwise"
+  bottom:"relu13"
+  bottom:"bn15"
+  top:"sum15"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name:"relu15"
+  type:"ReLU"
+  bottom:"sum15"
+  top:"relu15"
+}
+layer {
+  name:"conv16_3x3_64"
+  type:"Convolution"
+  bottom:"relu15"
+  top:"conv16"
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn16"
+  type:"BatchNorm"
+  bottom:"conv16"
+  top:"bn16"
+}
+layer {
+  name:"relu16"
+  type:"ReLU"
+  bottom:"bn16"
+  top:"relu16"
+}
+layer {
+  name:"conv17_3x3_64"
+  type:"Convolution"
+  bottom:"relu16"
+  top:"conv17"
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn17"
+  type:"BatchNorm"
+  bottom:"conv17"
+  top:"bn17"
+}
+layer {
+  name:"elt17"
+  type:"Eltwise"
+  bottom:"relu15"
+  bottom:"bn17"
+  top:"sum17"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name:"relu17"
+  type:"ReLU"
+  bottom:"sum17"
+  top:"relu17"
+}
+layer {
+  name:"conv18_3x3_64"
+  type:"Convolution"
+  bottom:"relu17"
+  top:"conv18"
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn18"
+  type:"BatchNorm"
+  bottom:"conv18"
+  top:"bn18"
+}
+layer {
+  name:"relu18"
+  type:"ReLU"
+  bottom:"bn18"
+  top:"relu18"
+}
+layer {
+  name:"conv19_3x3_64"
+  type:"Convolution"
+  bottom:"relu18"
+  top:"conv19"
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn19"
+  type:"BatchNorm"
+  bottom:"conv19"
+  top:"bn19"
+}
+layer {
+  name:"elt19"
+  type:"Eltwise"
+  bottom:"relu17"
+  bottom:"bn19"
+  top:"sum19"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name:"relu19"
+  type:"ReLU"
+  bottom:"sum19"
+  top:"relu19"
+}
+
+# ResNet block ends here.
+
+
+
+# policy head
+layer {
+  name: "conv1_p_1x1_160"   # 9*9*160 = 12960 > 11259
+  type: "Convolution"
+  bottom: "relu19"
+  top: "conv1_p"
+  convolution_param {
+    num_output: 160
+    kernel_size: 1
+    pad: 0
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+}
+layer {
+  name:"bn1_p"
+  type:"BatchNorm"
+  bottom:"conv1_p"
+  top:"bn1_p"
+}
+layer {
+  name:"relu1_p"
+  type:"ReLU"
+  bottom:"bn1_p"
+  top:"relu1_p"
+}
+
+layer {
+  # 9*9 *139 = 11259
+  # 9*9 *27 = 2187
+  name: "conv2_p_1x1_27"
+  type: "Convolution"
+  bottom: "relu1_p"
+  top: "conv2_p"
+  convolution_param {
+    num_output: 27
+    kernel_size: 1
+    pad: 0
+    weight_filler { type: "msra" }
+    bias_filler 
