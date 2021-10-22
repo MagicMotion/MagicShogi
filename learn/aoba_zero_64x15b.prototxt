@@ -1029,4 +1029,105 @@ layer {
     lr_mult: 0
     decay_mult: 0
   }
-  
+  scale_param {
+    axis: 0
+    num_axes: 0
+    filler {
+      type: "constant"
+      value: 0.015625 # 1 / batch_size
+    }
+    bias_term: false
+  }
+  include {
+    phase: TRAIN
+  }
+}
+
+layer {
+  name: "cross_entropy_loss"
+  type: "Reduction"
+  bottom: "cross_entropy_scale"
+  top: "policy_loss"
+    reduction_param {
+    operation: SUM
+    axis: 0
+  }
+  include {
+    phase: TRAIN
+  }
+  loss_weight: 1
+}
+
+
+
+
+# value head
+layer {
+  name: "conv1_v_1x1_4"  # 9*9*4 = 324 > 256
+  type: "Convolution"
+  bottom: "relu29"
+  top: "conv1_v"
+  convolution_param {
+    num_output: 4
+    kernel_size: 1
+    pad: 0
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+}
+layer {
+  name:"bn1_v"
+  type:"BatchNorm"
+  bottom:"conv1_v"
+  top:"bn1_v"
+}
+layer {
+  name:"relu1_v"
+  type:"ReLU"
+  bottom:"bn1_v"
+  top:"relu1_v"
+}
+
+layer {
+  name: "ip2_v"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 256
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+  bottom: "relu1_v"
+  top: "ip2_v"
+}
+layer {
+  name: "relu2_v"
+  type: "ReLU"
+  bottom: "ip2_v"
+  top: "relu2_v"
+}
+layer {
+  name: "ip3_v"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 1
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  }
+  bottom: "relu2_v"
+  top: "ip3_v"
+}
+layer {
+  name: "tanh_v"
+  type: "TanH"
+  bottom: "ip3_v"
+  top: "tanh_v"
+}
+layer {
+  name: "loss_value"
+  type: "EuclideanLoss"
+  bottom: "tanh_v"
+  bottom: "label_value"
+  top: "loss_value"
+  loss_weight: 2  # this cancels caffe's EuclideanLoss coefficient 0.5.
+}
+
