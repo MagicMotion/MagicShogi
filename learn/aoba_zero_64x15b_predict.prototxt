@@ -806,4 +806,170 @@ layer {
 layer {
   name:"bn28"
   type:"BatchNorm"
-  bottom:"
+  bottom:"conv28"
+  top:"bn28"
+}
+layer {
+  name:"relu28"
+  type:"ReLU"
+  bottom:"bn28"
+  top:"relu28"
+}
+layer {
+  name:"conv29_3x3_64"
+  type:"Convolution"
+  bottom:"relu28"
+  top:"conv29"
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler { type:"msra" }
+    bias_filler { type:"constant" }
+  }
+}
+layer {
+  name:"bn29"
+  type:"BatchNorm"
+  bottom:"conv29"
+  top:"bn29"
+}
+layer {
+  name:"elt29"
+  type:"Eltwise"
+  bottom:"relu27"
+  bottom:"bn29"
+  top:"sum29"
+  eltwise_param { operation: SUM }
+}
+layer {
+  name:"relu29"
+  type:"ReLU"
+  bottom:"sum29"
+  top:"relu29"
+}
+
+# ResNet block ends here.
+
+
+
+# policy head
+layer {
+  name: "conv1_p_1x1_160"   # 9*9*160 = 12960 > 11259
+  type: "Convolution"
+  bottom: "relu29"
+  top: "conv1_p"
+  convolution_param {
+    num_output: 160
+    kernel_size: 1
+    pad: 0
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+}
+layer {
+  name:"bn1_p"
+  type:"BatchNorm"
+  bottom:"conv1_p"
+  top:"bn1_p"
+}
+layer {
+  name:"relu1_p"
+  type:"ReLU"
+  bottom:"bn1_p"
+  top:"relu1_p"
+}
+
+layer {
+  # 9*9 *139 = 11259
+  name: "conv2_p_1x1_139"
+  type: "Convolution"
+  bottom: "relu1_p"
+  top: "conv2_p"
+  convolution_param {
+    num_output: 139
+    kernel_size: 1
+    pad: 0
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+}
+layer {
+  name: "flat_p"
+  type: "Flatten"
+  bottom: "conv2_p"
+  top: "flat_p"
+}
+
+# from DuelNet-40-64.prototxt by Kobayashi-san
+# and https://github.com/adepierre/Caffe_AlphaZero
+layer {
+  name: "softmax"
+  type: "Softmax"
+  bottom: "flat_p"
+  top: "policy_probability"
+}
+
+
+
+# value head
+layer {
+  name: "conv1_v_1x1_4"  # 9*9*4 = 324 > 256
+  type: "Convolution"
+  bottom: "relu29"
+  top: "conv1_v"
+  convolution_param {
+    num_output: 4
+    kernel_size: 1
+    pad: 0
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+}
+layer {
+  name:"bn1_v"
+  type:"BatchNorm"
+  bottom:"conv1_v"
+  top:"bn1_v"
+}
+layer {
+  name:"relu1_v"
+  type:"ReLU"
+  bottom:"bn1_v"
+  top:"relu1_v"
+}
+
+layer {
+  name: "ip2_v"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 256
+    weight_filler { type: "msra" }
+    bias_filler { type: "constant" }
+  }
+  bottom: "relu1_v"
+  top: "ip2_v"
+}
+layer {
+  name: "relu2_v"
+  type: "ReLU"
+  bottom: "ip2_v"
+  top: "relu2_v"
+}
+layer {
+  name: "ip3_v"
+  type: "InnerProduct"
+  inner_product_param {
+    num_output: 1
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  }
+  bottom: "relu2_v"
+  top: "ip3_v"
+}
+layer {
+  name: "tanh_v"
+  type: "TanH"
+  bottom: "ip3_v"
+  top: "tanh_v"
+}

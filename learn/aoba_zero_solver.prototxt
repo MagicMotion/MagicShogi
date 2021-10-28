@@ -1,0 +1,6 @@
+#net: "aoba_zero.prototxt"
+#net: "aoba_zero_256x40b.prototxt"
+#net: "aoba_zero_256x20b.prototxt"
+#net: "aoba_zero_256x20b_mb128.prototxt"
+#net: "aoba_zero_192x10b_mb128.prototxt"
+#net: "aoba_zero_192x10b_mb1
