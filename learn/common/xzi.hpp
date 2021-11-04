@@ -33,4 +33,48 @@ protected:
   uint8_t _outbuf[1024 * 8];
 
   explicit XZBase() noexcept {}
-  ~XZBase(
+  ~XZBase() noexcept {}
+  XZBase(const XZBase &) = delete;
+  XZBase & operator=(const XZBase &) = delete;
+
+  void xzwrite(int *fd, size_t len) const noexcept;
+  void xzwrite(std::ofstream *pofs, size_t len) const noexcept;
+  void xzwrite(PtrLen<char> *out, size_t len) const noexcept;
+  void xzwrite(DevNul *out, size_t len) const noexcept;
+  size_t xzread(PtrLen<const char> *pl) noexcept;
+  size_t xzread(std::ifstream *pifs) noexcept;
+  size_t xzread(int *fd) noexcept;
+};
+
+template <typename T_IN, typename T_OUT>
+class XZEncode : private XZBase {
+  lzma_stream _strm;
+  T_OUT *_out;
+  size_t _maxlen_out_tot, _len_out_tot;
+  bool encode(const lzma_action &a, lzma_ret &ret) noexcept;
+
+public:
+  explicit XZEncode() noexcept : _strm(LZMA_STREAM_INIT) {}
+  ~XZEncode() noexcept { lzma_end(&_strm); }
+  void start(T_OUT *out, size_t _maxlen_out_tot, uint32_t level,
+	     bool bExt = false) noexcept;
+  bool append(T_IN *in) noexcept;
+  bool end() noexcept;
+  
+  size_t get_len_out() const noexcept { return _len_out_tot; }
+};
+
+template <typename T_IN, typename T_OUT>
+class XZDecode : private XZBase {
+  lzma_stream _strm;
+  size_t _len_out_tot;
+  
+public:
+  explicit XZDecode() noexcept : _strm(LZMA_STREAM_INIT) {}
+  ~XZDecode() noexcept { lzma_end(&_strm); }
+  void init() noexcept;
+  bool decode(T_IN *in, T_OUT *out, size_t size_limit) noexcept;
+  bool getline(T_IN *in, T_OUT *out, size_t len_limit,
+	       const char *delims) noexcept;
+  size_t get_len_out() const noexcept { return _len_out_tot; }
+};
