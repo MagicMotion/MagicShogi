@@ -211,4 +211,11 @@ int main(int argc, char *argv[])
 {
 	int i;
 	for (i=0;i<WT_AVE_NUM;i++) {
-		char filename[TMP_
+		char filename[TMP_BUF_LEN];
+		sprintf(filename,"/home/yss/test/extract/w%012d.txt",i+848);
+		PRT("filename=%s\n",filename);
+		load_network_file(filename,i);
+	}
+
+	return 0;
+}
