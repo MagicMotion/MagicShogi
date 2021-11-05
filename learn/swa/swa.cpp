@@ -126,4 +126,89 @@ std::pair<int, int> load_v1_network(std::istream& wtfile, int wt_ave_loop)
     const auto plain_conv_layers = 1 + (residual_blocks * 2);
     const auto plain_conv_wts = plain_conv_layers * 4;
     linecount = 0;
-    int num = 0
+    int num = 0;
+    while (std::getline(wtfile, line)) {
+        std::vector<float> weights;
+        auto it_line = line.cbegin();
+        const auto ok = phrase_parse(it_line, line.cend(),  *x3::float_, x3::space, weights);
+		int n = weights.size();
+        for (int i=0; i<n; i++) wt_sum[num+i] += weights[i];
+        if ( fp ) {
+			for (int i=0; i<n; i++) {
+				if ( i>0 ) fprintf(fp," ");
+				fprintf(fp,"%f",wt_sum[num+i] / WT_AVE_NUM);
+			}
+			fprintf(fp,"\n");
+		}
+        num += n;
+        PRT("%3d:n=%8d:num=%10d\n",linecount,n,num);
+        
+        if (!ok || it_line != line.cend()) {
+            PRT("\nFailed to parse weight file. Error on line %d.\n",
+                    linecount + 2); //+1 from version line, +1 from 0-indexing
+            return {0, 0};
+        }
+        if (linecount < plain_conv_wts) {
+            if (linecount % 4 == 0) {
+//                m_fwd_weights->m_conv_weights.emplace_back(weights);
+            } else if (linecount % 4 == 1) {
+                // Redundant in our model, but they encode the
+                // number of outputs so we have to read them in.
+//                m_fwd_weights->m_conv_biases.emplace_back(weights);
+            } else if (linecount % 4 == 2) {
+//				modify_bn_scale_factor(weights);
+//               m_fwd_weights->m_batchnorm_means.emplace_back(weights);
+            } else if (linecount % 4 == 3) {
+//				modify_bn_scale_factor(weights);
+//                process_bn_var(weights);
+//                m_fwd_weights->m_batchnorm_stddevs.emplace_back(weights);
+            }
+        } else {
+            switch (linecount - plain_conv_wts) {
+//              case  0: m_fwd_weights->m_conv_pol_w = std::move(weights); break;
+            }
+        }
+        linecount++;
+    }
+	PRT("num=%d...linecount=%d\n",num,linecount);
+	if ( num != WT_NUM ) debug();
+	for (int i=0; i<100; i++) PRT("%f,",wt_sum[i]);
+
+    return {channels, static_cast<int>(residual_blocks)};
+}
+
+std::pair<int, int> load_network_file(std::string filename, int wt_ave_loop)
+{
+	ifstream wtfile;
+//  auto wtfile = std::ifstream{filename};
+	wtfile.open(filename);
+		 
+    if (wtfile.fail()) {
+        PRT("Could not open weights file: %s\n", filename.c_str());
+        return {0, 0};
+    }
+
+    // Read format version
+    auto line = std::string{};
+    auto format_version = -1;
+    if (std::getline(wtfile, line)) {
+        auto iss = std::stringstream{line};
+        // First line is the file format version id
+        iss >> format_version;
+        if (iss.fail() || format_version != 2 ) {
+            PRT("Weights file is the wrong version.\n");
+            return {0, 0};
+        } else {
+            assert(format_version == 2 );
+            return load_v1_network(wtfile, wt_ave_loop);
+        }
+    }
+
+    return {0, 0};
+}
+
+int main(int argc, char *argv[])
+{
+	int i;
+	for (i=0;i<WT_AVE_NUM;i++) {
+		char filename[TMP_
