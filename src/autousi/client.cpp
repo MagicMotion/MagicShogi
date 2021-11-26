@@ -118,4 +118,85 @@ float Client::receive_header(const OSI::Conn &conn, uint TO, uint bufsiz) {
   for (int i=0; i<HANDICAP_TYPE; i++) {
     uint16_t x = bytes_to_int<uint16_t>(buf + 4 + i*2);
     _handicap_rate[i] = x;
-//  cout << "handi rate " << i << " = " << x << e
+//  cout << "handi rate " << i << " = " << x << endl;
+  }
+
+  return (static_cast<float>(bytes_to_int<uint16_t>(buf + 2))
+	  * (1.0f / 65536.0f)); }
+
+Client::Client() noexcept
+: _quit(false), _has_conn(false), _downloading(false), _nsend(0), _ndiscard(0),
+  _wght_id(-1) { _buf_wght_time[0] = '\0'; }
+
+Client::~Client() noexcept {}
+
+void Client::get_new_wght() {
+  // get new weight information
+  OSI::Conn conn(_saddr.get(), _port);
+  _th_resign = receive_header(conn, _recvTO, _recv_bufsiz);
+
+  char buf[BUFSIZ];
+  static_assert(12 <= BUFSIZ, "BUSIZ too small");
+  buf[0] = 1;
+  conn.send(buf, 1, _sendTO, _send_bufsiz);
+  conn.recv(buf, 12, _recvTO, _recv_bufsiz);
+  make_time_stamp(_buf_wght_time, sizeof(_buf_wght_time), "%D %T");
+  
+  int64_t no_wght = bytes_to_int<int64_t>(buf);
+  uint nblock     = bytes_to_int<uint>(buf + 8);
+  if (nblock == 0) die(ERR_INT("invalid nblock value %d", nblock));
+  if (no_wght < 0) die(ERR_INT("invalid weight no %" PRIi64, no_wght));
+  if (no_wght == _wght_id) return;
+  if (no_wght < _wght_id) die(ERR_INT(corrupt_fmt, _dwght.get_fname()));
+
+  // get old weight information file
+  _downloading = true;
+  int64_t no_wght_tmp;
+  FName finfo(_dwght.get_fname(), info_name);
+  try {
+    map<string, string> m = {{"WeightNo", "0"}};
+    Config::read(finfo.get_fname(), m);
+    no_wght_tmp = Config::get<int64_t>(m, "WeightNo",
+				       [](int64_t v){ return 0 <= v; }); }
+  catch (const ErrInt &e) {
+    cout << "\n" << e.what() << endl;
+    no_wght_tmp = 0; }
+
+  // update information file
+  set<FNameID> set_tmp;
+  grab_files(set_tmp, _dwght.get_fname(), fmt_tmp_scn, 0);
+  if (no_wght_tmp != no_wght) {
+    // cleanup all of old temporary files
+    for (auto it = set_tmp.begin(); !set_tmp.empty(); it = set_tmp.erase(it))
+      if (remove(it->get_fname()) < 0) die(ERR_CLL("remove"));
+    
+    ofstream ofs(finfo.get_fname());
+    ofs << "WeightNo " << no_wght << "\n";
+    ofs.close();
+    if (!ofs) {
+      remove(finfo.get_fname());
+      die(ERR_INT("cannot write to %s", finfo.get_fname())); } }
+  else if (!set_tmp.empty()) {
+    auto it = set_tmp.rbegin();
+    if (nblock <= it->get_id())
+      die(ERR_INT(corrupt_fmt, _dwght.get_fname())); }
+  
+  // flag existing blocks
+  unique_ptr<bool []> flags(new bool [nblock]);
+  for (uint u = 0; u < nblock; ++u) flags[u] = false;
+  for (auto it = set_tmp.begin(); it != set_tmp.end(); ++it) {
+    int64_t i64(it->get_id());
+    assert(0 <= i64);
+    assert(i64 < static_cast<int64_t>(nblock));
+    flags[i64] = true; }
+    
+  // obtain blocks
+  for (uint iblock = 0; iblock < nblock; ++iblock) {
+    if (flags[iblock]) continue;
+    buf[0] = 2;
+    int_to_bytes<uint>(iblock, buf + 1);
+    conn.send(buf, 5, _sendTO, _send_bufsiz);
+    conn.recv(buf, 4, _recvTO, _recv_bufsiz);
+    size_t len = bytes_to_int<uint>(buf);
+    unique_ptr<char []> block(new char [len]);
+    conn.rec
