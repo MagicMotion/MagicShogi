@@ -199,4 +199,99 @@ void Client::get_new_wght() {
     conn.recv(buf, 4, _recvTO, _recv_bufsiz);
     size_t len = bytes_to_int<uint>(buf);
     unique_ptr<char []> block(new char [len]);
-    conn.rec
+    conn.recv(block.get(), len, _recvTO, _recv_bufsiz);
+
+    FName ftmp(_dwght);
+    ftmp.add_fmt_fname(tmp_fmt, iblock);
+    
+    ofstream ofs(ftmp.get_fname(), ios::binary);
+    ofs.write(block.get(), len);
+    ofs.close();
+    if (!ofs) {
+      remove(ftmp.get_fname());
+      die(ERR_INT("cannot write to %s", ftmp.get_fname())); }
+    _retry_count = 0; }
+  
+  grab_files(set_tmp, _dwght.get_fname(), fmt_tmp_scn, 0);
+  if (set_tmp.size() != nblock) die(ERR_INT(corrupt_fmt, _dwght.get_fname()));
+
+  // gather all temporaries
+  FName ftmp(_dwght.get_fname(), tmp_name);
+  ofstream ofs(ftmp.get_fname(), ios::binary);
+  for (auto it = set_tmp.begin(); it != set_tmp.end(); ++it) {
+    ifstream ifs(it->get_fname(), ios::binary);
+    if (!ifs) die(ERR_INT("cannot read %s", it->get_fname()));
+    
+    while (true) {
+      size_t len = ifs.read(buf, sizeof(buf)).gcount();
+      if (len == 0) break;
+      ofs.write(buf, len); } }
+  
+  ofs.close();
+  if (!ofs) {
+    remove(ftmp.get_fname());
+    die(ERR_INT("cannot write to %s", ftmp.get_fname())); }
+
+  FNameID fwght(no_wght, _dwght);
+  fwght.add_fmt_fname(wght_xz_fmt, no_wght);
+  if (rename(ftmp.get_fname(), fwght.get_fname()) < 0) die(ERR_CLL("rename"));
+  
+  for (auto it = set_tmp.begin(); !set_tmp.empty(); it = set_tmp.erase(it))
+    if (remove(it->get_fname()) < 0) die(ERR_CLL("remove"));
+
+  _wght_id = no_wght;
+
+  lock_guard<mutex> lock(_m_wght);
+  _wght = make_shared<const WghtFile>(fwght, _keep_wght); }
+
+void Client::reader() noexcept {
+  uint sec_wght  = 0;
+  uint sec_retry = 0;
+  bool do_retry  = false;
+  _retry_count = 0;
+  while (!_quit) {
+    if (do_retry) sec_retry += 1;
+    else          sec_wght  += 1;
+    sleep_for(seconds(1));
+
+    if ( do_retry && sec_retry < wght_retry_interval) continue;
+    if (!do_retry && sec_wght  < wght_polling) continue;
+    sec_wght = sec_retry = 0;
+    
+    try {
+      get_new_wght();
+      _retry_count = 0;
+      _downloading = false;
+      _has_conn    = true;
+      do_retry     = false;
+      continue; }
+    catch (const exception &e) { cout << "\n" << e.what() << endl; }
+    
+    _downloading = false;
+    _has_conn    = false;
+    if (_max_retry < ++_retry_count)
+      die(ERR_INT("retry count %u/%u, abort", _retry_count, _max_retry));
+    cout << "\nconnect again ..." << endl;
+    do_retry = true; } }
+
+void Client::sender() noexcept {
+  char buf[len_head];
+  buf[0] = 0;
+
+  while (true) {
+    Job *pJob = _pJQueue->pop();
+    if (!pJob) break;
+
+    int_to_bytes<uint32_t>(static_cast<uint32_t>(pJob->get_len()), buf + 1);
+    uint retry_count = 0;
+    uint sec         = snd_retry_interval;
+    while (!_quit) {
+      if (sec < snd_retry_interval) {
+	sec += 1U;
+	sleep_for(seconds(1));
+	continue; }
+      
+      try {
+	OSI::Conn conn(_saddr.get(), _port);
+	_th_resign = receive_header(conn, _recvTO, _recv_bufsiz);
+	conn.send(buf, len_head, _send
