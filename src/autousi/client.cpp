@@ -294,4 +294,84 @@ void Client::sender() noexcept {
       try {
 	OSI::Conn conn(_saddr.get(), _port);
 	_th_resign = receive_header(conn, _recvTO, _recv_bufsiz);
-	conn.send(buf, len_head, _send
+	conn.send(buf, len_head, _sendTO, _send_bufsiz);
+	conn.send(pJob->get_p(), pJob->get_len(), _sendTO, _send_bufsiz);
+	_nsend += 1U;
+	_has_conn = true;
+	pJob->reset();
+	sleep_for(milliseconds(snd_sleep));
+	break; }
+      catch (const exception &e) { cout << "\n" << e.what() << endl; }
+
+      _has_conn = false;
+      if (snd_max_retry < ++retry_count) {
+	cout << "\nfailed to send a game record" << endl;
+	_ndiscard += 1U;
+	pJob->reset();
+	break; }
+      else {
+	cout << "\nconnect again ..." << endl;
+	sec = 0; } } } }
+
+Client & Client::get() noexcept {
+  static Client instance;
+  return instance; }
+
+void Client::start(const char *dwght, const char *cstr_addr, uint port,
+		   uint recvTO, uint recv_bufsiz, uint sendTO,
+		   uint send_bufsiz, uint max_retry, uint size_queue,
+		   uint keep_wght) noexcept {
+  assert(dwght && cstr_addr);
+  _dwght       = FName(dwght);
+  _recvTO      = recvTO;
+  _recv_bufsiz = recv_bufsiz;
+  _sendTO      = sendTO;
+  _send_bufsiz = send_bufsiz;
+  _max_retry   = max_retry;
+  _keep_wght   = keep_wght;
+  _port        = port;
+  FNameID fname = grab_max_file(_dwght.get_fname(), fmt_wght_xz_scn);
+  _wght_id = fname.get_id();
+  if (0 <= _wght_id ) _wght = make_shared<const WghtFile>(fname, _keep_wght);
+
+  _saddr.reset(new char [strlen(cstr_addr) + 1U]);
+  strcpy(_saddr.get(), cstr_addr);
+  _prec_xz.reset(new char [maxlen_rec_xz]);
+  _pJQueue.reset(new JQueue<Job>(size_queue));
+  uint retry_count = 0;
+  while (true) {
+    try { get_new_wght(); break; }
+    catch (const exception &e) { cout << "\n" << e.what() << endl; }
+    if (_max_retry < ++retry_count)
+      die(ERR_INT("retry count %u/%u, abort", retry_count, _max_retry));
+    cout << "\nconnect again ..." << endl;
+    sleep_for(seconds(wght_retry_interval)); }
+  
+  _downloading   = false;
+  _has_conn      = true;  
+  _thread_reader = thread(&Client::reader, this);
+  _thread_sender = thread(&Client::sender, this); }
+
+void Client::end() noexcept {
+  _quit = true;
+  _pJQueue->end();
+  _thread_reader.join();
+  _thread_sender.join(); }
+
+void Client::add_rec(const char *p, size_t len) noexcept {
+  XZEncode<PtrLen<const char>, PtrLen<char>> xze;
+  PtrLen<const char> pl_in(p, len);
+  PtrLen<char> pl_out(_prec_xz.get(), 0);
+  xze.start(&pl_out, maxlen_rec_xz, 9);
+  if (!xze.append(&pl_in) || !xze.end() || UINT32_MAX < pl_out.len) {
+    cout << "\ntoo large compressed image of CSA record" << endl;
+    return; }
+  
+  Job *pjob = _pJQueue->get_free();
+  pjob->reset(pl_out.len);
+  memcpy(pjob->get_p(), _prec_xz.get(), pl_out.len);
+  _pJQueue->push_free(); }
+
+shared_ptr<const WghtFile> Client::get_wght() noexcept {
+  lock_guard<mutex> lock(_m_wght);
+  return _wght; }
