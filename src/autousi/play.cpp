@@ -538,3 +538,174 @@ public:
       } else {
         rec += _record_wght + string(", ");
         rec += _record_version + string(", no-resign\n");
+      }
+      rec += string("'") + _record_settings + _record_handicap + string("\n");
+      rec += _record_main;
+      rec += "%" + string(_node.get_type().to_str()) + string("\n");
+      _flag_playing = false;
+      return move(rec);
+    }
+
+    return string(""); }
+
+  void engine_quit() noexcept { engine_out("quit"); }
+  uint getline_in(char *line, uint size) noexcept {
+    uint ret = Child::getline_in(line, size);
+    if (ret) out_log(line);
+    return ret; }
+  uint getline_err(char *line, uint size) noexcept {
+    uint ret = Child::getline_err(line, size);
+    if (ret) out_log(line);
+    return ret; }
+
+  const char *get_fp() const noexcept { return _fingerprint.c_str(); }
+  bool is_playing() const noexcept { return _flag_playing; }
+  bool is_ready() const noexcept { return _flag_ready; }
+  bool is_thinking() const noexcept { return _flag_thinking; }
+  bool get_do_resign() const noexcept { return _flag_do_resign; }
+  uint get_eid() const noexcept { return _eid; }
+  uint get_nmove() const noexcept { return _nmove; }
+  int get_did() const noexcept { return _device_id; }
+  double get_time_average() const noexcept { return _time_average; }
+};
+
+PlayManager & PlayManager::get() noexcept {
+  static PlayManager instance;
+  return instance; }
+
+PlayManager::PlayManager() noexcept : _ngen_records(0), _num_thinking(0) {}
+PlayManager::~PlayManager() noexcept {}
+void PlayManager::start(const char *cname, const char *dlog, const char *dtune,
+			const vector<string> &devices_str, uint verbose_eng, uint silent_eng,
+			uint sleep_opencl, const FNameID &wfname,
+			uint64_t crc64) noexcept {
+  assert(cname && dlog && dtune && wfname.ok() && _engines.empty());
+  if (devices_str.empty()) die(ERR_INT("bad devices"));
+  _verbose_eng = verbose_eng;
+  _silent_eng  = silent_eng;
+  _cname.reset_fname(cname);
+  _logname.reset_fname(dlog);
+  _wid = wfname.get_id();
+
+  int nnet_id = 0;
+  for (const string &s : devices_str) _devices.emplace_back(s, nnet_id++,
+							    sleep_opencl,
+							    dtune);
+  for (Device &d : _devices) d.nnreset(wfname);
+  for (Device &d : _devices) d.wait();
+
+  int eid = 0;
+  for (Device &d : _devices) {
+    uint size     = d.get_size_parallel();
+    nnet_id       = d.get_nnet_id();
+    int device_id = d.get_device_id();
+    char ch       = d.get_id_option_character();
+    for (uint u = 0; u < size; ++u)
+      _engines.emplace_back(new USIEngine(_cname, ch, device_id, nnet_id,
+					  eid++, wfname, crc64, _verbose_eng, _silent_eng,
+					  _logname )); } }
+
+void PlayManager::end() noexcept {
+  for (auto &e : _engines) e->engine_quit();
+  while (!_engines.empty()) {
+    Child::wait(1000U);
+    for (auto it = _engines.begin(); it != _engines.end(); ) {
+      bool flag_err = false;
+      bool flag_in  = false;
+      if ((*it)->has_line_err()) {
+	char line[65536];
+	if ((*it)->getline_err(line, sizeof(line)) == 0) flag_err = true; }
+      
+      if ((*it)->has_line_in()) {
+	char line[65536];
+	if ((*it)->getline_in(line, sizeof(line)) == 0) flag_in = true; }
+      
+      if (flag_err && flag_in) {
+	(*it)->close();
+	it = _engines.erase(it); }
+      else ++it; } }
+
+  _devices.clear();
+
+  lock_guard<mutex> lock(m_seq);
+  seq_s.clear(); }
+
+deque<string> PlayManager::manage_play(bool has_conn, const FNameID &wfname,
+				       uint64_t crc64, float th_resign, const uint *phandicap_rate)
+  noexcept {
+  deque<string> recs;
+
+  Child::wait(1000U);
+  for (auto &e : _engines) {
+    bool flag_eof = false;
+    if (e->has_line_err()) {
+      char line[65536];
+      if (e->getline_err(line, sizeof(line)) == 0) flag_eof = true; }
+      
+    if (e->has_line_in()) {
+      char line[65536];
+      if (e->getline_in(line, sizeof(line)) == 0) flag_eof = true;
+      else {
+	bool flag_thinking = e->is_thinking();
+	string s = e->update(line, _moves_eid0, th_resign, phandicap_rate);
+	if (!s.empty()) {
+	  _ngen_records += 1U;
+	  recs.push_back(move(s)); }
+
+	if (e->is_ready() && _wid == wfname.get_id()) {
+	  if (has_conn && ! e->is_playing()) e->start_newgame(phandicap_rate);
+	  if (e->is_playing() && ! e->is_thinking()) e->engine_go(); }
+
+	if (! flag_thinking && e->is_thinking()) _num_thinking += 1U;
+	if (flag_thinking && ! e->is_thinking()) _num_thinking -= 1U;
+	assert(_num_thinking <= _engines.size()); } }
+
+    if (flag_eof) {
+      char line[65536];
+      while (0 < e->getline_err(line, sizeof(line)));
+      while (0 < e->getline_in (line, sizeof(line)));
+      die(ERR_INT("An engine (%s) terminates.", e->get_fp())); } }
+
+  if (_wid != wfname.get_id() && _num_thinking == 0) {
+    _wid = wfname.get_id();
+    cout << "\nUpdate weight" << endl;
+    for (Device &d : _devices) d.nnreset(wfname);
+    for (Device &d : _devices) d.wait();
+    for (auto &e : _engines) {
+      bool flag_thinking = e->is_thinking();
+      e->engine_wght_update(wfname, crc64);
+      if (e->is_ready() && _wid == wfname.get_id()) {
+	if (has_conn && ! e->is_playing()) e->start_newgame(phandicap_rate);
+	if (e->is_playing() && ! e->is_thinking()) e->engine_go(); }
+
+      if (! flag_thinking && e->is_thinking()) _num_thinking += 1U;
+      if (flag_thinking && ! e->is_thinking()) _num_thinking -= 1U;
+      assert(_num_thinking <= _engines.size()); } }
+
+  return recs; }
+
+bool PlayManager::get_moves_eid0(string &move) noexcept {
+  if (_moves_eid0.empty()) return false;
+  move.swap(_moves_eid0.front());
+  _moves_eid0.pop();
+  return true; }
+
+bool PlayManager::get_do_resign(uint u) const noexcept {
+  assert(u < _engines.size());
+  return _engines[u]->get_do_resign(); }
+
+uint PlayManager::get_eid(uint u) const noexcept {
+  assert(u < _engines.size());
+  return _engines[u]->get_eid(); }
+
+int PlayManager::get_did(uint u) const noexcept {
+  assert(u < _engines.size());
+  return _engines[u]->get_did(); }
+
+uint PlayManager::get_nmove(uint u) const noexcept {
+  assert(u < _engines.size());
+  return _engines[u]->get_nmove(); }
+
+double PlayManager::get_time_average(uint u) const noexcept {
+  assert(u < _engines.size());
+  return _engines[u]->get_time_average(); }
