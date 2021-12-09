@@ -129,4 +129,88 @@ bool IOAux::is_weight_ok(const char *fname, uint64_t &digest) noexcept {
   ifstream ifs(fname, ios::binary | ios::ate);
   size_t len = ifs.tellg();
   ifs.seekg(0, ifs.beg);
-  if (!ifs) die(ERR_INT("cannot open %s", fna
+  if (!ifs) die(ERR_INT("cannot open %s", fname));
+  unique_ptr<char> ptr(new char [len]);
+  ifs.read(ptr.get(), len);
+  return is_weight_ok(PtrLen<const char>(ptr.get(), len), digest); }
+
+bool IOAux::is_weight_ok(PtrLen<const char> plxz, uint64_t &digest) noexcept {
+  assert(plxz.ok());
+  XZDecode<PtrLen<const char>, PtrLen<char>> xzd;
+  char token[256];
+  PtrLen<char> pl(token,0);
+  char *endptr;
+
+  xzd.init();
+  while (true) {
+    pl.clear();
+    bool bRet = xzd.getline(&plxz, &pl, sizeof(token), " \n\r\t,");
+    if (!bRet) return false;
+    if (pl.len == 0) break;
+    if (pl.len == sizeof(token)) return false;
+    assert(pl.len < sizeof(token));
+    
+    pl.p[pl.len] = '\0';
+    errno = 0;
+    strtof(token, &endptr);
+    if (*endptr != '\0' || endptr == token || errno == ERANGE) return false; }
+  
+  digest = xzd.get_crc64();
+  return true; }
+
+void IOAux::grab_files(set<FNameID> &dir_list, const char *dname,
+		       const char *fmt, int64_t min_no) noexcept {
+  assert(dname);
+  dir_list.clear();
+  OSI::Dir dir(dname);
+  while (true) {
+    const char *fname = dir.next();
+    if (fname == nullptr) break;
+    if (maxlen_path < strlen(fname) + 1U) continue;
+    int64_t i64 = match_fname(fname, fmt);
+    if (i64 < min_no) continue;
+    dir_list.insert(FNameID(i64, dname, fname)); } }
+
+FNameID IOAux::grab_max_file(const char *dname, const char *fmt) noexcept {
+  assert(dname);
+  FNameID ret;
+
+  OSI::Dir dir(dname);
+  while (true) {
+    const char *fname = dir.next();
+    if (fname == nullptr) break;
+    if (maxlen_path < strlen(fname) + 1U) continue;
+    int64_t i64 = match_fname(fname, fmt);
+    if (i64 <= ret.get_id()) continue;
+    ret = FNameID(i64, dname, fname); }
+
+  return ret; }
+
+template <typename T> T IOAux::bytes_to_int(const char *p) noexcept {
+  using value_t = typename std::make_unsigned<T>::type;
+  assert(p);
+  value_t value = 0;
+  uint u = sizeof(value_t);
+  while (0 < u) {
+    uchar uc = static_cast<uchar>(p[--u]);
+    value *= static_cast<value_t>(256U);
+    value += static_cast<value_t>(uc); }
+  return static_cast<T>(value); }
+
+template ushort IOAux::bytes_to_int(const char *p) noexcept;
+template uint IOAux::bytes_to_int(const char *p) noexcept;
+template int64_t IOAux::bytes_to_int(const char *p) noexcept;
+
+template <typename T> void IOAux::int_to_bytes(const T &v, char *p) noexcept {
+  using value_t = typename std::make_unsigned<T>::type;
+  assert(p);
+
+  value_t value = static_cast<value_t>(v);
+  for (uint u = 0; u < sizeof(value_t); ++u) {
+    uchar uc = static_cast<uchar>(value % 256U);
+    p[u] = static_cast<char>(uc);
+    value /= static_cast<value_t>(256U); } }
+
+template void IOAux::int_to_bytes(const ushort &v, char *p) noexcept;
+template void IOAux::int_to_bytes(const uint &v, char *p) noexcept;
+template void IOAux::int_to_bytes(const int64_t &v, char *p) noexcept;
