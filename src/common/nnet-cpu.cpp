@@ -115,4 +115,74 @@ static row_t gen_sd_inv(uint nch, const float *sd) noexcept {
     row[ch] = 1.0f / std::sqrt(sd[ch] * bn_factor + bn_eps);
   return row; }
 
-static row_t gen_head1
+static row_t gen_head1_weight(uint nout1, uint nout2, uint nin,
+			      const float *w1, const float *w2) noexcept {
+  row_t row(new float [(nout1 + nout2) * nin * NNAux::size_plane]);
+  copy_n(w1, nout1 * nin, row.get());
+  copy_n(w2, nout2 * nin, row.get() + nout1 * nin);
+  return row; }
+
+static row_t gen_head1_mean(uint nch1, uint nch2,
+			    const float *bias1, const float *mean1,
+			    const float *bias2, const float *mean2) noexcept {
+  row_t row(new float [nch1 + nch2]);
+  for (uint ch = 0; ch < nch1; ++ch)
+    row[ch] = mean1[ch] * bn_factor - bias1[ch];
+  for (uint ch = 0; ch < nch2; ++ch)
+    row[nch1 + ch] = mean2[ch] * bn_factor - bias2[ch];
+  return row; }
+
+static row_t gen_head1_sd_inv(uint nch1, uint nch2,
+			      const float *sd1, const float *sd2) noexcept {
+  row_t row(new float [nch1 + nch2]);
+  for (uint ch = 0; ch < nch1; ++ch)
+    row[ch] = 1.0f / std::sqrt(sd1[ch] * bn_factor + bn_eps);
+  for (uint ch = 0; ch < nch2; ++ch)
+    row[nch1 + ch] = 1.0f / std::sqrt(sd2[ch] * bn_factor + bn_eps);
+  return row; }
+
+void NNetCPU::load(const vector<pair<uint, row_t>> &wght) noexcept {
+  constexpr uint nrow_input = 4U;
+  constexpr uint nrow_head  = 14U;
+  uint nrow = static_cast<uint>(wght.size());
+  if (nrow < nrow_input + nrow_head) die(ERR_INT(msg_bad_wght_dim));
+  
+  uint nrow_res = nrow - nrow_input - nrow_head;
+  if (nrow_res % 8U) die(ERR_INT(msg_bad_wght_dim));
+  
+  // load body part
+  // for index in 0 ... nrow_res / 4
+  // (4*index + 0) weight [nout][nin][size_plane]
+  // (4*index + 1) bias [nout]
+  // (4*index + 2) mean value [nout]
+  // (4*index + 3) standard deviation [nout]
+  _resnet_nout      = wght[1].first;
+  _conv3x3_nin_max  = max(NNAux::nch_input, _resnet_nout);
+  _conv3x3_nout_max = _resnet_nout;
+  _maxsize_out      = _resnet_nout * NNAux::size_plane;
+  row_t matU, mean, sd_inv;
+  uint nin = NNAux::nch_input;
+  uint index = 0;
+  for (uint u = 0; u < 1U + nrow_res / 4U; ++u) {
+    if (wght[index].first != _resnet_nout * nin * size_kernel
+	|| wght[index + 1U].first != _resnet_nout
+	|| wght[index + 2U].first != _resnet_nout
+	|| wght[index + 3U].first != _resnet_nout)
+      die(ERR_INT(msg_bad_wght_dim));
+    matU = gen_matU(_resnet_nout, nin, wght[index].second.get());
+    mean = gen_mean(_resnet_nout, wght[index + 1U].second.get(),
+		    wght[index + 2U].second.get());
+    sd_inv = gen_sd_inv(_resnet_nout, wght[index + 3U].second.get());
+    _reswghts.push_back({move(matU), move(mean), move(sd_inv)});
+    nin = _resnet_nout;
+    index += 4U; }
+
+  // load head1 part (conv 1x1)
+  // index + 0: weight (policy part)
+  // index + 1: bias (policy part)
+  // index + 2: mean value (policy part)
+  // index + 3: standard deviation (policy part)
+  // index + 6: weight (value part)
+  // index + 7: bias (value part)
+  // index + 8: mean value (value part)
+  // index + 9
