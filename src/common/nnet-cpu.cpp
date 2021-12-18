@@ -363,4 +363,64 @@ static void compute_matV_child(uint nchxnb, uint chb, const float *fin,
 	   - x4(md[1][3]) + x6(md[2][3]) - x2(md[3][3])
 	   + x2(md[1][4]) - x3(md[2][4]) + x1(md[3][4]));
       matV[ucc + uca*3U + ucb*4U]
-	= (- x2(md[1][1]) + x2(md[3][1]) + x1(md[1][
+	= (- x2(md[1][1]) + x2(md[3][1]) + x1(md[1][2]) - x1(md[3][2])
+	   + x2(md[1][3]) - x2(md[3][3]) - x1(md[1][4]) + x1(md[3][4]));
+      matV[ucc + uca*4U + ucb*4U]
+	= (+ x4(md[1][1]) - x2(md[1][2]) - x4(md[1][3]) + x2(md[1][4])
+	   - x2(md[2][1]) + x1(md[2][2]) + x2(md[2][3]) - x1(md[2][4])
+	   - x4(md[3][1]) + x2(md[3][2]) + x4(md[3][3]) - x2(md[3][4])
+	   + x2(md[4][1]) - x1(md[4][2]) - x2(md[4][3]) + x1(md[4][4])); } }
+
+// in: matM[size_tile_in][nchxnb][ntile]
+// out: fout[size_plane]
+static void
+compute_matA_child(uint nchxnb, uint chb, const float *matM, float *fout)
+  noexcept {
+  for (uint uh = 0; uh < ntile_h; ++uh)
+    for (uint uw = 0; uw < ntile_w; ++uw) {
+      float mm[len_tile_in][len_tile_in];
+      for (uint uh_in = 0; uh_in < len_tile_in; ++uh_in)
+	for (uint uw_in = 0; uw_in < len_tile_in; ++uw_in)
+	  mm[uh_in][uw_in] = matM[uh_in * len_tile_in * nchxnb * ntile
+				  + uw_in * nchxnb * ntile
+				  + chb * ntile
+				  + uh * ntile_w + uw];
+      
+      const uint ucd = uh * len_tile_out * NNAux::width + uw * len_tile_out;
+      fout[ucd + 0U * NNAux::width + 0U]
+	= (+ mm[0][0] + mm[0][1] + mm[0][2] + mm[0][3]
+	   + mm[1][0] + mm[1][1] + mm[1][2] + mm[1][3]
+	   + mm[2][0] + mm[2][1] + mm[2][2] + mm[2][3]
+	   + mm[3][0] + mm[3][1] + mm[3][2] + mm[3][3]);
+      fout[ucd + 0U * NNAux::width + 1U]
+	= (+ mm[0][1] - mm[0][2] + x2(mm[0][3])
+	   + mm[1][1] - mm[1][2] + x2(mm[1][3])
+	   + mm[2][1] - mm[2][2] + x2(mm[2][3])
+	   + mm[3][1] - mm[3][2] + x2(mm[3][3]));
+      fout[ucd + 0U * NNAux::width + 2U]
+	= (+ mm[0][1] + mm[0][2] + x4(mm[0][3]) + mm[0][4]
+	   + mm[1][1] + mm[1][2] + x4(mm[1][3]) + mm[1][4]
+	   + mm[2][1] + mm[2][2] + x4(mm[2][3]) + mm[2][4]
+	   + mm[3][1] + mm[3][2] + x4(mm[3][3]) + mm[3][4]);
+      fout[ucd + 1U * NNAux::width + 0U]
+	= (+ mm[1][0] + mm[1][1] + mm[1][2] + mm[1][3]
+	   - mm[2][0] - mm[2][1] - mm[2][2] - mm[2][3]
+	   + x2(mm[3][0]) + x2(mm[3][1]) + x2(mm[3][2]) + x2(mm[3][3]));
+      fout[ucd + 1U * NNAux::width + 1U]
+	= (+ mm[1][1] - mm[1][2] + x2(mm[1][3])
+	   - mm[2][1] + mm[2][2] - x2(mm[2][3])
+           + x2(mm[3][1]) - x2(mm[3][2]) + x4(mm[3][3]));
+      fout[ucd + 1U * NNAux::width + 2U]
+	= (+ mm[1][1] + mm[1][2] + x4(mm[1][3]) + mm[1][4]
+	   - mm[2][1] - mm[2][2] - x4(mm[2][3]) - mm[2][4]
+	   + x2(mm[3][1]) + x2(mm[3][2]) + x8(mm[3][3]) + x2(mm[3][4]));
+      fout[ucd + 2U * NNAux::width + 0U]
+	= (+ mm[1][0] + mm[1][1] + mm[1][2] + mm[1][3]
+	   + mm[2][0] + mm[2][1] + mm[2][2] + mm[2][3]
+	   + x4(mm[3][0]) + x4(mm[3][1]) + x4(mm[3][2]) + x4(mm[3][3])
+	   + mm[4][0] + mm[4][1] + mm[4][2] + mm[4][3]);
+      fout[ucd + 2U * NNAux::width + 1U]
+	= (+ mm[1][1] - mm[1][2] + x2(mm[1][3])
+	   + mm[2][1] - mm[2][2] + x2(mm[2][3])
+           + x4(mm[3][1]) - x4(mm[3][2]) + x8(mm[3][3])
+	   + mm[4][1] - mm[4][2] 
