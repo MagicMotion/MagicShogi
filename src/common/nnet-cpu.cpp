@@ -185,4 +185,66 @@ void NNetCPU::load(const vector<pair<uint, row_t>> &wght) noexcept {
   // index + 6: weight (value part)
   // index + 7: bias (value part)
   // index + 8: mean value (value part)
-  // index + 9
+  // index + 9: standard deviation (value part)
+  _policy1_nout = wght[index + 1U].first;
+  _value1_nout  = wght[index + 7U].first;
+  nin           = _resnet_nout;
+  _head1_nout   = _policy1_nout + _value1_nout;
+  _maxsize_out  = max(_maxsize_out, _head1_nout * NNAux::size_plane);
+  if (wght[index].first != _policy1_nout * nin
+      || wght[index + 2U].first != _policy1_nout
+      || wght[index + 3U].first != _policy1_nout
+      || wght[index + 6U].first != _value1_nout * nin
+      || wght[index + 8U].first != _value1_nout
+      || wght[index + 9U].first != _value1_nout)
+    die(ERR_INT(msg_bad_wght_dim));
+  _head1_weight = gen_head1_weight(_policy1_nout, _value1_nout, nin,
+				   wght[index + 0U].second.get(),
+				   wght[index + 6U].second.get());
+  _head1_mean = gen_head1_mean(_policy1_nout, _value1_nout,
+			       wght[index + 1U].second.get(),
+			       wght[index + 2U].second.get(),
+			       wght[index + 7U].second.get(),
+			       wght[index + 8U].second.get());
+  _head1_sd_inv = gen_head1_sd_inv(_policy1_nout, _value1_nout,
+				   wght[index + 3U].second.get(),
+				   wght[index + 9U].second.get());
+
+  // load policy2 part (conv 1x1)
+  // index + 4: weight
+  // index + 5: bias
+  uint nout    = NNAux::nch_out_policy;
+  _policy2_nin = _policy1_nout;
+  _maxsize_out = max(_maxsize_out, nout * NNAux::size_plane);
+  if (wght[index + 4U].first != nout * _policy2_nin
+      || wght[index + 5U].first != nout) die(ERR_INT(msg_bad_wght_dim));
+  _policy2_weight.reset(new float [nout * _policy2_nin]);
+  _policy2_bias.reset(new float [nout]);
+  copy_n(wght[index + 4U].second.get(), nout * _policy2_nin,
+	 _policy2_weight.get());
+  copy_n(wght[index + 5U].second.get(), nout, _policy2_bias.get());
+
+  // load value2 part (fc)
+  // index + 10: weight
+  // index + 11: bias
+  _value2_nin  = _value1_nout * NNAux::size_plane;
+  _value2_nout = wght[index + 11U].first;
+  if (wght[index + 10U].first != _value2_nout * _value2_nin)
+    die(ERR_INT(msg_bad_wght_dim));
+  _value2_weight.reset(new float [_value2_nout * _value2_nin]);
+  _value2_bias.reset(new float [_value2_nout]);
+  copy_n(wght[index + 10U].second.get(), _value2_nout * _value2_nin,
+	 _value2_weight.get());
+  copy_n(wght[index + 11U].second.get(), _value2_nout, _value2_bias.get());
+
+  // load value3 part (fc)
+  // index + 12: weight
+  // index + 13: bias
+  _value3_nin  = _value2_nout;
+  _value3_nout = wght[index + 13U].first;
+  if (wght[index + 12U].first != _value3_nout * _value3_nin
+      || _value3_nout != 1) die(ERR_INT(msg_bad_wght_dim));
+  _value3_weight.reset(new float [_value3_nout * _value3_nin]);
+  _value3_bias.reset(new float [_value3_nout]);
+  copy_n(wght[index + 12U].second.get(), _value3_nout * _value3_nin,
+	 _value3_weight.ge
