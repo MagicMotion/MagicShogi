@@ -247,4 +247,62 @@ void NNetCPU::load(const vector<pair<uint, row_t>> &wght) noexcept {
   _value3_weight.reset(new float [_value3_nout * _value3_nin]);
   _value3_bias.reset(new float [_value3_nout]);
   copy_n(wght[index + 12U].second.get(), _value3_nout * _value3_nin,
-	 _value3_weight.ge
+	 _value3_weight.get());
+  copy_n(wght[index + 13U].second.get(), _value3_nout, _value3_bias.get()); }
+
+// fin[size_plane]
+// matrix_V[size_tile_in][nchxnb][ntile]
+static void compute_matV_child(uint nchxnb, uint chb, const float *fin,
+			       float *matV) noexcept {
+  assert(0 < nchxnb && chb < nchxnb && fin && matV);
+  const uint uca = len_tile_in * nchxnb * ntile;
+  const uint ucb = nchxnb * ntile;
+  for (uint uh = 0; uh < ntile_h; ++uh)
+    for (uint uw = 0; uw < ntile_w; ++uw) {
+      const uint ucc = chb * ntile + uh * ntile_w + uw;
+  
+      float md[len_tile_in][len_tile_in];
+      int y0 = static_cast<int>(uh * len_tile_out) - pad;
+      int x0 = static_cast<int>(uw * len_tile_out) - pad;
+      for (int y = 0; y < static_cast<int>(len_tile_in); ++y)
+	for (int x = 0; x < static_cast<int>(len_tile_in); ++x)
+	  if (0 <= y0 + y && y0 + y < static_cast<int>(NNAux::height)
+	      && 0 <= x0 + x && x0 + x < static_cast<int>(NNAux::width))
+	    md[y][x] = fin[(y0 + y) * NNAux::width + x0 + x];
+	  else md[y][x] = 0.0f;
+
+      matV[ucc + uca*0U + ucb*0U]
+	= (+ x4(md[0][0]) - x2(md[0][1]) - x4(md[0][2]) + x2(md[0][3])
+	   - x2(md[1][0]) + x1(md[1][1]) + x2(md[1][2]) - x1(md[1][3])
+	   - x4(md[2][0]) + x2(md[2][1]) + x4(md[2][2]) - x2(md[2][3])
+	   + x2(md[3][0]) - x1(md[3][1]) - x2(md[3][2]) + x1(md[3][3]));
+      matV[ucc + uca*1U + ucb*0U]
+	= (- x4(md[1][0]) + x2(md[1][1]) + x4(md[1][2]) - x2(md[1][3])
+	   - x2(md[2][0]) + x1(md[2][1]) + x2(md[2][2]) - x1(md[2][3])
+	   + x2(md[3][0]) - x1(md[3][1]) - x2(md[3][2]) + x1(md[3][3]));
+      matV[ucc + uca*2U + ucb*0U]
+	= (+ x4(md[1][0]) - x2(md[1][1]) - x4(md[1][2]) + x2(md[1][3])
+	   - x6(md[2][0]) + x3(md[2][1]) + x6(md[2][2]) - x3(md[2][3])
+	   + x2(md[3][0]) - x1(md[3][1]) - x2(md[3][2]) + x1(md[3][3]));
+      matV[ucc + uca*3U + ucb*0U]
+	= (- x2(md[1][0]) + x1(md[1][1]) + x2(md[1][2]) - x1(md[1][3])
+	   + x2(md[3][0]) - x1(md[3][1]) - x2(md[3][2]) + x1(md[3][3]));
+      matV[ucc + uca*4U + ucb*0U]
+	= (+ x4(md[1][0]) - x2(md[1][1]) - x4(md[1][2]) + x2(md[1][3])
+	   - x2(md[2][0]) + x1(md[2][1]) + x2(md[2][2]) - x1(md[2][3])
+	   - x4(md[3][0]) + x2(md[3][1]) + x4(md[3][2]) - x2(md[3][3])
+	   + x2(md[4][0]) - x1(md[4][1]) - x2(md[4][2]) + x1(md[4][3]));
+      matV[ucc + uca*0U + ucb*1U]
+	= (- x4(md[0][1]) - x2(md[0][2]) + x2(md[0][3])
+	   + x2(md[1][1]) + x1(md[1][2]) - x1(md[1][3])
+	   + x4(md[2][1]) + x2(md[2][2]) - x2(md[2][3])
+	   - x2(md[3][1]) - x1(md[3][2]) + x1(md[3][3]));
+      matV[ucc + uca*1U + ucb*1U]
+	= (+ x4(md[1][1]) + x2(md[1][2]) - x2(md[1][3])
+	   + x2(md[2][1]) + x1(md[2][2]) - x1(md[2][3])
+	   - x2(md[3][1]) - x1(md[3][2]) + x1(md[3][3]));
+      matV[ucc + uca*2U + ucb*1U]
+	= (- x4(md[1][1]) - x2(md[1][2]) + x2(md[1][3])
+	   + x6(md[2][1]) + x3(md[2][2]) - x3(md[2][3])
+	   - x2(md[3][1]) - x1(md[3][2]) + x1(md[3][3]));
+      matV[
