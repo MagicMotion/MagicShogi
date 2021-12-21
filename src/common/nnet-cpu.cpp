@@ -486,4 +486,79 @@ static void compute_matM(uint nout, uint nin, uint size_batch,
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
 		nout, ntile * size_batch, nin,
 		1.0f, matU + uin * nout * nin, nin,
-		matV + uin * nin * size_batch * ntile,ntile * si
+		matV + uin * nin * size_batch * ntile,ntile * size_batch,
+		0.0f, matM + uin * nout * ntile * size_batch,
+		ntile * size_batch); }
+#endif
+}
+
+// in: matM[size_tile_in][nch][size_batch][ntile]
+// in: mean[nch]
+// in: sd_inv[nch]
+// out: fork[nch][size_batch][size_plane]
+// out: matV[size_tile_in][nch][size_batch][ntile]
+static void
+compute_matA_BNReLU_fork_matV(uint nch, uint size_batch, const float *matM,
+			      const float *mean, const float *sd_inv,
+			      float *fork, float *matV) noexcept {
+  uint nchxnb = nch * size_batch;
+#pragma omp parallel for
+  for (int loop = 0; loop < static_cast<int>(nchxnb); ++loop) {
+    uint chb = loop;
+    uint ch = chb / size_batch;
+    float fout[NNAux::size_plane];
+    compute_matA_child(nchxnb, chb, matM, fout);
+    for (uint u = 0; u < NNAux::size_plane; ++u)
+      fork[chb * NNAux::size_plane + u] = fout[u]
+	= max(0.0f, sd_inv[ch] * (fout[u] - mean[ch]));
+    compute_matV_child(nchxnb, chb, fout, matV); } }
+
+static void
+compute_matA_BNReLU_join_fork_matV(uint nch, uint size_batch,
+				   const float *matM, const float *mean,
+				   const float *sd_inv, float *fork,
+				   float *matV) noexcept {
+  int nchxnb = static_cast<int>(nch * size_batch);
+#pragma omp parallel for
+  for (int loop = 0; loop < nchxnb; ++loop) {
+    uint chb = static_cast<uint>(loop);
+    uint ch = chb / size_batch;
+    float fout[NNAux::size_plane];
+    compute_matA_child(nchxnb, chb, matM, fout);
+    for (uint u = 0; u < NNAux::size_plane; ++u) {
+      float &f = fork[chb * NNAux::size_plane + u];
+      f = fout[u] = max(0.0f, f + sd_inv[ch] * (fout[u] - mean[ch])); }
+    compute_matV_child(nchxnb, chb, fout, matV); } }
+
+static void
+compute_matA_BNReLU_join_fork(uint nch, uint size_batch, const float *matM,
+			      const float *mean, const float *sd_inv,
+			      float *fork) noexcept {
+  uint nchxnb = nch * size_batch;
+  for (uint chb = 0; chb < nchxnb; ++chb) {
+    uint ch = chb / size_batch;
+    float fout[NNAux::size_plane];
+    compute_matA_child(nchxnb, chb, matM, fout);
+    for (uint u = 0; u < NNAux::size_plane; ++u) {
+      float &f = fork[chb * NNAux::size_plane + u];
+      f = fout[u] = max(0.0f, f + sd_inv[ch] * (fout[u] - mean[ch])); } } }
+
+static void
+compute_matA_BNReLU_matV(uint nch, uint size_batch, const float *matM,
+			 const float *mean, const float *sd_inv, float *matV)
+  noexcept {
+  uint nchxnb = nch * size_batch;
+#pragma omp parallel for
+  for (int loop = 0; loop < static_cast<int>(nchxnb); ++loop) {
+    uint chb = loop;
+    uint ch = chb / size_batch;
+    float fout[NNAux::size_plane];
+    compute_matA_child(nchxnb, chb, matM, fout);
+    for (uint u = 0; u < NNAux::size_plane; ++u)
+      fout[u] = max(0.0f, sd_inv[ch] * (fout[u] - mean[ch]));
+    compute_matV_child(nchxnb, chb, fout, matV); } }
+
+// in:     mean[nch]
+// in:     sd_inv[nch]
+// in/out: fio[nch][size_batch][size_plane]
+s
