@@ -423,4 +423,67 @@ compute_matA_child(uint nchxnb, uint chb, const float *matM, float *fout)
 	= (+ mm[1][1] - mm[1][2] + x2(mm[1][3])
 	   + mm[2][1] - mm[2][2] + x2(mm[2][3])
            + x4(mm[3][1]) - x4(mm[3][2]) + x8(mm[3][3])
-	   + mm[4][1] - mm[4][2] 
+	   + mm[4][1] - mm[4][2] + x2(mm[4][3]));
+      fout[ucd + 2U * NNAux::width + 2U]
+	= (+ mm[1][1] + mm[1][2] + x4(mm[1][3]) + mm[1][4]
+	   + mm[2][1] + mm[2][2] + x4(mm[2][3]) + mm[2][4]
+	   + x4(mm[3][1]) + x4(mm[3][2]) + x16(mm[3][3]) + x4(mm[3][4])
+	   + mm[4][1] + mm[4][2] + x4(mm[4][3]) + mm[4][4]); } }
+  
+static void compute_matV_input(uint size_batch, const float *fin, float *matV)
+  noexcept {
+  assert(0 < size_batch && fin && matV);
+  const uint nchxnb = NNAux::nch_input * size_batch;
+
+#pragma omp parallel for
+  for (int loop = 0; loop < static_cast<int>(nchxnb); ++loop) {
+    uint chb_in = loop;
+    uint ub  = chb_in / NNAux::nch_input;
+    uint ch  = chb_in % NNAux::nch_input;
+    uint chb = ch * size_batch + ub;
+    const float *p = fin + chb_in * NNAux::size_plane;
+    compute_matV_child(nchxnb, chb, p, matV); } }
+
+// in:  weight[nout][nin]
+// in:  fin[nin][size_batch][size_plane]
+// out: fout[nout][size_batch][size_plane]
+static void
+compute_conv1x1(uint nout, uint nin, uint size_batch, const float *weight,
+		const float *fin, float *fout) noexcept {
+  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+	      nout, size_batch * NNAux::size_plane, nin,
+	      1.0f, weight, nin, fin, size_batch * NNAux::size_plane,
+	      0.0f, fout, size_batch * NNAux::size_plane); }
+
+// in:  matU[size_tile_in][nout][nin]
+// in:  matV[size_tile_in][nin][size_batch][ntile]
+// out: matM[size_tile_in][nout][size_batch][ntile]
+static void compute_matM(uint nout, uint nin, uint size_batch,
+			 const float *matU, const float *matV, float *matM)
+  noexcept {
+#if defined(USE_MKL)
+  constexpr CBLAS_TRANSPOSE trans[1] = { CblasNoTrans };
+  constexpr int group_size[1]    = { static_cast<int>(size_tile_in) };
+  constexpr float alpha_array[1] = { 1.0f };
+  constexpr float beta_array[1]  = { 0.0f };
+  const int m_array[1]           = { static_cast<int>(nout) };
+  const int n_array[1]           = { static_cast<int>(ntile * size_batch) };
+  const int k_array[1]           = { static_cast<int>(nin) };
+  const float *a_array[size_tile_in], *b_array[size_tile_in];
+  float *c_array[size_tile_in];
+  for (uint u = 0; u < size_tile_in; ++u) {
+    a_array[u] = matU + u * nout * nin;
+    b_array[u] = matV + u * nin * size_batch * ntile;
+    c_array[u] = matM + u * nout * ntile * size_batch; }
+
+  cblas_sgemm_batch(CblasRowMajor, trans, trans, m_array, n_array, k_array,
+		    alpha_array, a_array, k_array, b_array, n_array,
+		    beta_array, c_array, n_array, 1, group_size);
+#else
+#  pragma omp parallel for
+  for (int loop = 0; loop < static_cast<int>(size_tile_in); ++loop) {
+    uint uin = loop;
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+		nout, ntile * size_batch, nin,
+		1.0f, matU + uin * nout * nin, nin,
+		matV + uin * nin * size_batch * ntile,ntile * si
