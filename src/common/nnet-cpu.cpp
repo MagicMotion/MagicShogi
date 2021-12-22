@@ -561,4 +561,72 @@ compute_matA_BNReLU_matV(uint nch, uint size_batch, const float *matM,
 // in:     mean[nch]
 // in:     sd_inv[nch]
 // in/out: fio[nch][size_batch][size_plane]
-s
+static void compute_BNReLU(uint nch, uint size_batch, const float *mean,
+			   const float *sd_inv, float *fio) noexcept {
+  for (uint ch = 0; ch < nch; ++ch) {
+    float x = mean[ch];
+    float y = sd_inv[ch];
+    float *f = fio + ch * size_batch * NNAux::size_plane;
+    for (uint u = 0; u < size_batch * NNAux::size_plane; ++u)
+      f[u] = max(0.0f, y * (f[u] - x)); } }
+
+// in:  nnmoves[size_batch][NN::nmove]
+// in:  weight[nch_out_policy][nch]
+// in:  bias[nch_out_policy]
+// in:  fin[nch][size_batch][size_plane]
+// out: probs[size_batch][NN::nmove]
+static void
+compute_probs(uint nch, uint size_batch, const uint *sizes_nnmove,
+	      const ushort *nnmoves, const float *weight, const float *bias,
+	      const float *fin, float *probs) noexcept {
+  for (uint ub = 0; ub < size_batch; ++ub) {
+    const ushort *m = nnmoves + ub * SAux::maxsize_moves;
+    float *probs_b  = probs   + ub * SAux::maxsize_moves;
+    for (uint u = 0; u < sizes_nnmove[ub]; ++u) {
+      assert(m[u] < NNAux::nch_out_policy * NNAux::size_plane);
+      uint ch = m[u] / NNAux::size_plane;
+      uint sq = m[u] % NNAux::size_plane;
+      probs_b[u] = cblas_sdot(nch, weight + ch * nch, 1,
+			      fin + ub * NNAux::size_plane + sq,
+			      size_batch * NNAux::size_plane);
+      probs_b[u] += bias[ch]; }
+    NNAux::softmax(sizes_nnmove[ub], probs_b); } }
+
+uint NNetCPU::push_ff(uint size_batch, const float *input,
+		      const uint *sizes_nnmove, const ushort *nnmoves,
+		      float *probs, float *values) noexcept {
+  assert(input && sizes_nnmove && nnmoves && probs && values);
+
+  omp_set_num_threads(_thread_num);
+#if defined(USE_OPENBLAS)
+  openblas_set_num_threads(1);
+#endif
+
+  if (size_batch == 0 || _maxsize_batch < size_batch)
+    die(ERR_INT("size_batch == 0"));
+  
+  // feed forward input layers
+  // body part
+  float *fbody = _fslot[0].get();
+  float *f1    = _fslot[1].get();
+  compute_matV_input(size_batch, input, _matV.get());
+  compute_matM(_resnet_nout, NNAux::nch_input, size_batch,
+	       _reswghts[0].matU.get(), _matV.get(), _matM.get());
+  compute_matA_BNReLU_fork_matV(_resnet_nout, size_batch, _matM.get(),
+				_reswghts[0].mean.get(),
+				_reswghts[0].sd_inv.get(),
+				fbody, _matV.get());
+
+  uint ulayer = 1U;
+  for (; ulayer + 2U < _reswghts.size(); ulayer += 2U) {
+    compute_matM(_resnet_nout, _resnet_nout, size_batch,
+		 _reswghts[ulayer].matU.get(), _matV.get(), _matM.get());
+    compute_matA_BNReLU_matV(_resnet_nout, size_batch, _matM.get(),
+			     _reswghts[ulayer].mean.get(),
+			     _reswghts[ulayer].sd_inv.get(),
+			     _matV.get());
+
+    compute_matM(_resnet_nout, _resnet_nout, size_batch,
+		 _reswghts[ulayer + 1U].matU.get(), _matV.get(), _matM.get());
+    compute_matA_BNReLU_join_fork_matV(_resnet_nout, size_batch, _matM.get(),
+				       _reswghts[ulayer + 1U].mean.get
