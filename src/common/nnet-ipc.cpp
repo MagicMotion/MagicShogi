@@ -89,4 +89,16 @@ int NNetIPC::submit_block_child(uint size_nnmove) noexcept {
   _sem_service.inc();
   return sem_wait(_sem_ipc); }
 
-int NNetIPC
+int NNetIPC::submit_block(uint size_nnmove) noexcept {
+  assert(ok() && size_nnmove <= SAux::maxsize_moves && _pipc);
+  if (_do_compress)
+    _pipc->n_one = NNAux::compress_features(_pipc->compressed_features,
+					    _pipc->features);
+  return submit_block_child(size_nnmove); }
+
+int NNetIPC::submit_compressed_block(uint size_nnmove, uint n_one) noexcept {
+  assert(ok() && size_nnmove <= SAux::maxsize_moves && _pipc);
+  if (! _do_compress)
+    NNAux::decompress_features(_pipc->features, n_one,
+			       _pipc->compressed_features);
+  return submit_block_child(size_nnmove); }
