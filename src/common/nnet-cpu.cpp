@@ -629,4 +629,67 @@ uint NNetCPU::push_ff(uint size_batch, const float *input,
     compute_matM(_resnet_nout, _resnet_nout, size_batch,
 		 _reswghts[ulayer + 1U].matU.get(), _matV.get(), _matM.get());
     compute_matA_BNReLU_join_fork_matV(_resnet_nout, size_batch, _matM.get(),
-				       _reswghts[ulayer + 1U].mean.get
+				       _reswghts[ulayer + 1U].mean.get(),
+				       _reswghts[ulayer + 1U].sd_inv.get(),
+				       fbody, _matV.get()); }
+  
+  compute_matM(_resnet_nout, _resnet_nout, size_batch,
+	       _reswghts[ulayer].matU.get(), _matV.get(), _matM.get());
+  compute_matA_BNReLU_matV(_resnet_nout, size_batch, _matM.get(),
+			   _reswghts[ulayer].mean.get(),
+			   _reswghts[ulayer].sd_inv.get(),
+			   _matV.get());
+
+  compute_matM(_resnet_nout, _resnet_nout, size_batch,
+	       _reswghts[ulayer + 1U].matU.get(), _matV.get(), _matM.get());
+  compute_matA_BNReLU_join_fork(_resnet_nout, size_batch, _matM.get(),
+				_reswghts[ulayer + 1U].mean.get(),
+				_reswghts[ulayer + 1U].sd_inv.get(),
+				fbody);
+
+  // head part
+  compute_conv1x1(_head1_nout, _resnet_nout, size_batch, _head1_weight.get(),
+		  fbody, f1);
+
+  compute_BNReLU(_head1_nout, size_batch, _head1_mean.get(),
+		 _head1_sd_inv.get(), f1);
+  
+  compute_probs(_policy2_nin, size_batch, sizes_nnmove, nnmoves,
+		_policy2_weight.get(), _policy2_bias.get(), f1, probs);
+  
+
+  // in:  f1[_policy1_nout + _value1_nout][size_batch][size_plane]
+  // out: f2[size_batch][_value1_nout][size_plane]
+  float *f2 = fbody;
+  for (uint ub = 0; ub < size_batch; ++ub)
+    for (uint ch = 0; ch < _value1_nout; ++ch) {
+      uint ch2 = _policy1_nout + ch;
+      const float *src = f1 + (ch2 * size_batch + ub) * NNAux::size_plane;
+      float *dest      = f2 + (ub * _value1_nout + ch) * NNAux::size_plane;
+      copy_n(src, NNAux::size_plane, dest); }
+
+  // in:  _value2_weight[_value2_nout][_value2_nin]
+  // in:  _value2_bias[_value2_nout]
+  // in:  f1[size_batch][_value2_nin]
+  // out: f2[size_batch][_value2_nout]
+  swap(f1, f2);
+  for (uint ub = 0; ub < size_batch; ++ub)
+    copy_n(_value2_bias.get(), _value2_nout, f2 + ub * _value2_nout);
+
+  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+	      size_batch, _value2_nout, _value2_nin,
+	      1.0f, f1, _value2_nin, _value2_weight.get(), _value2_nin,
+	      1.0f, f2, _value2_nout);
+  for (uint u = 0; u < size_batch * _value2_nout; ++u)
+    f2[u] = max(0.0f, f2[u]);
+
+  // in:  _value3_weight[_value3_nin]
+  // in:  _value3_bias[1]
+  // in:  f2[size_batch][_value3_nin]
+  // out: values[size_batch]
+  fill_n(values, size_batch, _value3_bias[0]);
+  cblas_sgemv(CblasRowMajor, CblasNoTrans, size_batch, _value3_nin,
+	      1.0f, f2, _value3_nin, _value3_weight.get(), 1, 1.0f, values, 1);
+  for (uint ub = 0; ub < size_batch; ++ub) values[ub] = std::tanh(values[ub]);
+  return 0; }
+#endif
