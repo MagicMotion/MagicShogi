@@ -370,3 +370,54 @@ void NodeNN<Len>::encode_features(float *p) const noexcept {
     if (Node<Len>::get_len_path() < uposi) break;
     uint len_path = Node<Len>::get_len_path() - uposi;
     
+    // board piece position
+    for (Color c : {turn, turn.to_opp()}) {
+      BMap bm = _posi[len_path].bm[c.to_u()];
+      for (Sq sq(bm.pop_f()); sq.ok(); sq = Sq(bm.pop_f())) {
+	uint upc = _posi[len_path].board[sq.to_u()];
+	store(p, ch_off + upc, sq.rel(turn).to_u()); }
+      ch_off += Pc::ok_size; }
+    
+    // hand piece position
+    for (Color c : {turn, turn.to_opp()}) {
+      for (uint upc = 0; upc < Pc::hand_size; ++upc) {
+	uint num = _posi[len_path].hand[c.to_u()][upc];
+	if (num == 0) continue;
+	float f = ( static_cast<float>(num)
+		    / static_cast<float>(Pc::num_array[upc]) );
+	store_plane(p, ch_off + upc, f); }
+      ch_off += Pc::hand_size; }
+    
+    // repeat count
+    uint nrep = _posi[len_path].count_repeat;
+    for (uint u = 0; u < nrep; ++u) store_plane(p, ch_off + u);
+    ch_off += 3U; }
+  
+  // player to move
+  if (turn == SAux::white) store_plane(p, 360U);
+  
+  // path length from root of shogi
+  uint len_path = Node<Len>::get_len_path();
+  store_plane(p, 361U, (1.0f / 512.0f) * static_cast<float>(len_path)); }
+
+template class NodeNN<Param::maxlen_play>;
+
+uint NNet::push_ff(uint, const float *, const uint *, const ushort *, float *,
+		   float *) noexcept {
+  die(ERR_INT("INTERNAL ERROR")); return 0; }
+
+uint NNet::push_ff(const NNInBatchCompressed &, float *, float *) noexcept {
+  die(ERR_INT("INTERNAL ERROR")); return 0; }
+
+void NNet::wait_ff(uint) noexcept { die(ERR_INT("INTERNAL ERROR")); }
+/*
+  channel 
+  0  - 13 black position
+  14 - 27 white position
+  28 - 34 black hand (fill)
+  35 - 41 white hand (fill)
+  42 - 44 rep        (fill)
+
+  360     0: black, 1: white (fill)
+  361     length             (fill)
+ */
