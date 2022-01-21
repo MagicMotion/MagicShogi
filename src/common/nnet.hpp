@@ -72,4 +72,78 @@ public:
   virtual void erase() noexcept { _ub = 0; }
   virtual bool ok() const noexcept { return (_ub <= _nb && _sizes_nnmove); }
   void add(uint size_nnmove) noexcept { _sizes_nnmove[_ub++] = size_nnmove; }
-  const uint *get_
+  const uint *get_sizes_nnmove() const noexcept { return _sizes_nnmove.get(); }
+  uint get_ub() const noexcept { return _ub; }
+  uint get_nb() const noexcept { return _nb; }
+};
+
+class NNInBatch : public NNInBatchBase {
+  using uint   = unsigned int;
+  using ushort = unsigned short;
+  std::unique_ptr<float []> _features;
+  std::unique_ptr<ushort []> _nnmoves;
+public:
+  explicit NNInBatch(uint nb) noexcept;
+  void add(const float *features, uint size_nnmove, const ushort *nnmoves)
+    noexcept;
+  const float *get_features() const noexcept { return _features.get(); }
+  const ushort *get_nnmoves() const noexcept { return _nnmoves.get(); }
+  bool ok() const noexcept {
+    return (NNInBatchBase::ok() && _features && _nnmoves); }
+};
+
+class NNInBatchCompressed : public NNInBatchBase {
+  using uint   = unsigned int;
+  using ushort = unsigned short;
+  std::unique_ptr<float []> _fills;
+  std::unique_ptr<uint []> _ones;
+  std::unique_ptr<uint []> _nnmoves;
+  uint _n_one, _ntot_moves;
+public:
+  explicit NNInBatchCompressed(uint nb) noexcept;
+  void add(uint n_one, const void *compressed_features, uint size_nnmove,
+	   const ushort *nnmoves) noexcept;
+  void erase() noexcept { NNInBatchBase::erase(); _n_one = _ntot_moves = 0U; }
+  std::tuple<uint, uint, uint, uint>
+  compute_pack_batch(void *out) const noexcept;
+  bool ok() const noexcept {
+    return (NNInBatchBase::ok() && _fills && _ones && _nnmoves); }
+};
+
+class NNet {
+  using uint   = unsigned int;
+  using ushort = unsigned short;
+public:
+  enum class Impl : uint { CPUBLAS, OpenCL, End };
+  static constexpr Impl cpublas = Impl::CPUBLAS, opencl  = Impl::OpenCL;
+  virtual ~NNet() noexcept {}
+  virtual uint push_ff(uint size_batch, const float *input,
+		       const uint *sizes_nnmove, const ushort *nnmoves,
+		       float *probs, float *values) noexcept;
+  virtual uint push_ff(const NNInBatchCompressed &nn_in_b_c, float *probs,
+		       float *values) noexcept;
+  virtual void wait_ff(uint) noexcept;
+  virtual bool do_compress() const noexcept { return false; }
+};
+
+enum class SrvType : unsigned int { Register, FeedForward, FlushON, FlushOFF,
+				    NNReset, NOP, End };
+
+struct SharedService {
+  using uint = unsigned int;
+  uint id_ipc_next;
+  FName fn_weights;
+  uint njob;
+  bool do_compress;
+  struct { uint id; SrvType type; } jobs[NNAux::maxnum_nipc + 16U];
+};
+
+struct SharedIPC {
+  using uint = unsigned int;
+  uint nnet_id, n_one;
+  float compressed_features[NNAux::maxsize_compressed_features];
+  float features[NNAux::size_plane * NNAux::nch_input]; // ~100KB
+  unsigned int size_nnmove;
+  unsigned short nnmove[SAux::maxsize_moves];
+  float probs[SAux::maxsize_moves];
+  float value; };
