@@ -63,4 +63,71 @@ void Data::set_bit(uint u) {
   else              _u2 |= 1U << (80U - u); }
 
 void Data::set_bit(int r, int f) {
-  if (r < 0 || 8 < r || f < 0
+  if (r < 0 || 8 < r || f < 0 || 8 < f) return;
+  set_bit(static_cast<uint>(r)*9U + static_cast<uint>(f)); }
+
+void Data::out(const char *head, FILE *pf, const char *tail) {
+  fprintf(pf, "%sBMap(0x%08xU, 0x%08xU, 0x%08xU)%s", head, _u0, _u1, _u2, tail);
+  _u0 = _u1 = _u2 = 0; }
+
+static void out_zkey() noexcept {
+  mt19937_64 mt64;
+  PF pf("src/common/tbl_zkey.inc");
+  fputs("static constexpr uint64_t zkey_turn ", pf);
+  fprintf(pf, "= UINT64_C(0x%016" PRIx64 ");\n\n", mt64());
+  
+  fputs("static constexpr uint64_t tbl_zkey_hand", pf);
+  fputs("[Color::ok_size][Pc::hand_size][Pc::npawn] = {\n", pf);
+  for (uint uc = 0; uc < 2U; ++uc)
+    for (uint upc = 0; upc < 7U; ++upc)
+      for (uint u = 0; u < 9U; ++u) {
+	if (upc == 0 && u == 0) fputs(" { {", pf);
+	else if (u == 0)        fputs("   {", pf);
+	else                    fputs("    ", pf);
+	fprintf(pf, " UINT64_C(0x%016" PRIx64 "),", mt64());
+	fprintf(pf, " UINT64_C(0x%016" PRIx64 ")", mt64());
+	if (uc == 1U && upc == 6U && u == 8U) fputs(" } } };\n\n", pf);
+	else if (upc == 6U && u == 8U)        fputs(" } },\n", pf);
+	else if (u == 8U)                     fputs(" },\n", pf);
+	else                                  fputs(",\n", pf); }
+
+  fputs("static constexpr uint64_t tbl_zkey_sq", pf);
+  fputs("[Color::ok_size][Pc::ok_size][Sq::ok_size] = {\n", pf);
+  for (uint uc = 0; uc < 2U; ++uc)
+    for (uint upc = 0; upc < 14U; ++upc)
+      for (uint usq = 0; usq < 81U; ++usq) {
+	if (upc == 0 && usq == 0) fputs(" { {", pf);
+	else if (usq == 0)        fputs("   {", pf);
+	else if ((usq % 2) == 0)  fputs("    ", pf);
+	fprintf(pf, " UINT64_C(0x%016" PRIx64 ")", mt64());
+	if (uc == 1U && upc == 13U && usq == 80U) fputs(" } } };\n", pf);
+	else if (upc == 13U && usq == 80U)        fputs(" } },\n", pf);
+	else if (usq == 80U)                      fputs(" },\n", pf);
+	else if ((usq % 2) == 0)                  fputs(",", pf);
+	else                                      fputs(",\n", pf); }
+}
+
+enum { A9, B9, C9, D9, E9, F9, G9, H9, I9,
+       A8, B8, C8, D8, E8, F8, G8, H8, I8,
+       A7, B7, C7, D7, E7, F7, G7, H7, I7,
+       A6, B6, C6, D6, E6, F6, G6, H6, I6,
+       A5, B5, C5, D5, E5, F5, G5, H5, I5,
+       A4, B4, C4, D4, E4, F4, G4, H4, I4,
+       A3, B3, C3, D3, E3, F3, G3, H3, I3,
+       A2, B2, C2, D2, E2, F2, G2, H2, I2,
+       A1, B1, C1, D1, E1, F1, G1, H1, I1 };
+
+constexpr uchar tbl_file[] = { A1, A2, A3, A4, A5, A6, A7, A8, A9,
+			       B1, B2, B3, B4, B5, B6, B7, B8, B9,
+			       C1, C2, C3, C4, C5, C6, C7, C8, C9,
+			       D1, D2, D3, D4, D5, D6, D7, D8, D9,
+			       E1, E2, E3, E4, E5, E6, E7, E8, E9,
+			       F1, F2, F3, F4, F5, F6, F7, F8, F9,
+			       G1, G2, G3, G4, G5, G6, G7, G8, G9,
+			       H1, H2, H3, H4, H5, H6, H7, H8, H9,
+			       I1, I2, I3, I4, I5, I6, I7, I8, I9 };
+
+constexpr uchar tbl_diag1[] = { I8, I7, I6, I5, I4, I3, I2, I1, I9,
+				H7, H6, H5, H4, H3, H2, H1, H9, H8,
+				G6, G5, G4, G3, G2, G1, G9, G8, G7,
+				
