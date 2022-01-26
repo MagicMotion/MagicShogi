@@ -130,4 +130,84 @@ constexpr uchar tbl_file[] = { A1, A2, A3, A4, A5, A6, A7, A8, A9,
 constexpr uchar tbl_diag1[] = { I8, I7, I6, I5, I4, I3, I2, I1, I9,
 				H7, H6, H5, H4, H3, H2, H1, H9, H8,
 				G6, G5, G4, G3, G2, G1, G9, G8, G7,
-				
+				F5, F4, F3, F2, F1, F9, F8, F7, F6,
+				E4, E3, E2, E1, E9, E8, E7, E6, E5,
+				D3, D2, D1, D9, D8, D7, D6, D5, D4,
+				C2, C1, C9, C8, C7, C6, C5, C4, C3,
+				B1, B9, B8, B7, B6, B5, B4, B3, B2,
+				A9, A8, A7, A6, A5, A4, A3, A2, A1 };
+
+constexpr uchar tbl_diag2[] = { A9, B1, C2, D3, E4, F5, G6, H7, I8,
+				A8, B9, C1, D2, E3, F4, G5, H6, I7,
+				A7, B8, C9, D1, E2, F3, G4, H5, I6,
+				A6, B7, C8, D9, E1, F2, G3, H4, I5,
+				A5, B6, C7, D8, E9, F1, G2, H3, I4,
+				A4, B5, C6, D7, E8, F9, G1, H2, I3,
+				A3, B4, C5, D6, E7, F8, G9, H1, I2,
+				A2, B3, C4, D5, E6, F7, G8, H9, I1,
+				A1, B2, C3, D4, E5, F6, G7, H8, I9 };
+
+static void out_sq() noexcept {
+  PF pf("src/common/tbl_sq.inc");
+  uint u;
+  fputs("static_assert(SAux::ray_size == 4U, ", pf);
+  fputs("\"SAux::ray_size != 4U\");\n\n", pf);
+
+  fputs("static constexpr BMap tbl_sq_u2bmap[81][4] = {\n", pf);
+  for (uint usq = 0; usq < 81U; ++usq) {
+    Data data(usq);
+    data.out("  { ", pf, ",\n");
+
+    data.set_bit(tbl_file[usq]);
+    data.out("    ", pf, ",\n");
+    
+    data.set_bit(tbl_diag1[usq]);
+    data.out("    ", pf, ",\n");
+
+    data.set_bit(tbl_diag2[usq]);
+    data.out("    ", pf, (usq < 80U) ? " },\n" : " } };\n\n"); }
+    
+  fputs("static constexpr BMap tbl_sq_obstacle[81][81] = {\n", pf);
+  auto fsign = [](int i){
+    if (i < 0) return -1; else if (0 < i) return 1; else return 0; };
+  for (int i1 = 0; i1 < 81; ++i1) {
+    int rank1 = i1 / 9;
+    int file1 = i1 % 9;
+    for (int i2 = 0; i2 < 81; ++i2) {
+      Data data;
+      int rank2 = i2 / 9;
+      int file2 = i2 % 9;
+      if (rank1 == rank2 && file1 == file2);
+      else if (rank1 == rank2 || file1 == file2
+	       || rank2 - rank1 == file1 - file2
+	       || rank2 - rank1 == file2 - file1) {
+	int dr = fsign(rank2 - rank1);
+	int df = fsign(file2 - file1);
+	for (int factor = 1;; ++factor) {
+	  int rank = rank1 + factor * dr;
+	  int file = file1 + factor * df;
+	  if (rank == rank2 && file == file2) break;
+	  data.set_bit(rank, file); } }
+      data.out((i2 == 0) ? "  { " : "    ", pf,
+	       (i1 == 80 && i2 == 80) ? " } };\n\n"
+	       : ((i2 == 80) ? " },\n" : ",\n")); } }
+  
+  fputs("static constexpr Sq::Attacks tbl_sq_atk[Color::ok_size][81] = {\n",
+	pf);
+  for (u = 0; u < 81U; ++u) {
+    int rank = static_cast<int>(u / 9U);
+    int file = static_cast<int>(u % 9U);
+    Data data;
+    // Black Silver
+    data.set_bit(rank + 1, file - 1);
+    data.set_bit(rank + 1, file + 1);
+    data.set_bit(rank - 1, file - 1);
+    data.set_bit(rank - 1, file + 0);
+    data.set_bit(rank - 1, file + 1);
+    data.out((u == 0) ? "  { { " : "    { ", pf, ",\n");
+
+    // Black Gold
+    data.set_bit(rank + 1, file + 0);
+    data.set_bit(rank + 0, file + 1);
+    data.set_bit(rank + 0, file - 1);
+    data.set_
