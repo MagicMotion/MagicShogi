@@ -210,4 +210,82 @@ static void out_sq() noexcept {
     data.set_bit(rank + 1, file + 0);
     data.set_bit(rank + 0, file + 1);
     data.set_bit(rank + 0, file - 1);
-    data.set_
+    data.set_bit(rank - 1, file - 1);
+    data.set_bit(rank - 1, file + 0);
+    data.set_bit(rank - 1, file + 1);
+    data.out("      ", pf, ",\n");
+  
+    // Black Knight
+    data.set_bit(rank - 2, file - 1);
+    data.set_bit(rank - 2, file + 1);
+    data.out("      ", pf, ",\n");
+  
+    // Black Lance
+    for (int i = 1; i < 9; ++i) data.set_bit(rank - i, file);
+    data.out("      ", pf, ",\n");
+
+    // Black Pawn
+    data.set_bit(rank - 1, file);
+    data.out("      ", pf, (u < 80U) ? " },\n" : " } },\n"); }
+
+  for (u = 0; u < 81U; ++u) {
+    int rank = static_cast<int>(u / 9U);
+    int file = static_cast<int>(u % 9U);
+    Data data;
+    // White Silver
+    data.set_bit(rank - 1, file + 1);
+    data.set_bit(rank - 1, file - 1);
+    data.set_bit(rank + 1, file + 1);
+    data.set_bit(rank + 1, file + 0);
+    data.set_bit(rank + 1, file - 1);
+    data.out((u == 0) ? "  { { " : "    { ", pf, ",\n");
+    
+    // White Gold
+    data.set_bit(rank - 1, file + 0);
+    data.set_bit(rank + 0, file - 1);
+    data.set_bit(rank + 0, file + 1);
+    data.set_bit(rank + 1, file + 1);
+    data.set_bit(rank + 1, file + 0);
+    data.set_bit(rank + 1, file - 1);
+    data.out("      ", pf, ",\n");
+
+    // Whight Knight
+    data.set_bit(rank + 2, file + 1);
+    data.set_bit(rank + 2, file - 1);
+    data.out("      ", pf, ",\n");
+
+    // White Lance
+    for (int i = 1; i < 9; ++i) data.set_bit(rank + i, file);
+    data.out("      ", pf, ",\n");
+
+    // White Pawn
+    data.set_bit(rank + 1, file);
+    data.out("      ", pf, (u < 80U) ? " },\n" : " } } };\n\n"); }
+
+  fputs("static constexpr BMap tbl_sq_atk_king[81] = {\n", pf);
+  for (u = 0; u < 81U; ++u) {
+    int rank = static_cast<int>(u / 9U);
+    int file = static_cast<int>(u % 9U);
+    Data data;
+    data.set_bit(rank - 1, file + 1);
+    data.set_bit(rank - 1, file + 0);
+    data.set_bit(rank - 1, file - 1);
+    data.set_bit(rank - 0, file + 1);
+    data.set_bit(rank - 0, file - 1);
+    data.set_bit(rank + 1, file + 1);
+    data.set_bit(rank + 1, file + 0);
+    data.set_bit(rank + 1, file - 1);
+    data.out("  ", pf, (u < 80U) ? ",\n" : " };\n\n"); }
+
+  fputs("static constexpr uchar tbl_sq_rel[2][81] = {\n", pf);
+  for (int rank = 0; rank < 9; ++rank) {
+    fputs((rank == 0) ? "  { " : "    ", pf);
+    fprintf(pf, "%2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU",
+	    9*rank + 0, 9*rank + 1, 9*rank + 2, 9*rank + 3, 9*rank + 4,
+	    9*rank + 5, 9*rank + 6, 9*rank + 7, 9*rank + 8);
+    fputs((rank == 8) ? " },\n" : ",\n", pf); }
+  for (int rank = 8; 0 <= rank; --rank) {
+    fputs((rank == 8) ? "  { " : "    ", pf);
+    fprintf(pf, "%2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU",
+	    9*rank + 8, 9*rank + 7, 9*rank + 6, 9*rank + 5, 9*rank + 4,
+	    9*rank + 3, 9*rank + 2, 9*rank + 1, 
