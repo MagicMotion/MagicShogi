@@ -288,4 +288,63 @@ static void out_sq() noexcept {
     fputs((rank == 8) ? "  { " : "    ", pf);
     fprintf(pf, "%2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU",
 	    9*rank + 8, 9*rank + 7, 9*rank + 6, 9*rank + 5, 9*rank + 4,
-	    9*rank + 3, 9*rank + 2, 9*rank + 1, 
+	    9*rank + 3, 9*rank + 2, 9*rank + 1, 9*rank + 0);
+    fputs((rank == 0) ? " } };\n\n" : ",\n", pf); }
+  
+  fputs("static constexpr uchar tbl_sq_adv[2][81] = {\n", pf);
+  fputs("  { 81U, 81U, 81U, 81U, 81U, 81U, 81U, 81U, 81U,\n", pf);
+  for (int rank = 1; rank < 9; ++rank) {
+    fprintf(pf, "    %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU",
+	    9*rank - 9, 9*rank - 8, 9*rank - 7, 9*rank - 6, 9*rank - 5,
+	    9*rank - 4, 9*rank - 3, 9*rank - 2, 9*rank - 1);
+    fputs((rank == 8) ? " },\n" : ",\n", pf); }
+  for (int rank = 0; rank < 8; ++rank) {
+    fputs((rank == 0) ? "  { " : "    ", pf);
+    fprintf(pf, "%2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU, %2dU,\n",
+	    9*rank + 9, 9*rank +10, 9*rank +11, 9*rank +12, 9*rank +13,
+	    9*rank +14, 9*rank +15, 9*rank +16, 9*rank +17); }
+  fputs("    81U, 81U, 81U, 81U, 81U, 81U, 81U, 81U, 81U } };\n\n", pf);
+  
+  fputs("static constexpr uchar tbl_sq_ray[81][81] = {\n", pf);
+  for (int sq1 = 0; sq1 < 81; ++sq1) {
+    int rank1 = sq1 / 9;
+    int file1 = sq1 % 9;
+    unsigned int tbl[81];
+    for (int sq2 = 0; sq2 < 81; ++sq2) {
+      int rank2 = sq2 / 9;
+      int file2 = sq2 % 9;
+      if (rank1 == rank2 && file1 == file2)    tbl[sq2] = 4U;
+      else if (rank1 == rank2)                 tbl[sq2] = 0;
+      else if (file1 == file2)                 tbl[sq2] = 1U;
+      else if (rank2 - rank1 == file1 - file2) tbl[sq2] = 2U;
+      else if (rank2 - rank1 == file2 - file1) tbl[sq2] = 3U;
+      else                                     tbl[sq2] = 4U; }
+    for (int rank = 0; rank < 9; ++rank) {
+      int x = rank*9;
+      if (rank == 0) fputs("  { ", pf);
+      else           fputs("    ", pf);
+      fprintf(pf, "%uU, %uU, %uU, %uU, %uU, %uU, %uU, %uU, %uU",
+	      tbl[x + 0], tbl[x + 1], tbl[x + 2], tbl[x + 3], tbl[x + 4],
+	      tbl[x + 5], tbl[x + 6], tbl[x + 7], tbl[x + 8]);
+      if (sq1 == 80 && rank == 8) fputs(" } };\n\n", pf);
+      else if (rank == 8)         fputs(" },\n", pf);
+      else                        fputs(",\n", pf); } }
+
+  fputs("static constexpr uchar tbl_sq_distance[81][81] = {\n", pf);
+  for (int sq1 = 0; sq1 < 81; ++sq1) {
+    int rank1 = sq1 / 9;
+    int file1 = sq1 % 9;
+    unsigned int tbl[81];
+    for (int sq2 = 0; sq2 < 81; ++sq2) {
+      int rank2 = sq2 / 9;
+      int file2 = sq2 % 9;
+      tbl[sq2] = max(abs(rank2 - rank1), abs(file2 - file1)); }
+    for (int rank = 0; rank < 9; ++rank) {
+      int x = rank*9;
+      if (rank == 0) fputs("  { ", pf);
+      else           fputs("    ", pf);
+      fprintf(pf, "%uU, %uU, %uU, %uU, %uU, %uU, %uU, %uU, %uU",
+	      tbl[x + 0], tbl[x + 1], tbl[x + 2], tbl[x + 3], tbl[x + 4],
+	      tbl[x + 5], tbl[x + 6], tbl[x + 7], tbl[x + 8]);
+      if (sq1 == 80 && rank == 8) fputs(" } };\n\n", pf);
+      else if (rank == 8)         fputs(" },\n", pf)
