@@ -347,4 +347,68 @@ static void out_sq() noexcept {
 	      tbl[x + 0], tbl[x + 1], tbl[x + 2], tbl[x + 3], tbl[x + 4],
 	      tbl[x + 5], tbl[x + 6], tbl[x + 7], tbl[x + 8]);
       if (sq1 == 80 && rank == 8) fputs(" } };\n\n", pf);
-      else if (rank == 8)         fputs(" },\n", pf)
+      else if (rank == 8)         fputs(" },\n", pf);
+      else                        fputs(",\n", pf); } }
+
+  fputs("static constexpr uchar tbl_sq_dir[81][81] = {\n", pf);
+  for (int sq1 = 0; sq1 < 81; ++sq1) {
+    int rank1 = sq1 / 9;
+    int file1 = sq1 % 9;
+    unsigned int tbl[81];
+    for (int sq2 = 0; sq2 < 81; ++sq2) {
+      int rank2 = sq2 / 9;
+      int file2 = sq2 % 9;
+      int drank = rank2 - rank1;
+      int dfile = file2 - file1;
+      if      (dfile ==  0 && drank <   0)     tbl[sq2] =   0U;
+      else if (dfile <   0 && drank ==  dfile) tbl[sq2] =   1U;
+      else if (dfile <   0 && drank ==  0)     tbl[sq2] =   2U;
+      else if (dfile <   0 && drank == -dfile) tbl[sq2] =   3U;
+      else if (dfile ==  0 && drank >   0)     tbl[sq2] =   4U;
+      else if (dfile >   0 && drank ==  dfile) tbl[sq2] =   5U;
+      else if (dfile >   0 && drank ==  0)     tbl[sq2] =   6U;
+      else if (dfile >   0 && drank == -dfile) tbl[sq2] =   7U;
+      else if (dfile == -1 && drank == -2)     tbl[sq2] =   8U;
+      else if (dfile == +1 && drank == -2)     tbl[sq2] =   9U;
+      else if (dfile == -1 && drank ==  2)     tbl[sq2] =  10U;
+      else if (dfile == +1 && drank ==  2)     tbl[sq2] =  11U;
+      else                                     tbl[sq2] = 255U; }
+    for (int rank = 0; rank < 9; ++rank) {
+      int x = rank*9;
+      if (rank == 0) fputs("  { ", pf);
+      else           fputs("    ", pf);
+      fprintf(pf, "%3uU, %3uU, %3uU, %3uU, %3uU, %3uU, %3uU, %3uU, %3uU",
+	      tbl[x + 0], tbl[x + 1], tbl[x + 2], tbl[x + 3], tbl[x + 4],
+	      tbl[x + 5], tbl[x + 6], tbl[x + 7], tbl[x + 8]);
+      if (sq1 == 80 && rank == 8) fputs(" } };\n", pf);
+      else if (rank == 8)         fputs(" },\n", pf);
+      else                        fputs(",\n", pf); } } }
+
+void out_bmap() noexcept {
+  PF pf("src/common/tbl_bmap.inc");
+  fputs("static_assert(SAux::ray_size == 4U, ", pf);
+  fputs("\"SAux::ray_size != 4U\");\n\n", pf);
+  
+  fputs("static constexpr RBB tbl_bmap_rbb[81][4] = {\n", pf);
+  for (uint u = 0; u < 81U; ++u) {
+    uint r = u / 9U;
+    uint f = u % 9U;
+    uint off_l = (r < f) ? 9U : 0;
+    uint off_r = (f + r < 8U) ? 0 : 9U;
+    fprintf(pf, "  { {%2uU, %2uU}, {%2uU, %2uU}, {%2uU, %2uU}, {%2uU, %2uU} }",
+	    u/27U, 9U*(2U - r%3U) + 1U,
+	    2U - f/3U, 9U*(f%3U) + 1U,
+	    (r + f + 1U - off_r)/3U, 9U*(2U - ((r + f + 1U - off_r)%3U)) + 1U,
+	    (off_l + r - f)/3U, 9U*(2U-((off_l + r - f)%3U)) + 1U);
+    if (u + 1U < 81U) fputs(",\n", pf);
+    else              fputs(" };\n\n", pf); }
+}
+
+void out_board() noexcept {
+  PF pf("src/common/tbl_board.inc");
+  fputs("static const BMap tbl_board_atk_slide"
+	"[Sq::ok_size][SAux::ray_size][128] = {\n", pf);
+  for (uint usq = 0; usq < 81U; ++usq) {
+    const int rank = static_cast<int>(usq / 9U);
+    const int file = static_cast<int>(usq % 9U);
+ 
