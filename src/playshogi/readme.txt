@@ -30,4 +30,67 @@ bin/playshogi -rsm 800 -P 25 -B 7 -U 0 -H 1 -c /bin/bash -W w1650.txt -0 "bin/ao
 bin/playshogi -frsm 800 -d 4 -0 "bin/aobaz -p 400 -msafe 30 -w w1525.txt" -1 "bin/aobaz -p 10 -msafe 30 -w w1525.txt" >> 2mai_p400_vs_p10.csa
 
 GPU 0 のみを用いて w70 と w62 を対戦。
-bin/p
+bin/playshogi -rsbm 800 -c /bin/bash -U 0:0 -B 7:7 -P 25 -H 1:1 -W w70.txt:w62.txt -0 "bin/aobak -e 0 -p 30 -w w70.txt" -1 "bin/aobak -e 1 -p 30 -w w62.txt" >> w0070_vs_w0062_p30.csa
+
+GPU 0 のみを用いて w70同士を対戦。6枚落ちの定跡集を利用。上手は1手800p、下手は1手1p
+bin/playshogi -frsm 800 -d 6 -o opening/20210805_6mai.sfen -P 18 -B 7 -H 1 -W ~/w70.txt -c /bin/bash -0 "bin/aobak -p 1 -e 0 -w ~/w70.txt" -1 "bin/aobak -p 800 -e 0 -w ~/w70.txt" >> 6mai_w70_1p_vs_w70_800p.csa
+
+
+
+※ 注意
+ubuntu 16だと "-c /bin/bash" を付けないとAobaZeroのプロセス間バッチは動作しません。
+CentOSだと必要ないです。これは "sh -c" で起動したプロセスがubuntuだと子プロセスでなく孫プロセスになるためです。
+
+
+結果の見方
+   W-D-L    Games(DW-rep-DL) Sente WinR                WinRate 95%   ELO
+   勝 分 敗 局数 (宣 千 宣)    先手勝率                 勝率   95%   ELO
+  437-13-350 800 (50-10-2)(s=422-365,0.536), m=133, wr=0.554(0.034)(  37)
+
+  (50-10-2) は先手の宣言勝ちが50局、千日手の引き分けが10局、後手の宣言勝ちが2局、です。
+  513手超えは13-10=3局です。
+
+
+
+
+
+
+
+
+Usage: playshogi [OPTION] -0 "CMD0" -1 "CMD1"
+
+      Generate gameplays between two USI shogi engines
+
+Mandatory options:
+  -0 "CMD0" Start player0 as '/bin/sh -c "CMD0"'.
+  -1 "CMD1" Start player1 as '/bin/sh -c "CMD1"'.
+
+Other options:
+  -m NUM   Generate NUM gameplays. NUM must be a positive integer. The default
+           value is 1.
+  -f       Always assign player0 to Sente (black). If this is not specified,
+           then Sente and Gote (white) are assigned alternatively.
+  -r       Print CSA records.
+  -s       Print results in detail.
+  -u       Print verbose USI messages.
+  -b       Use positions recorded in records2016_10818.sfen (a collection of
+           24 moves from the no-handicap initial position).
+  -c SHELL Use SHELL, e.g., /bin/csh, instead of /bin/sh.
+  -P NUM   Generate NUM gameplays simultaneously. The default is 1.
+  -I STR   Specifies nnet implementation. STR can conatin two characters
+           separated by ':'. Character 'B' means CPU BLAS implementation, and
+           'O' means OpenCL implimentation. The default is 0.
+  -B STR   Specifies batch sizes of nnet computation. STR can contain two
+           sizes separated by ':'. The default size is 1.
+  -W STR   Specifies weight paths for nnet computation. STR can contain two
+           file names separated by ':'.
+  -U STR   Specifies device IDs of OpenCL nnet computation. STR can contain
+           two IDs separated by ':'. Each ID must be different from the other.
+  -H STR   OpenCL uses half precision floating-point values. STR can contain
+           two binary values separated by ':'. The value should be 1 (use
+           half) or 0 (do not use half). The default is 0.
+  -T STR   Specifies the number of threads for CPU BLAS computation. STR can
+           contain two numbers separated by ':'. The default is -1 (means an
+           upper bound of the number).
+Example:
+  playshogi -0 
