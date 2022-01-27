@@ -411,4 +411,65 @@ void out_board() noexcept {
   for (uint usq = 0; usq < 81U; ++usq) {
     const int rank = static_cast<int>(usq / 9U);
     const int file = static_cast<int>(usq % 9U);
- 
+    Data data;
+    for (uint bits = 0; bits < 256U; bits += 2U) {
+      for (int i = -1; 0 <= file + i; --i) {
+	data.set_bit(rank, file + i);
+	if (bits & (1U << (8 - file - i))) break; }
+      for (int i = 1; file + i <= 8; ++i) {
+	data.set_bit(rank, file + i);
+	if (bits & (1U << (8 - file - i))) break; }
+      data.out( (bits == 0) ? "  { { " : "      ", pf,
+		(bits < 254U) ? ",\n" : " },\n" ); }
+      
+    for (uint bits = 0; bits < 256U; bits += 2U) {
+      for (int i = -1; 0 <= rank + i; --i) {
+	data.set_bit(rank + i, file);
+	if (bits & (1U << (8 - rank - i))) break; }
+      for (int i = 1; rank + i <= 8; ++i) {
+	data.set_bit(rank + i, file);
+	if (bits & (1U << (8 - rank - i))) break; }
+      data.out( (bits == 0) ? "    { " : "      ", pf,
+		(bits < 254U) ? ",\n" : " },\n" ); }
+
+    for (uint bits = 0; bits < 256U; bits += 2U) {
+      if (8 <= file + rank) {
+	for (int i = -1; rank - i <= 8; --i) {
+	  data.set_bit(rank - i, file + i);
+	  if (bits & (1U << (rank - i))) break;	}
+	for (int i = 1; file + i <= 8; ++i) {
+	  data.set_bit(rank - i, file + i);
+	  if (bits & (1U << (rank - i))) break;	}
+      } else {
+	for (int i = -1; 0 <= file + i; --i) {
+	  data.set_bit(rank - i, file + i);
+	  if (bits & (1U << (rank - i))) break;	}
+	for (int i = 1; 0 <= rank - i; ++i) {
+	  data.set_bit(rank - i, file + i);
+	  if (bits & (1U << (rank - i))) break; }
+      }
+      data.out( (bits == 0) ? "    { " : "      ", pf,
+		(bits < 254U) ? ",\n" : " },\n" ); }
+
+    for (uint bits = 0; bits < 256U; bits += 2U) {
+      if (file <= rank) {
+	for (int i = -1; 0 <= file + i; --i) {
+	  data.set_bit(rank + i, file + i);
+	  if (bits & (1U << (8 - file - i))) break; }
+	for (int i = 1; rank + i <= 8; ++i) {
+	  data.set_bit(rank + i, file + i);
+	  if (bits & (1U << (8 - file - i))) break; }
+      } else {
+	for (int i = -1; 0 <= rank + i; --i) {
+	  data.set_bit(rank + i, file + i);
+	  if (bits & (1U << (8 - file - i))) break; }
+	for (int i = 1; file + i <= 8; ++i) {
+	  data.set_bit(rank + i, file + i);
+	  if (bits & (1U << (8 - file - i))) break; }
+      }
+      data.out((bits == 0) ? "    { " : "      ", pf, "");
+      if (bits < 254U)    fputs(",\n", pf);
+      else if (usq < 80U) fputs(" } },\n", pf);
+      else                fputs(" } } };\n", pf); }
+  }
+}
