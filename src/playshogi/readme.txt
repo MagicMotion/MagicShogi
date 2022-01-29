@@ -93,4 +93,6 @@ Other options:
            contain two numbers separated by ':'. The default is -1 (means an
            upper bound of the number).
 Example:
-  playshogi -0 
+  playshogi -0 "~/aobaz -w ~/w0.txt" -1 "~/aobaz -w ~/w1.txt"
+           Generate a gameplay between 'w0.txt' (black) and 'w1.txt' (white)
+
