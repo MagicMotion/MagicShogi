@@ -124,4 +124,95 @@ public:
   void set_len(size_t len) noexcept { _len = len; }
   void set_len_sent(size_t len) noexcept { _len_sent = len; }
   void set_iblock(uint u) noexcept { _iblock = u; }
-  void set_wght(shared_ptr<const Wght> wght) noexcept { 
+  void set_wght(shared_ptr<const Wght> wght) noexcept { _wght = wght; }
+  void reset_wght() noexcept { _wght.reset(); }
+  void reset_time() noexcept { _time = system_clock::now(); }
+  char *get_buf() noexcept { return _buf.get(); }
+  void clear() noexcept {
+    assert(sckt_ok());
+    close(_sckt);
+    _wght.reset();
+    _sckt = -1; }
+};
+
+class AddrList {
+  mutex _m;
+  set<uint32_t> _set;
+  FName _fname;
+  off_t _size;
+  timespec _mtim;
+  
+public:
+  explicit AddrList(const char *p) noexcept : _fname(p), _size(0) {}
+
+  void reload(Logger *logger) noexcept {
+    lock_guard<mutex> lock(_m);
+    struct stat sb;
+    if (stat(_fname.get_fname(), &sb) < 0) {
+      if (errno == ENOENT) {
+	if (_size) {
+	  _size = 0;
+	  logger->out(nullptr, load_list_s, _fname.get_fname());
+	  _set.clear(); }
+	return; }
+      die(ERR_CLL("stat() failed")); }
+    
+    if (_size == sb.st_size
+	&& _mtim.tv_sec == sb.st_mtim.tv_sec
+	&& _mtim.tv_nsec == sb.st_mtim.tv_nsec) return;
+    _size = sb.st_size;
+    _mtim = sb.st_mtim;
+    
+    _set.clear();
+    ifstream ifs(_fname.get_fname());
+    if (!ifs) return;
+    
+    char buf[1024];
+    logger->out(nullptr, load_list_s, _fname.get_fname());
+    while (ifs.getline(buf, sizeof(buf))) {
+      char *token, *saveptr;
+      token = strtok_r(buf, " \t\r\n", &saveptr);
+      if (!token || token[0] == '#') continue;
+
+      try {
+	OSI::IAddr iaddr(token, 0);
+	_set.insert(iaddr.get_addr());
+	logger->out(nullptr, "%s", iaddr.get_cipv4()); }
+      catch (const exception &e) { cout << e.what() << endl; } } }
+
+  bool find(uint32_t addr) noexcept {
+    lock_guard<mutex> lock(_m);
+    return _set.find(addr) != _set.end(); }
+
+  void insert(const OSI::IAddr & iaddr) noexcept {
+    lock_guard<mutex> lock(_m);
+    _set.insert(iaddr.get_addr());
+
+    ofstream ofs(_fname.get_fname(), ifstream::app);
+    ofs << iaddr.get_cipv4() << endl;
+    if (!ofs) die(ERR_INT("cannot write to %s", _fname.get_fname()));
+    
+    struct stat sb;
+    if (stat(_fname.get_fname(), &sb) < 0) die(ERR_CLL("stat() failed"));
+    _size = sb.st_size;
+    _mtim = sb.st_mtim; }
+};
+
+ssize_t Listen::send_wrap(const Peer &peer, const void *buf, size_t len,
+			  int flags) noexcept {
+  assert(peer.sckt_ok() && buf);
+  ssize_t ret = send(peer.get_sckt(), buf, len, flags);
+  if (ret <= 0) return ret;
+  IAddrValue & value = (*_maxconn_table)[IAddrKey(peer)];
+  assert(_maxconn_table->ok());
+  if (!value.initialized()) value.reset(_maxconn_len, _now);
+  value.update_size_com(ret, _now);
+  return ret; }
+
+ssize_t Listen::recv_wrap(const Peer &peer, void *buf, size_t len,
+			  int flags) noexcept {
+  assert(peer.sckt_ok() && buf);
+  return recv(peer.get_sckt(), buf, len, flags);
+  /*
+  ssize_t ret = recv(peer.get_sckt(), buf, len, flags);
+  if (ret <= 0) ret;
