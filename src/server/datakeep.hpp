@@ -74,4 +74,43 @@ class RecKeep {
       no = value.no; count = value.count; return *this; }
   };
   std::unique_ptr<EMAKeep> _ema_keep_ptr;
-  std::thread _thr
+  std::thread _thread;
+  std::unique_ptr<JQueue<class JobIP>> _pJQueue;
+  std::set<FNameID> _pool;
+  HashTable<Key64, RedunValue> _redundancy_table;
+  class Logger *_logger;
+  FName _fpool_tmp, _farch_tmp;
+  XZDecode<PtrLen<const char>, PtrLen<char>> _xzd;
+  XZEncode<PtrLen<const char>, std::ofstream> _xze;
+  std::ofstream _ofs_arch_tmp;
+  size_t _maxlen_rec;
+  FName _darch, _dpool;
+  std::unique_ptr<char []> _prec;
+  uint _maxrec_sec, _maxrec_min, _maxrec_len, _minlen_play, _minave_child;
+  bool _bFirst;
+
+  void worker() noexcept;
+  void close_arch_tmp() noexcept;
+  void open_arch_tmp() noexcept;
+
+  // special member functions
+  explicit RecKeep() noexcept;
+  ~RecKeep() noexcept;
+  RecKeep(const RecKeep &) = delete;
+  RecKeep & operator=(const RecKeep &) = default;
+  
+public:
+  // singleton technique
+  static RecKeep & get() noexcept;
+  
+  void start(Logger *logger, const char *darch, const char *dpool,
+	     uint maxlen_job, size_t maxlen_rec, size_t maxlen_recv,
+	     uint log2_nindex_redun, uint minlen_play, uint minave_child,
+	     uint resign_ema_deno, float resign_ema_init, float resign_mrate)
+    noexcept;
+    
+  void end() noexcept;
+  void transact(const JobIP *pJob) noexcept;
+  void add(const char *prec, size_t len_rec, const OSI::IAddr &iaddr) noexcept;
+  uint get_th16() const noexcept;
+};
