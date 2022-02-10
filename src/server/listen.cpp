@@ -382,4 +382,91 @@ void Listen::handle_send(Peer &peer) noexcept {
     size_t r = len_wght % static_cast<size_t>(_len_block);
     size_t nblock    = q + min(r,size_t(1));
     int64_t no_wght  = wght->get_no();
-    char 
+    char buf[12];
+
+    int_to_bytes<int64_t>(no_wght, buf);
+    int_to_bytes<uint>(static_cast<uint>(nblock), buf + 8);
+    ssize_t ret = send_wrap(peer, buf, 12, 0);
+    if (ret < 0 && errno == ECONNRESET) {
+      _logger->out(&peer, fmt_reset_s, "send info");
+      peer.clear();
+      return; }
+    if (ret < 0) die(ERR_CLL("send"));
+    _logger->out(&peer, fmt_info_sent_ll, no_wght);
+    peer.set_stat_send(StatSend::DoNothing);
+    return; }
+
+  if (peer.get_stat_send() == StatSend::SendWght) {
+    assert(peer.have_wght());
+    const Wght *wght   = peer.get_wght();
+    const char *p_wght = wght->get_p();
+    size_t len_wght    = wght->get_len();
+    size_t len_block   = _len_block;
+    size_t iblock      = peer.get_iblock();
+    size_t len_start   = len_block * iblock;
+    size_t max_send    = _max_send;
+    size_t len_sent    = peer.get_len_sent();
+    size_t len_rest    = len_wght - len_start;
+    size_t len_send    = min(len_rest, len_block);
+    ssize_t ret;
+    assert(0 < len_rest && len_sent < len_send && len_start < len_wght);
+
+    if (len_sent == 0) {
+      if (iblock == 0) _logger->out(&peer, fmt_wght_sent_ll, wght->get_no());
+      char buf[4];
+      int_to_bytes<uint>(static_cast<uint>(len_send), buf);
+      ret = send_wrap(peer, buf, 4, 0);
+      if (ret < 0 && errno == ECONNRESET) {
+	_logger->out(&peer, fmt_reset_s, "send wght header");
+	peer.clear();
+	return; }
+      if (ret < 0) die(ERR_CLL("send"));
+      
+      assert(4 <= max_send);
+      max_send -= 4; }
+    
+    size_t len_buf = min(len_send - len_sent, max_send);
+    ret = send_wrap(peer, p_wght + len_start + len_sent, len_buf, 0);
+    if (ret < 0 && errno == ECONNRESET) {
+      _logger->out(&peer, fmt_reset_s, "send wght block");
+      peer.clear();
+      return; }
+    if (ret < 0) die(ERR_CLL("send"));
+  
+    len_sent += len_buf;
+    assert(len_sent <= len_block);
+    assert(len_start + len_sent <= len_wght);
+    if ( len_sent < len_send) peer.set_len_sent(len_sent);
+    else peer.set_stat_send(StatSend::DoNothing); } }
+
+void Listen::handle_recv(Peer &peer) noexcept {
+  if (!peer.sckt_ok()) return;
+  
+  char *buf(peer.get_buf());
+  size_t len_tot = peer.get_len();
+
+  assert(len_tot < _max_recv);
+  size_t len_avail = _max_recv - len_tot;
+
+  ssize_t ret = recv_wrap(peer, buf + len_tot, len_avail, 0);
+  if (ret < 0 && errno == ECONNRESET) {
+    _logger->out(&peer, fmt_reset_s, "recv");
+    peer.clear();
+    return; }
+  if (ret < 0) die(ERR_CLL("recv"));
+  if (ret == 0) {
+    _logger->out(&peer, shutdown_peer);
+    peer.clear();
+    return; }
+
+  len_tot += ret;
+  peer.set_len(len_tot);
+  assert(len_tot);
+  while (true) {
+    constexpr size_t len_header(5U);
+    if (len_tot == 0) return;
+    if (buf[0] == Cmd::RecvRec) {
+      if (len_tot <= len_header) return;
+      
+      size_t len_rec = bytes_to_int<uint>(buf + 1);
+      
