@@ -216,3 +216,83 @@ ssize_t Listen::recv_wrap(const Peer &peer, void *buf, size_t len,
   /*
   ssize_t ret = recv(peer.get_sckt(), buf, len, flags);
   if (ret <= 0) ret;
+
+  IAddrValue & value = (*_maxconn_table)[IAddrKey(peer)];
+  assert(_maxconn_table->ok());
+  if (!value.initialized()) value.reset(_maxconn_len, _now);
+  value.update_size_com(ret, _now);
+  return ret;
+  */
+ }
+
+Listen::Listen() noexcept : _bEndWorker(false), _s_addr(new sockaddr_in),
+  _deny_list(new AddrList(fname_deny_list)),
+  _ignore_list(new AddrList(fname_ignore_list)),
+  _last_deny(system_clock::now()), _now(system_clock::now()), _sckt_lstn(-1) {}
+
+Listen::~Listen() noexcept { if (0 <= _sckt_lstn) close(_sckt_lstn); }
+
+void Listen::worker() noexcept {
+  while (!_bEndWorker) {
+    sleep_for(seconds(1));
+    _deny_list->reload(_logger);
+    _ignore_list->reload(_logger); } }
+
+void Listen::end() noexcept {
+  _bEndWorker = true;
+  _thread.join(); }
+
+Listen & Listen::get() noexcept {
+  static Listen instance;
+  return instance; }
+
+void Listen::start(Logger *logger, uint port_player, uint backlog,
+		   uint selectTO, uint playerTO, uint max_accept,
+		   uint max_recv, uint max_send, uint len_block,
+		   uint maxconn_sec, uint maxconn_min, uint cutconn_min,
+		   uint maxlen_com) noexcept {
+  assert(logger);
+  int reuse = 1;
+
+  _deny_list->reload(logger);
+  _ignore_list->reload(logger);
+  _maxconn_table.reset(new HashTable<IAddrKey, IAddrValue>(15U, 2U << 15U));
+  assert(_maxconn_table->ok());
+  _now           = system_clock::now();
+  _maxlen_com    = maxlen_com;
+  _maxconn_sec   = maxconn_sec;
+  _maxconn_min   = maxconn_min;
+  _cutconn_min   = cutconn_min;
+  _maxconn_len   = max(max(maxconn_sec, maxconn_min), cutconn_min) + 1U;
+  _logger        = logger;
+  _max_accept    = max_accept;
+  _max_recv      = max_recv;
+  _max_send      = max_send;
+  _len_block     = len_block;
+  _selectTO_sec  = selectTO / 1000U;
+  _selectTO_usec = (selectTO % 1000U) * 1000U;
+  _playerTO      = playerTO;
+  _thread        = thread(&Listen::worker, this);
+  
+  _sckt_lstn = socket(AF_INET, SOCK_STREAM, 0);
+  if (_sckt_lstn < 0) die(ERR_CLL("socket"));
+  if (setsockopt(_sckt_lstn, SOL_SOCKET, SO_REUSEADDR,
+		 &reuse, sizeof(reuse)) < 0) die(ERR_CLL("setsockopt"));
+
+  memset(_s_addr.get(), 0, sizeof(*_s_addr));
+  _s_addr->sin_family      = AF_INET;
+  _s_addr->sin_addr.s_addr = INADDR_ANY;
+  _s_addr->sin_port        = htons(port_player);
+  if (bind(_sckt_lstn, reinterpret_cast<sockaddr *>(_s_addr.get()),
+	   sizeof(*_s_addr)) < 0) die(ERR_CLL("bind"));
+  if (listen(_sckt_lstn, backlog) < 0) die(ERR_CLL("listen"));
+
+  _pPeer.reset(new Peer [_max_accept]);
+  for (uint u = 0; u < _max_accept; ++u) new (&(_pPeer[u])) Peer(_max_recv); }
+
+void Listen::handle_connect() noexcept {
+  sockaddr_in c_addr;
+    
+  memset(&c_addr, 0, sizeof(c_addr));
+  socklen_t c_len = sizeof(c_addr);
+  int sckt 
