@@ -295,4 +295,91 @@ void Listen::handle_connect() noexcept {
     
   memset(&c_addr, 0, sizeof(c_addr));
   socklen_t c_len = sizeof(c_addr);
-  int sckt 
+  int sckt = accept(_sckt_lstn, reinterpret_cast<sockaddr *>(&c_addr), &c_len);
+  if (sckt < 0) die(ERR_CLL("accept"));
+
+  OSI::IAddr iaddr(c_addr);
+  if (_deny_list->find(iaddr.get_addr())) {
+    if (_last_deny + seconds(deny_log_interval) < _now) {
+      _logger->out(&iaddr, conn_denied);
+      _last_deny = _now; }
+    close(sckt);
+    return; }
+
+  IAddrValue & maxconn_value = (*_maxconn_table)[IAddrKey(iaddr)];
+  assert(_maxconn_table->ok());
+  if (!maxconn_value.initialized()) maxconn_value.reset(_maxconn_len, _now);
+  time_point<system_clock> *ring = maxconn_value.get_tbl_recv_time();
+  uint len = maxconn_value.get_len();
+
+  if (_cutconn_min <= len
+      && _now < ring[(len - _cutconn_min) % _maxconn_len] + seconds(60)) {
+    _deny_list->insert(iaddr);
+    _logger->out(&iaddr, cut_conn_min);
+    close(sckt);
+    return; }
+  
+  if (_maxconn_sec <= len
+      && _now < ring[(len - _maxconn_sec) % _maxconn_len] + seconds(1)) {
+    _logger->out(&iaddr, too_many_conn_sec);
+    return; }
+  
+  if (_maxconn_min <= len
+      && _now < ring[(len - _maxconn_min) % _maxconn_len] + seconds(60)) {
+    _logger->out(&iaddr, too_many_conn_min);
+    return; }
+  
+  ring[len % _maxconn_len] = _now;
+  maxconn_value.set_len(++len);
+
+  uint u;
+  for (u = 0; u < _max_accept && _pPeer[u].sckt_ok(); ++u);
+  if (u == _max_accept) {
+    _logger->out(&iaddr, too_many_conn);
+    close(sckt);
+    return; }
+
+  Peer &pr = _pPeer[u];
+  pr.set_sckt(sckt);
+  pr.set_iaddr(c_addr);
+  pr.set_len(0);
+  pr.reset_time();
+  pr.set_stat_send(StatSend::SendHeader);
+  _logger->out(&pr, conn_accepted); }
+
+void Listen::handle_send(Peer &peer) noexcept {
+  if (!peer.sckt_ok()) return;
+  
+  if (peer.get_stat_send() == StatSend::SendHeader) {
+    char buf[HEADER_SIZE];
+    memset(buf, 0, HEADER_SIZE);
+    buf[0] = static_cast<char>(Ver::major);
+    buf[1] = static_cast<char>(Ver::minor);
+    int_to_bytes<ushort>(RecKeep::get().get_th16(), buf + 2);
+//  buf[4] = buf[5] = buf[6] = buf[7] = 0;
+    static int count;
+    count++;
+    for (int i=0; i<HANDICAP_TYPE; i++) {
+      ushort x = nHandicapRate[i];	//(i+1)*100 + count;
+      int_to_bytes<ushort>(x, buf + 4 + i*2);
+    }
+
+    ssize_t ret = send_wrap(peer, buf, HEADER_SIZE, 0);
+    if (ret < 0 && errno == ECONNRESET) {
+      _logger->out(&peer, fmt_reset_s, "send header");
+      peer.clear();
+      return; }
+    if (ret < 0) die(ERR_CLL("send"));
+    
+    peer.set_stat_send(StatSend::DoNothing);
+    return; }
+
+  if (peer.get_stat_send() == StatSend::SendInfo) {
+    assert(peer.have_wght());
+    const Wght *wght = peer.get_wght();
+    size_t len_wght  = wght->get_len();
+    size_t q = len_wght / static_cast<size_t>(_len_block);
+    size_t r = len_wght % static_cast<size_t>(_len_block);
+    size_t nblock    = q + min(r,size_t(1));
+    int64_t no_wght  = wght->get_no();
+    char 
