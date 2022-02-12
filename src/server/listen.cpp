@@ -469,4 +469,91 @@ void Listen::handle_recv(Peer &peer) noexcept {
       if (len_tot <= len_header) return;
       
       size_t len_rec = bytes_to_int<uint>(buf + 1);
+      if (_max_recv < len_header + len_rec) {
+	_logger->out(&peer, bad_rec_size);
+	break; }
+      if (len_tot < len_header + len_rec) return;
       
+      if (_ignore_list->find(peer.get_addr()))
+	_logger->out(&peer, record_ignored);
+      else RecKeep::get().add(buf + len_header, len_rec, peer);
+      len_tot -= len_header + len_rec;
+      memmove(buf, buf + len_header + len_rec, len_tot);
+      peer.set_len(len_tot);
+      continue; }  
+
+    else if (buf[0] == Cmd::SendInfo) {
+      if (peer.get_stat_send() != StatSend::DoNothing) {
+	_logger->out(&peer, fmt_multiple_cmd_s, "send info");
+	break; }
+      
+      len_tot -= 1;
+      memmove(buf, buf + 1, len_tot);
+      peer.set_len(len_tot);
+      peer.set_wght(WghtKeep::get().get_pw());
+      peer.set_stat_send(StatSend::SendInfo);
+      return; }
+
+    else if (buf[0] == Cmd::SendWght) {
+      if (peer.get_stat_send() != StatSend::DoNothing) {
+	_logger->out(&peer, fmt_multiple_cmd_s, "send wght");
+	break; }
+      if (!peer.have_wght()) {
+	_logger->out(&peer, fmt_bad_cmd_s, "no info sent");
+	break; }
+      if (len_tot < len_header) return;
+
+      const Wght *wght(peer.get_wght());
+      uint iblock = bytes_to_int<uint>(buf + 1);
+      size_t len_block = _len_block;
+      size_t len_wght  = wght->get_len();
+      size_t len_start = len_block * static_cast<size_t>(iblock);
+      if (len_wght < len_start) {
+	_logger->out(&peer, fmt_bad_cmd_s, "iblock too large");
+	break; }
+
+      len_tot -= len_header;
+      memmove(buf, buf + len_header, len_tot);
+      peer.set_len(len_tot);
+      peer.set_len_sent(0);
+      peer.set_iblock(iblock);
+      peer.set_stat_send(StatSend::SendWght);
+      return; }
+    
+    _logger->out(&peer, fmt_bad_cmd_d, static_cast<int>(buf[0]));
+    break; }
+  
+  peer.clear(); }
+
+void Listen::wait() noexcept {
+  timeval tv;
+  fd_set read_fds, write_fds;
+
+  tv.tv_sec  = _selectTO_sec;
+  tv.tv_usec = _selectTO_usec;
+  FD_ZERO(&read_fds);
+  FD_ZERO(&write_fds);
+  FD_SET(_sckt_lstn, &read_fds);
+  int maxfd = _sckt_lstn;
+  
+  for (uint u = 0; u < _max_accept; ++u) {
+    Peer & peer = _pPeer[u];
+    if (!peer.sckt_ok()) continue;
+    
+    if (peer.get_time() + seconds(_playerTO) < _now) {
+      _logger->out(&peer, closed_timeout);
+      peer.clear();
+      continue; }
+
+    int sckt = peer.get_sckt();
+    FD_SET(sckt, &read_fds);
+    maxfd = max(maxfd, sckt);
+    if (peer.get_stat_send() == StatSend::DoNothing) continue;
+    
+    IAddrValue & value = (*_maxconn_table)[IAddrKey(peer)];
+    assert(_maxconn_table->ok());
+    if (!value.initialized()) value.reset(_maxconn_len, _now);
+    if (_maxlen_com < value.get_size_com(_now)) continue;
+    FD_SET(sckt, &write_fds); }
+  
+  if (select(maxfd + 1, &read_fd
