@@ -556,4 +556,16 @@ void Listen::wait() noexcept {
     if (_maxlen_com < value.get_size_com(_now)) continue;
     FD_SET(sckt, &write_fds); }
   
-  if (select(maxfd + 1, &read_fd
+  if (select(maxfd + 1, &read_fds, &write_fds, NULL, &tv) < 0)
+    die(ERR_CLL("select"));
+  
+  _now = system_clock::now();
+  for (uint u = 0; u < _max_accept; ++u) {
+    Peer &peer = _pPeer[u];
+    if (!peer.sckt_ok()) continue;
+    
+    if (FD_ISSET(peer.get_sckt(), &read_fds)) handle_recv(peer);
+    if (peer.sckt_ok()
+	&& FD_ISSET(peer.get_sckt(), &write_fds)) handle_send(peer); }
+  
+  if (FD_ISSET(_sckt_lstn, &read_fds)) handle_connect(); }
