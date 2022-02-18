@@ -439,4 +439,85 @@
 
 /* Detect which version to target */
 #if !defined(CL_HPP_TARGET_OPENCL_VERSION)
-# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 200 (Ope
+# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 200 (OpenCL 2.0)")
+# define CL_HPP_TARGET_OPENCL_VERSION 200
+#endif
+#if CL_HPP_TARGET_OPENCL_VERSION != 100 && CL_HPP_TARGET_OPENCL_VERSION != 110 && CL_HPP_TARGET_OPENCL_VERSION != 120 && CL_HPP_TARGET_OPENCL_VERSION != 200
+# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not a valid value (100, 110, 120 or 200). It will be set to 200")
+# undef CL_HPP_TARGET_OPENCL_VERSION
+# define CL_HPP_TARGET_OPENCL_VERSION 200
+#endif
+/* Forward target OpenCL version to C headers */
+#define CL_TARGET_OPENCL_VERSION CL_HPP_TARGET_OPENCL_VERSION
+
+#if !defined(CL_HPP_MINIMUM_OPENCL_VERSION)
+# define CL_HPP_MINIMUM_OPENCL_VERSION 200
+#endif
+#if CL_HPP_MINIMUM_OPENCL_VERSION != 100 && CL_HPP_MINIMUM_OPENCL_VERSION != 110 && CL_HPP_MINIMUM_OPENCL_VERSION != 120 && CL_HPP_MINIMUM_OPENCL_VERSION != 200
+# pragma message("cl2.hpp: CL_HPP_MINIMUM_OPENCL_VERSION is not a valid value (100, 110, 120 or 200). It will be set to 100")
+# undef CL_HPP_MINIMUM_OPENCL_VERSION
+# define CL_HPP_MINIMUM_OPENCL_VERSION 100
+#endif
+#if CL_HPP_MINIMUM_OPENCL_VERSION > CL_HPP_TARGET_OPENCL_VERSION
+# error "CL_HPP_MINIMUM_OPENCL_VERSION must not be greater than CL_HPP_TARGET_OPENCL_VERSION"
+#endif
+
+#if CL_HPP_MINIMUM_OPENCL_VERSION <= 100 && !defined(CL_USE_DEPRECATED_OPENCL_1_0_APIS)
+# define CL_USE_DEPRECATED_OPENCL_1_0_APIS
+#endif
+#if CL_HPP_MINIMUM_OPENCL_VERSION <= 110 && !defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+# define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#endif
+#if CL_HPP_MINIMUM_OPENCL_VERSION <= 120 && !defined(CL_USE_DEPRECATED_OPENCL_1_2_APIS)
+# define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#endif
+#if CL_HPP_MINIMUM_OPENCL_VERSION <= 200 && !defined(CL_USE_DEPRECATED_OPENCL_2_0_APIS)
+# define CL_USE_DEPRECATED_OPENCL_2_0_APIS
+#endif
+
+#ifdef _WIN32
+
+#include <malloc.h>
+
+#if defined(CL_HPP_USE_DX_INTEROP)
+#include <CL/cl_d3d10.h>
+#include <CL/cl_dx9_media_sharing.h>
+#endif
+#endif // _WIN32
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif // _MSC_VER 
+ 
+ // Check for a valid C++ version
+
+// Need to do both tests here because for some reason __cplusplus is not 
+// updated in visual studio
+#if (!defined(_MSC_VER) && __cplusplus < 201103L) || (defined(_MSC_VER) && _MSC_VER < 1700)
+#error Visual studio 2013 or another C++11-supporting compiler required
+#endif
+
+// 
+#if defined(CL_HPP_USE_CL_DEVICE_FISSION) || defined(CL_HPP_USE_CL_SUB_GROUPS_KHR)
+#include <CL/cl_ext.h>
+#endif
+
+#if defined(__APPLE__) || defined(__MACOSX)
+#include <OpenCL/opencl.h>
+#else
+#include <CL/opencl.h>
+#endif // !__APPLE__
+
+#if (__cplusplus >= 201103L)
+#define CL_HPP_NOEXCEPT_ noexcept
+#else
+#define CL_HPP_NOEXCEPT_
+#endif
+
+#if defined(_MSC_VER)
+# define CL_HPP_DEFINE_STATIC_MEMBER_ __declspec(selectany)
+#else
+# define CL_HPP_DEFINE_STATIC_MEMBER_ __attribute__((weak))
+#endif // !_MSC_VER
+
+// Define 
