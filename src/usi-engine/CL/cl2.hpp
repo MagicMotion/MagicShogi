@@ -361,4 +361,82 @@
 	    vectorAddKernel(
             cl::EnqueueArgs(
                 cl::NDRange(numElements/2),
-                cl::NDRa
+                cl::NDRange(numElements/2)),
+            fooPointer,
+            inputA.data(),
+            inputB,
+            outputBuffer,
+            3,
+            aPipe,
+            defaultDeviceQueue,
+		    error
+            );
+
+        cl::copy(outputBuffer, begin(output), end(output));
+        // Grab the SVM output vector using a map
+        cl::mapSVM(output2);
+
+        cl::Device d = cl::Device::getDefault();
+
+        std::cout << "Output:\n";
+        for (int i = 1; i < numElements; ++i) {
+            std::cout << "\t" << output[i] << "\n";
+        }
+        std::cout << "\n\n";
+
+        return 0;
+    }
+ *
+ * \endcode
+ *
+ */
+#ifndef CL_HPP_
+#define CL_HPP_
+
+/* Handle deprecated preprocessor definitions. In each case, we only check for
+ * the old name if the new name is not defined, so that user code can define
+ * both and hence work with either version of the bindings.
+ */
+#if !defined(CL_HPP_USE_DX_INTEROP) && defined(USE_DX_INTEROP)
+# pragma message("cl2.hpp: USE_DX_INTEROP is deprecated. Define CL_HPP_USE_DX_INTEROP instead")
+# define CL_HPP_USE_DX_INTEROP
+#endif
+#if !defined(CL_HPP_USE_CL_DEVICE_FISSION) && defined(USE_CL_DEVICE_FISSION)
+# pragma message("cl2.hpp: USE_CL_DEVICE_FISSION is deprecated. Define CL_HPP_USE_CL_DEVICE_FISSION instead")
+# define CL_HPP_USE_CL_DEVICE_FISSION
+#endif
+#if !defined(CL_HPP_ENABLE_EXCEPTIONS) && defined(__CL_ENABLE_EXCEPTIONS)
+# pragma message("cl2.hpp: __CL_ENABLE_EXCEPTIONS is deprecated. Define CL_HPP_ENABLE_EXCEPTIONS instead")
+# define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#if !defined(CL_HPP_NO_STD_VECTOR) && defined(__NO_STD_VECTOR)
+# pragma message("cl2.hpp: __NO_STD_VECTOR is deprecated. Define CL_HPP_NO_STD_VECTOR instead")
+# define CL_HPP_NO_STD_VECTOR
+#endif
+#if !defined(CL_HPP_NO_STD_STRING) && defined(__NO_STD_STRING)
+# pragma message("cl2.hpp: __NO_STD_STRING is deprecated. Define CL_HPP_NO_STD_STRING instead")
+# define CL_HPP_NO_STD_STRING
+#endif
+#if defined(VECTOR_CLASS)
+# pragma message("cl2.hpp: VECTOR_CLASS is deprecated. Alias cl::vector instead")
+#endif
+#if defined(STRING_CLASS)
+# pragma message("cl2.hpp: STRING_CLASS is deprecated. Alias cl::string instead.")
+#endif
+#if !defined(CL_HPP_USER_OVERRIDE_ERROR_STRINGS) && defined(__CL_USER_OVERRIDE_ERROR_STRINGS)
+# pragma message("cl2.hpp: __CL_USER_OVERRIDE_ERROR_STRINGS is deprecated. Define CL_HPP_USER_OVERRIDE_ERROR_STRINGS instead")
+# define CL_HPP_USER_OVERRIDE_ERROR_STRINGS
+#endif
+
+/* Warn about features that are no longer supported
+ */
+#if defined(__USE_DEV_VECTOR)
+# pragma message("cl2.hpp: __USE_DEV_VECTOR is no longer supported. Expect compilation errors")
+#endif
+#if defined(__USE_DEV_STRING)
+# pragma message("cl2.hpp: __USE_DEV_STRING is no longer supported. Expect compilation errors")
+#endif
+
+/* Detect which version to target */
+#if !defined(CL_HPP_TARGET_OPENCL_VERSION)
+# pragma message("cl2.hpp: CL_HPP_TARGET_OPENCL_VERSION is not defined. It will default to 200 (Ope
