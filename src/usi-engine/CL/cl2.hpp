@@ -84,4 +84,56 @@
  *
  * There are numerous compatibility, portability and memory management
  * fixes in the new header as well as additional OpenCL 2.0 features.
- * As a result the header is not directly backward compa
+ * As a result the header is not directly backward compatible and for this
+ * reason we release it as cl2.hpp rather than a new version of cl.hpp.
+ * 
+ *
+ * \section compatibility Compatibility
+ * Due to the evolution of the underlying OpenCL API the 2.0 C++ bindings
+ * include an updated approach to defining supported feature versions
+ * and the range of valid underlying OpenCL runtime versions supported.
+ *
+ * The combination of preprocessor macros CL_HPP_TARGET_OPENCL_VERSION and 
+ * CL_HPP_MINIMUM_OPENCL_VERSION control this range. These are three digit
+ * decimal values representing OpenCL runime versions. The default for 
+ * the target is 200, representing OpenCL 2.0 and the minimum is also 
+ * defined as 200. These settings would use 2.0 API calls only.
+ * If backward compatibility with a 1.2 runtime is required, the minimum
+ * version may be set to 120.
+ *
+ * Note that this is a compile-time setting, and so affects linking against
+ * a particular SDK version rather than the versioning of the loaded runtime.
+ *
+ * The earlier versions of the header included basic vector and string 
+ * classes based loosely on STL versions. These were difficult to 
+ * maintain and very rarely used. For the 2.0 header we now assume
+ * the presence of the standard library unless requested otherwise.
+ * We use std::array, std::vector, std::shared_ptr and std::string 
+ * throughout to safely manage memory and reduce the chance of a 
+ * recurrance of earlier memory management bugs.
+ *
+ * These classes are used through typedefs in the cl namespace: 
+ * cl::array, cl::vector, cl::pointer and cl::string.
+ * In addition cl::allocate_pointer forwards to std::allocate_shared
+ * by default.
+ * In all cases these standard library classes can be replaced with 
+ * custom interface-compatible versions using the CL_HPP_NO_STD_ARRAY, 
+ * CL_HPP_NO_STD_VECTOR, CL_HPP_NO_STD_UNIQUE_PTR and 
+ * CL_HPP_NO_STD_STRING macros.
+ *
+ * The OpenCL 1.x versions of the C++ bindings included a size_t wrapper
+ * class to interface with kernel enqueue. This caused unpleasant interactions
+ * with the standard size_t declaration and led to namespacing bugs.
+ * In the 2.0 version we have replaced this with a std::array-based interface.
+ * However, the old behaviour can be regained for backward compatibility
+ * using the CL_HPP_ENABLE_SIZE_T_COMPATIBILITY macro.
+ *
+ * Finally, the program construction interface used a clumsy vector-of-pairs
+ * design in the earlier versions. We have replaced that with a cleaner 
+ * vector-of-vectors and vector-of-strings design. However, for backward 
+ * compatibility old behaviour can be regained with the
+ * CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY macro.
+ * 
+ * In OpenCL 2.0 OpenCL C is not entirely backward compatibility with 
+ * earlier versions. As a result a flag must be passed to the OpenCL C
+ * c
