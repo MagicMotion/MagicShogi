@@ -287,4 +287,78 @@
         // New simpler string interface style
         std::vector<std::string> programStrings {kernel1, kernel2};
 
-        cl::Program vecto
+        cl::Program vectorAddProgram(programStrings);
+        try {
+            vectorAddProgram.build("-cl-std=CL2.0");
+        }
+        catch (...) {
+            // Print build info for all devices
+            cl_int buildErr = CL_SUCCESS;
+            auto buildInfo = vectorAddProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(&buildErr);
+            for (auto &pair : buildInfo) {
+                std::cerr << pair.second << std::endl << std::endl;
+            }
+
+            return 1;
+        }
+
+        typedef struct { int *bar; } Foo;
+
+        // Get and run kernel that initializes the program-scope global
+        // A test for kernels that take no arguments
+        auto program2Kernel =
+            cl::KernelFunctor<>(vectorAddProgram, "updateGlobal");
+        program2Kernel(
+            cl::EnqueueArgs(
+            cl::NDRange(1)));
+
+        //////////////////
+        // SVM allocations
+
+        auto anSVMInt = cl::allocate_svm<int, cl::SVMTraitCoarse<>>();
+        *anSVMInt = 5;
+        cl::SVMAllocator<Foo, cl::SVMTraitCoarse<cl::SVMTraitReadOnly<>>> svmAllocReadOnly;
+        auto fooPointer = cl::allocate_pointer<Foo>(svmAllocReadOnly);
+        fooPointer->bar = anSVMInt.get();
+        cl::SVMAllocator<int, cl::SVMTraitCoarse<>> svmAlloc;
+        std::vector<int, cl::SVMAllocator<int, cl::SVMTraitCoarse<>>> inputA(numElements, 1, svmAlloc);
+        cl::coarse_svm_vector<int> inputB(numElements, 2, svmAlloc);
+
+        //
+        //////////////
+
+        // Traditional cl_mem allocations
+        std::vector<int> output(numElements, 0xdeadbeef);
+        cl::Buffer outputBuffer(begin(output), end(output), false);
+        cl::Pipe aPipe(sizeof(cl_int), numElements / 2);
+
+        // Default command queue, also passed in as a parameter
+        cl::DeviceCommandQueue defaultDeviceQueue = cl::DeviceCommandQueue::makeDefault(
+            cl::Context::getDefault(), cl::Device::getDefault());
+
+        auto vectorAddKernel =
+            cl::KernelFunctor<
+                decltype(fooPointer)&,
+                int*,
+                cl::coarse_svm_vector<int>&,
+                cl::Buffer,
+                int,
+                cl::Pipe&,
+                cl::DeviceCommandQueue
+                >(vectorAddProgram, "vectorAdd");
+
+        // Ensure that the additional SVM pointer is available to the kernel
+        // This one was not passed as a parameter
+        vectorAddKernel.setSVMPointers(anSVMInt);
+
+        // Hand control of coarse allocations to runtime
+        cl::enqueueUnmapSVM(anSVMInt);
+        cl::enqueueUnmapSVM(fooPointer);
+        cl::unmapSVM(inputB);
+        cl::unmapSVM(output2);
+
+	    cl_int error;
+	    vectorAddKernel(
+            cl::EnqueueArgs(
+                cl::NDRange(numElements/2),
+                cl::NDRa
