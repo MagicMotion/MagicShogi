@@ -520,4 +520,99 @@
 # define CL_HPP_DEFINE_STATIC_MEMBER_ __attribute__((weak))
 #endif // !_MSC_VER
 
-// Define 
+// Define deprecated prefixes and suffixes to ensure compilation
+// in case they are not pre-defined
+#if !defined(CL_EXT_PREFIX__VERSION_1_1_DEPRECATED)
+#define CL_EXT_PREFIX__VERSION_1_1_DEPRECATED  
+#endif // #if !defined(CL_EXT_PREFIX__VERSION_1_1_DEPRECATED)
+#if !defined(CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED)
+#define CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED
+#endif // #if !defined(CL_EXT_PREFIX__VERSION_1_1_DEPRECATED)
+
+#if !defined(CL_EXT_PREFIX__VERSION_1_2_DEPRECATED)
+#define CL_EXT_PREFIX__VERSION_1_2_DEPRECATED  
+#endif // #if !defined(CL_EXT_PREFIX__VERSION_1_2_DEPRECATED)
+#if !defined(CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED)
+#define CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED
+#endif // #if !defined(CL_EXT_PREFIX__VERSION_1_2_DEPRECATED)
+
+#if !defined(CL_CALLBACK)
+#define CL_CALLBACK
+#endif //CL_CALLBACK
+
+#include <utility>
+#include <limits>
+#include <iterator>
+#include <mutex>
+#include <cstring>
+#include <functional>
+
+
+// Define a size_type to represent a correctly resolved size_t
+#if defined(CL_HPP_ENABLE_SIZE_T_COMPATIBILITY)
+namespace cl {
+    using size_type = ::size_t;
+} // namespace cl
+#else // #if defined(CL_HPP_ENABLE_SIZE_T_COMPATIBILITY)
+namespace cl {
+    using size_type = size_t;
+} // namespace cl
+#endif // #if defined(CL_HPP_ENABLE_SIZE_T_COMPATIBILITY)
+
+
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+#include <exception>
+#endif // #if defined(CL_HPP_ENABLE_EXCEPTIONS)
+
+#if !defined(CL_HPP_NO_STD_VECTOR)
+#include <vector>
+namespace cl {
+    template < class T, class Alloc = std::allocator<T> >
+    using vector = std::vector<T, Alloc>;
+} // namespace cl
+#endif // #if !defined(CL_HPP_NO_STD_VECTOR)
+
+#if !defined(CL_HPP_NO_STD_STRING)
+#include <string>
+namespace cl {
+    using string = std::string;
+} // namespace cl
+#endif // #if !defined(CL_HPP_NO_STD_STRING)
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+#if !defined(CL_HPP_NO_STD_UNIQUE_PTR)
+#include <memory>
+namespace cl {
+    // Replace unique_ptr and allocate_pointer for internal use
+    // to allow user to replace them
+    template<class T, class D>
+    using pointer = std::unique_ptr<T, D>;
+} // namespace cl
+#endif 
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+#if !defined(CL_HPP_NO_STD_ARRAY)
+#include <array>
+namespace cl {
+    template < class T, size_type N >
+    using array = std::array<T, N>;
+} // namespace cl
+#endif // #if !defined(CL_HPP_NO_STD_ARRAY)
+
+// Define size_type appropriately to allow backward-compatibility
+// use of the old size_t interface class
+#if defined(CL_HPP_ENABLE_SIZE_T_COMPATIBILITY)
+namespace cl {
+    namespace compatibility {
+        /*! \brief class used to interface between C++ and
+        *  OpenCL C calls that require arrays of size_t values, whose
+        *  size is known statically.
+        */
+        template <int N>
+        class size_t
+        {
+        private:
+            size_type data_[N];
+
+        public:
+            //! 
