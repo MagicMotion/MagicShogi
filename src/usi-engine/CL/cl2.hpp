@@ -615,4 +615,111 @@ namespace cl {
             size_type data_[N];
 
         public:
-            //! 
+            //! \brief Initialize size_t to all 0s
+            size_t()
+            {
+                for (int i = 0; i < N; ++i) {
+                    data_[i] = 0;
+                }
+            }
+
+            size_t(const array<size_type, N> &rhs)
+            {
+                for (int i = 0; i < N; ++i) {
+                    data_[i] = rhs[i];
+                }
+            }
+
+            size_type& operator[](int index)
+            {
+                return data_[index];
+            }
+
+            const size_type& operator[](int index) const
+            {
+                return data_[index];
+            }
+
+            //! \brief Conversion operator to T*.
+            operator size_type* ()             { return data_; }
+
+            //! \brief Conversion operator to const T*.
+            operator const size_type* () const { return data_; }
+
+            operator array<size_type, N>() const
+            {
+                array<size_type, N> ret;
+
+                for (int i = 0; i < N; ++i) {
+                    ret[i] = data_[i];
+                }
+                return ret;
+            }
+        };
+    } // namespace compatibility
+
+    template<int N>
+    using size_t = compatibility::size_t<N>;
+} // namespace cl
+#endif // #if defined(CL_HPP_ENABLE_SIZE_T_COMPATIBILITY)
+
+// Helper alias to avoid confusing the macros
+namespace cl {
+    namespace detail {
+        using size_t_array = array<size_type, 3>;
+    } // namespace detail
+} // namespace cl
+
+
+/*! \namespace cl
+ *
+ * \brief The OpenCL C++ bindings are defined within this namespace.
+ *
+ */
+namespace cl {
+    class Memory;
+
+#define CL_HPP_INIT_CL_EXT_FCN_PTR_(name) \
+    if (!pfn_##name) {    \
+    pfn_##name = (PFN_##name) \
+    clGetExtensionFunctionAddress(#name); \
+    if (!pfn_##name) {    \
+    } \
+    }
+
+#define CL_HPP_INIT_CL_EXT_FCN_PTR_PLATFORM_(platform, name) \
+    if (!pfn_##name) {    \
+    pfn_##name = (PFN_##name) \
+    clGetExtensionFunctionAddressForPlatform(platform, #name); \
+    if (!pfn_##name) {    \
+    } \
+    }
+
+    class Program;
+    class Device;
+    class Context;
+    class CommandQueue;
+    class DeviceCommandQueue;
+    class Memory;
+    class Buffer;
+    class Pipe;
+
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+    /*! \brief Exception class 
+     * 
+     *  This may be thrown by API functions when CL_HPP_ENABLE_EXCEPTIONS is defined.
+     */
+    class Error : public std::exception
+    {
+    private:
+        cl_int err_;
+        const char * errStr_;
+    public:
+        /*! \brief Create a new CL error exception for a given error code
+         *  and corresponding message.
+         * 
+         *  \param err error code value.
+         *
+         *  \param errStr a descriptive string that must remain in scope until
+         *                handling of the exception has concluded.  If set, it
+         *                
