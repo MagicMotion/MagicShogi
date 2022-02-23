@@ -722,4 +722,82 @@ namespace cl {
          *
          *  \param errStr a descriptive string that must remain in scope until
          *                handling of the exception has concluded.  If set, it
-         *                
+         *                will be returned by what().
+         */
+        Error(cl_int err, const char * errStr = NULL) : err_(err), errStr_(errStr)
+        {}
+
+        ~Error() throw() {}
+
+        /*! \brief Get error string associated with exception
+         *
+         * \return A memory pointer to the error message string.
+         */
+        virtual const char * what() const throw ()
+        {
+            if (errStr_ == NULL) {
+                return "empty";
+            }
+            else {
+                return errStr_;
+            }
+        }
+
+        /*! \brief Get error code associated with exception
+         *
+         *  \return The error code.
+         */
+        cl_int err(void) const { return err_; }
+    };
+#define CL_HPP_ERR_STR_(x) #x
+#else
+#define CL_HPP_ERR_STR_(x) NULL
+#endif // CL_HPP_ENABLE_EXCEPTIONS
+
+
+namespace detail
+{
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+static inline cl_int errHandler (
+    cl_int err,
+    const char * errStr = NULL)
+{
+    if (err != CL_SUCCESS) {
+        throw Error(err, errStr);
+    }
+    return err;
+}
+#else
+static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
+{
+    (void) errStr; // suppress unused variable warning
+    return err;
+}
+#endif // CL_HPP_ENABLE_EXCEPTIONS
+}
+
+
+
+//! \cond DOXYGEN_DETAIL
+#if !defined(CL_HPP_USER_OVERRIDE_ERROR_STRINGS)
+#define __GET_DEVICE_INFO_ERR               CL_HPP_ERR_STR_(clGetDeviceInfo)
+#define __GET_PLATFORM_INFO_ERR             CL_HPP_ERR_STR_(clGetPlatformInfo)
+#define __GET_DEVICE_IDS_ERR                CL_HPP_ERR_STR_(clGetDeviceIDs)
+#define __GET_PLATFORM_IDS_ERR              CL_HPP_ERR_STR_(clGetPlatformIDs)
+#define __GET_CONTEXT_INFO_ERR              CL_HPP_ERR_STR_(clGetContextInfo)
+#define __GET_EVENT_INFO_ERR                CL_HPP_ERR_STR_(clGetEventInfo)
+#define __GET_EVENT_PROFILE_INFO_ERR        CL_HPP_ERR_STR_(clGetEventProfileInfo)
+#define __GET_MEM_OBJECT_INFO_ERR           CL_HPP_ERR_STR_(clGetMemObjectInfo)
+#define __GET_IMAGE_INFO_ERR                CL_HPP_ERR_STR_(clGetImageInfo)
+#define __GET_SAMPLER_INFO_ERR              CL_HPP_ERR_STR_(clGetSamplerInfo)
+#define __GET_KERNEL_INFO_ERR               CL_HPP_ERR_STR_(clGetKernelInfo)
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+#define __GET_KERNEL_ARG_INFO_ERR           CL_HPP_ERR_STR_(clGetKernelArgInfo)
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+#define __GET_KERNEL_WORK_GROUP_INFO_ERR    CL_HPP_ERR_STR_(clGetKernelWorkGroupInfo)
+#define __GET_PROGRAM_INFO_ERR              CL_HPP_ERR_STR_(clGetProgramInfo)
+#define __GET_PROGRAM_BUILD_INFO_ERR        CL_HPP_ERR_STR_(clGetProgramBuildInfo)
+#define __GET_COMMAND_QUEUE_INFO_ERR        CL_HPP_ERR_STR_(clGetCommandQueueInfo)
+
+#define __CREATE_CONTEXT_ERR                CL_HPP_ERR_STR_(clCreateContext)
+#define __CREATE_CONTEXT_FROM_TYPE_ERR      CL_HPP_ERR_STR_(c
