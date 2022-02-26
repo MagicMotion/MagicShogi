@@ -842,4 +842,52 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
 #define __SET_COMMAND_QUEUE_PROPERTY_ERR    CL_HPP_ERR_STR_(clSetCommandQueueProperty)
 #define __ENQUEUE_READ_BUFFER_ERR           CL_HPP_ERR_STR_(clEnqueueReadBuffer)
 #define __ENQUEUE_READ_BUFFER_RECT_ERR      CL_HPP_ERR_STR_(clEnqueueReadBufferRect)
-#define __ENQUEUE_WRITE_BUFFER_ERR          CL_H
+#define __ENQUEUE_WRITE_BUFFER_ERR          CL_HPP_ERR_STR_(clEnqueueWriteBuffer)
+#define __ENQUEUE_WRITE_BUFFER_RECT_ERR     CL_HPP_ERR_STR_(clEnqueueWriteBufferRect)
+#define __ENQEUE_COPY_BUFFER_ERR            CL_HPP_ERR_STR_(clEnqueueCopyBuffer)
+#define __ENQEUE_COPY_BUFFER_RECT_ERR       CL_HPP_ERR_STR_(clEnqueueCopyBufferRect)
+#define __ENQUEUE_FILL_BUFFER_ERR           CL_HPP_ERR_STR_(clEnqueueFillBuffer)
+#define __ENQUEUE_READ_IMAGE_ERR            CL_HPP_ERR_STR_(clEnqueueReadImage)
+#define __ENQUEUE_WRITE_IMAGE_ERR           CL_HPP_ERR_STR_(clEnqueueWriteImage)
+#define __ENQUEUE_COPY_IMAGE_ERR            CL_HPP_ERR_STR_(clEnqueueCopyImage)
+#define __ENQUEUE_FILL_IMAGE_ERR            CL_HPP_ERR_STR_(clEnqueueFillImage)
+#define __ENQUEUE_COPY_IMAGE_TO_BUFFER_ERR  CL_HPP_ERR_STR_(clEnqueueCopyImageToBuffer)
+#define __ENQUEUE_COPY_BUFFER_TO_IMAGE_ERR  CL_HPP_ERR_STR_(clEnqueueCopyBufferToImage)
+#define __ENQUEUE_MAP_BUFFER_ERR            CL_HPP_ERR_STR_(clEnqueueMapBuffer)
+#define __ENQUEUE_MAP_IMAGE_ERR             CL_HPP_ERR_STR_(clEnqueueMapImage)
+#define __ENQUEUE_UNMAP_MEM_OBJECT_ERR      CL_HPP_ERR_STR_(clEnqueueUnMapMemObject)
+#define __ENQUEUE_NDRANGE_KERNEL_ERR        CL_HPP_ERR_STR_(clEnqueueNDRangeKernel)
+#define __ENQUEUE_NATIVE_KERNEL             CL_HPP_ERR_STR_(clEnqueueNativeKernel)
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+#define __ENQUEUE_MIGRATE_MEM_OBJECTS_ERR   CL_HPP_ERR_STR_(clEnqueueMigrateMemObjects)
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+#define __ENQUEUE_ACQUIRE_GL_ERR            CL_HPP_ERR_STR_(clEnqueueAcquireGLObjects)
+#define __ENQUEUE_RELEASE_GL_ERR            CL_HPP_ERR_STR_(clEnqueueReleaseGLObjects)
+
+#define __CREATE_PIPE_ERR             CL_HPP_ERR_STR_(clCreatePipe)
+#define __GET_PIPE_INFO_ERR           CL_HPP_ERR_STR_(clGetPipeInfo)
+
+
+#define __RETAIN_ERR                        CL_HPP_ERR_STR_(Retain Object)
+#define __RELEASE_ERR                       CL_HPP_ERR_STR_(Release Object)
+#define __FLUSH_ERR                         CL_HPP_ERR_STR_(clFlush)
+#define __FINISH_ERR                        CL_HPP_ERR_STR_(clFinish)
+#define __VECTOR_CAPACITY_ERR               CL_HPP_ERR_STR_(Vector capacity error)
+
+/**
+ * CL 1.2 version that uses device fission.
+ */
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+#define __CREATE_SUB_DEVICES_ERR            CL_HPP_ERR_STR_(clCreateSubDevices)
+#else
+#define __CREATE_SUB_DEVICES_ERR            CL_HPP_ERR_STR_(clCreateSubDevicesEXT)
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+/**
+ * Deprecated APIs for 1.2
+ */
+#if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+#define __ENQUEUE_MARKER_ERR                CL_HPP_ERR_STR_(clEnqueueMarker)
+#define __ENQUEUE_WAIT_FOR_EVENTS_ERR       CL_HPP_ERR_STR_(clEnqueueWaitForEvents)
+#define __ENQUEUE_BARRIER_ERR               CL_HPP_ERR_
