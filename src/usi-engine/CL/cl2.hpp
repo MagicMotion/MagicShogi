@@ -969,4 +969,102 @@ inline cl_int getInfoHelper(Func f, cl_uint name, vector<T>* param, long)
     if (err != CL_SUCCESS) {
         return err;
     }
-    const size_ty
+    const size_type elements = required / sizeof(T);
+
+    // Temporary to avoid changing param on an error
+    vector<T> localData(elements);
+    err = f(name, required, localData.data(), NULL);
+    if (err != CL_SUCCESS) {
+        return err;
+    }
+    if (param) {
+        *param = std::move(localData);
+    }
+
+    return CL_SUCCESS;
+}
+
+/* Specialization for reference-counted types. This depends on the
+ * existence of Wrapper<T>::cl_type, and none of the other types having the
+ * cl_type member. Note that simplify specifying the parameter as Wrapper<T>
+ * does not work, because when using a derived type (e.g. Context) the generic
+ * template will provide a better match.
+ */
+template <typename Func, typename T>
+inline cl_int getInfoHelper(
+    Func f, cl_uint name, vector<T>* param, int, typename T::cl_type = 0)
+{
+    size_type required;
+    cl_int err = f(name, 0, NULL, &required);
+    if (err != CL_SUCCESS) {
+        return err;
+    }
+
+    const size_type elements = required / sizeof(typename T::cl_type);
+
+    vector<typename T::cl_type> value(elements);
+    err = f(name, required, value.data(), NULL);
+    if (err != CL_SUCCESS) {
+        return err;
+    }
+
+    if (param) {
+        // Assign to convert CL type to T for each element
+        param->resize(elements);
+
+        // Assign to param, constructing with retain behaviour
+        // to correctly capture each underlying CL object
+        for (size_type i = 0; i < elements; i++) {
+            (*param)[i] = T(value[i], true);
+        }
+    }
+    return CL_SUCCESS;
+}
+
+// Specialized GetInfoHelper for string params
+template <typename Func>
+inline cl_int getInfoHelper(Func f, cl_uint name, string* param, long)
+{
+    size_type required;
+    cl_int err = f(name, 0, NULL, &required);
+    if (err != CL_SUCCESS) {
+        return err;
+    }
+
+    // std::string has a constant data member
+    // a char vector does not
+    if (required > 0) {
+        vector<char> value(required);
+        err = f(name, required, value.data(), NULL);
+        if (err != CL_SUCCESS) {
+            return err;
+        }
+        if (param) {
+            param->assign(begin(value), prev(end(value)));
+        }
+    }
+    else if (param) {
+        param->assign("");
+    }
+    return CL_SUCCESS;
+}
+
+// Specialized GetInfoHelper for clsize_t params
+template <typename Func, size_type N>
+inline cl_int getInfoHelper(Func f, cl_uint name, array<size_type, N>* param, long)
+{
+    size_type required;
+    cl_int err = f(name, 0, NULL, &required);
+    if (err != CL_SUCCESS) {
+        return err;
+    }
+
+    size_type elements = required / sizeof(size_type);
+    vector<size_type> value(elements, 0);
+
+    err = f(name, required, value.data(), NULL);
+    if (err != CL_SUCCESS) {
+        return err;
+    }
+    
+    // Bound the copy with N to pre
