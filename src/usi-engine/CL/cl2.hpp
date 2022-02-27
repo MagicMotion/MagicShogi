@@ -890,4 +890,83 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
 #if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
 #define __ENQUEUE_MARKER_ERR                CL_HPP_ERR_STR_(clEnqueueMarker)
 #define __ENQUEUE_WAIT_FOR_EVENTS_ERR       CL_HPP_ERR_STR_(clEnqueueWaitForEvents)
-#define __ENQUEUE_BARRIER_ERR               CL_HPP_ERR_
+#define __ENQUEUE_BARRIER_ERR               CL_HPP_ERR_STR_(clEnqueueBarrier)
+#define __UNLOAD_COMPILER_ERR               CL_HPP_ERR_STR_(clUnloadCompiler)
+#define __CREATE_GL_TEXTURE_2D_ERR          CL_HPP_ERR_STR_(clCreateFromGLTexture2D)
+#define __CREATE_GL_TEXTURE_3D_ERR          CL_HPP_ERR_STR_(clCreateFromGLTexture3D)
+#define __CREATE_IMAGE2D_ERR                CL_HPP_ERR_STR_(clCreateImage2D)
+#define __CREATE_IMAGE3D_ERR                CL_HPP_ERR_STR_(clCreateImage3D)
+#endif // #if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+
+/**
+ * Deprecated APIs for 2.0
+ */
+#if defined(CL_USE_DEPRECATED_OPENCL_1_2_APIS)
+#define __CREATE_COMMAND_QUEUE_ERR          CL_HPP_ERR_STR_(clCreateCommandQueue)
+#define __ENQUEUE_TASK_ERR                  CL_HPP_ERR_STR_(clEnqueueTask)
+#define __CREATE_SAMPLER_ERR                CL_HPP_ERR_STR_(clCreateSampler)
+#endif // #if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+
+/**
+ * CL 1.2 marker and barrier commands
+ */
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+#define __ENQUEUE_MARKER_WAIT_LIST_ERR                CL_HPP_ERR_STR_(clEnqueueMarkerWithWaitList)
+#define __ENQUEUE_BARRIER_WAIT_LIST_ERR               CL_HPP_ERR_STR_(clEnqueueBarrierWithWaitList)
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+#endif // CL_HPP_USER_OVERRIDE_ERROR_STRINGS
+//! \endcond
+
+
+namespace detail {
+
+// Generic getInfoHelper. The final parameter is used to guide overload
+// resolution: the actual parameter passed is an int, which makes this
+// a worse conversion sequence than a specialization that declares the
+// parameter as an int.
+template<typename Functor, typename T>
+inline cl_int getInfoHelper(Functor f, cl_uint name, T* param, long)
+{
+    return f(name, sizeof(T), param, NULL);
+}
+
+// Specialized for getInfo<CL_PROGRAM_BINARIES>
+// Assumes that the output vector was correctly resized on the way in
+template <typename Func>
+inline cl_int getInfoHelper(Func f, cl_uint name, vector<vector<unsigned char>>* param, int)
+{
+    if (name != CL_PROGRAM_BINARIES) {
+        return CL_INVALID_VALUE;
+    }
+    if (param) {
+        // Create array of pointers, calculate total size and pass pointer array in
+        size_type numBinaries = param->size();
+        vector<unsigned char*> binariesPointers(numBinaries);
+
+        for (size_type i = 0; i < numBinaries; ++i)
+        {
+            binariesPointers[i] = (*param)[i].data();
+        }
+
+        cl_int err = f(name, numBinaries * sizeof(unsigned char*), binariesPointers.data(), NULL);
+
+        if (err != CL_SUCCESS) {
+            return err;
+        }
+    }
+
+
+    return CL_SUCCESS;
+}
+
+// Specialized getInfoHelper for vector params
+template <typename Func, typename T>
+inline cl_int getInfoHelper(Func f, cl_uint name, vector<T>* param, long)
+{
+    size_type required;
+    cl_int err = f(name, 0, NULL, &required);
+    if (err != CL_SUCCESS) {
+        return err;
+    }
+    const size_ty
