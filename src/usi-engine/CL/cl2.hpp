@@ -1067,4 +1067,70 @@ inline cl_int getInfoHelper(Func f, cl_uint name, array<size_type, N>* param, lo
         return err;
     }
     
-    // Bound the copy with N to pre
+    // Bound the copy with N to prevent overruns
+    // if passed N > than the amount copied
+    if (elements > N) {
+        elements = N;
+    }
+    for (size_type i = 0; i < elements; ++i) {
+        (*param)[i] = value[i];
+    }
+
+    return CL_SUCCESS;
+}
+
+template<typename T> struct ReferenceHandler;
+
+/* Specialization for reference-counted types. This depends on the
+ * existence of Wrapper<T>::cl_type, and none of the other types having the
+ * cl_type member. Note that simplify specifying the parameter as Wrapper<T>
+ * does not work, because when using a derived type (e.g. Context) the generic
+ * template will provide a better match.
+ */
+template<typename Func, typename T>
+inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_type = 0)
+{
+    typename T::cl_type value;
+    cl_int err = f(name, sizeof(value), &value, NULL);
+    if (err != CL_SUCCESS) {
+        return err;
+    }
+    *param = value;
+    if (value != NULL)
+    {
+        err = param->retain();
+        if (err != CL_SUCCESS) {
+            return err;
+        }
+    }
+    return CL_SUCCESS;
+}
+
+#define CL_HPP_PARAM_NAME_INFO_1_0_(F) \
+    F(cl_platform_info, CL_PLATFORM_PROFILE, string) \
+    F(cl_platform_info, CL_PLATFORM_VERSION, string) \
+    F(cl_platform_info, CL_PLATFORM_NAME, string) \
+    F(cl_platform_info, CL_PLATFORM_VENDOR, string) \
+    F(cl_platform_info, CL_PLATFORM_EXTENSIONS, string) \
+    \
+    F(cl_device_info, CL_DEVICE_TYPE, cl_device_type) \
+    F(cl_device_info, CL_DEVICE_VENDOR_ID, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_COMPUTE_UNITS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_WORK_GROUP_SIZE, size_type) \
+    F(cl_device_info, CL_DEVICE_MAX_WORK_ITEM_SIZES, cl::vector<size_type>) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR, cl_uint) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG, cl_uint) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_CLOCK_FREQUENCY, cl_uint) \
+    F(cl_device_info, CL_DEVICE_ADDRESS_BITS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_READ_IMAGE_ARGS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_WRITE_IMAGE_ARGS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_MEM_ALLOC_SIZE, cl_ulong) \
+    F(cl_device_info, CL_DEVICE_IMAGE2D_MAX_WIDTH, size_type) \
+    F(cl_device_info, CL_DEVICE_IMAGE2D_MAX_HEIGHT, size_type) \
+    F(cl_device_info, CL_DEVICE_IMAGE3D_MAX_WIDTH, size_type) \
+    F(cl_device_info, CL_DEVICE_IMAGE3D_MAX_HEIGHT, size_typ
