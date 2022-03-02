@@ -1133,4 +1133,52 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_IMAGE2D_MAX_WIDTH, size_type) \
     F(cl_device_info, CL_DEVICE_IMAGE2D_MAX_HEIGHT, size_type) \
     F(cl_device_info, CL_DEVICE_IMAGE3D_MAX_WIDTH, size_type) \
-    F(cl_device_info, CL_DEVICE_IMAGE3D_MAX_HEIGHT, size_typ
+    F(cl_device_info, CL_DEVICE_IMAGE3D_MAX_HEIGHT, size_type) \
+    F(cl_device_info, CL_DEVICE_IMAGE3D_MAX_DEPTH, size_type) \
+    F(cl_device_info, CL_DEVICE_IMAGE_SUPPORT, cl_bool) \
+    F(cl_device_info, CL_DEVICE_MAX_PARAMETER_SIZE, size_type) \
+    F(cl_device_info, CL_DEVICE_MAX_SAMPLERS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MEM_BASE_ADDR_ALIGN, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE, cl_uint) \
+    F(cl_device_info, CL_DEVICE_SINGLE_FP_CONFIG, cl_device_fp_config) \
+    F(cl_device_info, CL_DEVICE_DOUBLE_FP_CONFIG, cl_device_fp_config) \
+    F(cl_device_info, CL_DEVICE_HALF_FP_CONFIG, cl_device_fp_config) \
+    F(cl_device_info, CL_DEVICE_GLOBAL_MEM_CACHE_TYPE, cl_device_mem_cache_type) \
+    F(cl_device_info, CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE, cl_uint)\
+    F(cl_device_info, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, cl_ulong) \
+    F(cl_device_info, CL_DEVICE_GLOBAL_MEM_SIZE, cl_ulong) \
+    F(cl_device_info, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, cl_ulong) \
+    F(cl_device_info, CL_DEVICE_MAX_CONSTANT_ARGS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_LOCAL_MEM_TYPE, cl_device_local_mem_type) \
+    F(cl_device_info, CL_DEVICE_LOCAL_MEM_SIZE, cl_ulong) \
+    F(cl_device_info, CL_DEVICE_ERROR_CORRECTION_SUPPORT, cl_bool) \
+    F(cl_device_info, CL_DEVICE_PROFILING_TIMER_RESOLUTION, size_type) \
+    F(cl_device_info, CL_DEVICE_ENDIAN_LITTLE, cl_bool) \
+    F(cl_device_info, CL_DEVICE_AVAILABLE, cl_bool) \
+    F(cl_device_info, CL_DEVICE_COMPILER_AVAILABLE, cl_bool) \
+    F(cl_device_info, CL_DEVICE_EXECUTION_CAPABILITIES, cl_device_exec_capabilities) \
+    F(cl_device_info, CL_DEVICE_PLATFORM, cl_platform_id) \
+    F(cl_device_info, CL_DEVICE_NAME, string) \
+    F(cl_device_info, CL_DEVICE_VENDOR, string) \
+    F(cl_device_info, CL_DRIVER_VERSION, string) \
+    F(cl_device_info, CL_DEVICE_PROFILE, string) \
+    F(cl_device_info, CL_DEVICE_VERSION, string) \
+    F(cl_device_info, CL_DEVICE_EXTENSIONS, string) \
+    \
+    F(cl_context_info, CL_CONTEXT_REFERENCE_COUNT, cl_uint) \
+    F(cl_context_info, CL_CONTEXT_DEVICES, cl::vector<Device>) \
+    F(cl_context_info, CL_CONTEXT_PROPERTIES, cl::vector<cl_context_properties>) \
+    \
+    F(cl_event_info, CL_EVENT_COMMAND_QUEUE, cl::CommandQueue) \
+    F(cl_event_info, CL_EVENT_COMMAND_TYPE, cl_command_type) \
+    F(cl_event_info, CL_EVENT_REFERENCE_COUNT, cl_uint) \
+    F(cl_event_info, CL_EVENT_COMMAND_EXECUTION_STATUS, cl_int) \
+    \
+    F(cl_profiling_info, CL_PROFILING_COMMAND_QUEUED, cl_ulong) \
+    F(cl_profiling_info, CL_PROFILING_COMMAND_SUBMIT, cl_ulong) \
+    F(cl_profiling_info, CL_PROFILING_COMMAND_START, cl_ulong) \
+    F(cl_profiling_info, CL_PROFILING_COMMAND_END, cl_ulong) \
+    \
+    F(cl_mem_info, CL_MEM_TYPE, cl_mem_object_type) \
+    F(cl_mem_info, CL_MEM_FLAGS, cl_mem_flags) \
+    F(cl
