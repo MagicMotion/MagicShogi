@@ -1181,4 +1181,57 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     \
     F(cl_mem_info, CL_MEM_TYPE, cl_mem_object_type) \
     F(cl_mem_info, CL_MEM_FLAGS, cl_mem_flags) \
-    F(cl
+    F(cl_mem_info, CL_MEM_SIZE, size_type) \
+    F(cl_mem_info, CL_MEM_HOST_PTR, void*) \
+    F(cl_mem_info, CL_MEM_MAP_COUNT, cl_uint) \
+    F(cl_mem_info, CL_MEM_REFERENCE_COUNT, cl_uint) \
+    F(cl_mem_info, CL_MEM_CONTEXT, cl::Context) \
+    \
+    F(cl_image_info, CL_IMAGE_FORMAT, cl_image_format) \
+    F(cl_image_info, CL_IMAGE_ELEMENT_SIZE, size_type) \
+    F(cl_image_info, CL_IMAGE_ROW_PITCH, size_type) \
+    F(cl_image_info, CL_IMAGE_SLICE_PITCH, size_type) \
+    F(cl_image_info, CL_IMAGE_WIDTH, size_type) \
+    F(cl_image_info, CL_IMAGE_HEIGHT, size_type) \
+    F(cl_image_info, CL_IMAGE_DEPTH, size_type) \
+    \
+    F(cl_sampler_info, CL_SAMPLER_REFERENCE_COUNT, cl_uint) \
+    F(cl_sampler_info, CL_SAMPLER_CONTEXT, cl::Context) \
+    F(cl_sampler_info, CL_SAMPLER_NORMALIZED_COORDS, cl_bool) \
+    F(cl_sampler_info, CL_SAMPLER_ADDRESSING_MODE, cl_addressing_mode) \
+    F(cl_sampler_info, CL_SAMPLER_FILTER_MODE, cl_filter_mode) \
+    \
+    F(cl_program_info, CL_PROGRAM_REFERENCE_COUNT, cl_uint) \
+    F(cl_program_info, CL_PROGRAM_CONTEXT, cl::Context) \
+    F(cl_program_info, CL_PROGRAM_NUM_DEVICES, cl_uint) \
+    F(cl_program_info, CL_PROGRAM_DEVICES, cl::vector<Device>) \
+    F(cl_program_info, CL_PROGRAM_SOURCE, string) \
+    F(cl_program_info, CL_PROGRAM_BINARY_SIZES, cl::vector<size_type>) \
+    F(cl_program_info, CL_PROGRAM_BINARIES, cl::vector<cl::vector<unsigned char>>) \
+    \
+    F(cl_program_build_info, CL_PROGRAM_BUILD_STATUS, cl_build_status) \
+    F(cl_program_build_info, CL_PROGRAM_BUILD_OPTIONS, string) \
+    F(cl_program_build_info, CL_PROGRAM_BUILD_LOG, string) \
+    \
+    F(cl_kernel_info, CL_KERNEL_FUNCTION_NAME, string) \
+    F(cl_kernel_info, CL_KERNEL_NUM_ARGS, cl_uint) \
+    F(cl_kernel_info, CL_KERNEL_REFERENCE_COUNT, cl_uint) \
+    F(cl_kernel_info, CL_KERNEL_CONTEXT, cl::Context) \
+    F(cl_kernel_info, CL_KERNEL_PROGRAM, cl::Program) \
+    \
+    F(cl_kernel_work_group_info, CL_KERNEL_WORK_GROUP_SIZE, size_type) \
+    F(cl_kernel_work_group_info, CL_KERNEL_COMPILE_WORK_GROUP_SIZE, cl::detail::size_t_array) \
+    F(cl_kernel_work_group_info, CL_KERNEL_LOCAL_MEM_SIZE, cl_ulong) \
+    \
+    F(cl_command_queue_info, CL_QUEUE_CONTEXT, cl::Context) \
+    F(cl_command_queue_info, CL_QUEUE_DEVICE, cl::Device) \
+    F(cl_command_queue_info, CL_QUEUE_REFERENCE_COUNT, cl_uint) \
+    F(cl_command_queue_info, CL_QUEUE_PROPERTIES, cl_command_queue_properties)
+
+
+#define CL_HPP_PARAM_NAME_INFO_1_1_(F) \
+    F(cl_context_info, CL_CONTEXT_NUM_DEVICES, cl_uint)\
+    F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WI
