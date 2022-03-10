@@ -1234,4 +1234,55 @@ inline cl_int getInfoHelper(Func f, cl_uint name, T* param, int, typename T::cl_
     F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF, cl_uint) \
     F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR, cl_uint) \
     F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT, cl_uint) \
-    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WI
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_INT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF, cl_uint) \
+    F(cl_device_info, CL_DEVICE_OPENCL_C_VERSION, string) \
+    \
+    F(cl_mem_info, CL_MEM_ASSOCIATED_MEMOBJECT, cl::Memory) \
+    F(cl_mem_info, CL_MEM_OFFSET, size_type) \
+    \
+    F(cl_kernel_work_group_info, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, size_type) \
+    F(cl_kernel_work_group_info, CL_KERNEL_PRIVATE_MEM_SIZE, cl_ulong) \
+    \
+    F(cl_event_info, CL_EVENT_CONTEXT, cl::Context)
+
+#define CL_HPP_PARAM_NAME_INFO_1_2_(F) \
+    F(cl_program_info, CL_PROGRAM_NUM_KERNELS, size_type) \
+    F(cl_program_info, CL_PROGRAM_KERNEL_NAMES, string) \
+    \
+    F(cl_program_build_info, CL_PROGRAM_BINARY_TYPE, cl_program_binary_type) \
+    \
+    F(cl_kernel_info, CL_KERNEL_ATTRIBUTES, string) \
+    \
+    F(cl_kernel_arg_info, CL_KERNEL_ARG_ADDRESS_QUALIFIER, cl_kernel_arg_address_qualifier) \
+    F(cl_kernel_arg_info, CL_KERNEL_ARG_ACCESS_QUALIFIER, cl_kernel_arg_access_qualifier) \
+    F(cl_kernel_arg_info, CL_KERNEL_ARG_TYPE_NAME, string) \
+    F(cl_kernel_arg_info, CL_KERNEL_ARG_NAME, string) \
+    F(cl_kernel_arg_info, CL_KERNEL_ARG_TYPE_QUALIFIER, cl_kernel_arg_type_qualifier) \
+    \
+    F(cl_device_info, CL_DEVICE_PARENT_DEVICE, cl::Device) \
+    F(cl_device_info, CL_DEVICE_PARTITION_PROPERTIES, cl::vector<cl_device_partition_property>) \
+    F(cl_device_info, CL_DEVICE_PARTITION_TYPE, cl::vector<cl_device_partition_property>)  \
+    F(cl_device_info, CL_DEVICE_REFERENCE_COUNT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_PREFERRED_INTEROP_USER_SYNC, size_type) \
+    F(cl_device_info, CL_DEVICE_PARTITION_AFFINITY_DOMAIN, cl_device_affinity_domain) \
+    F(cl_device_info, CL_DEVICE_BUILT_IN_KERNELS, string) \
+    \
+    F(cl_image_info, CL_IMAGE_ARRAY_SIZE, size_type) \
+    F(cl_image_info, CL_IMAGE_NUM_MIP_LEVELS, cl_uint) \
+    F(cl_image_info, CL_IMAGE_NUM_SAMPLES, cl_uint)
+
+#define CL_HPP_PARAM_NAME_INFO_2_0_(F) \
+    F(cl_device_info, CL_DEVICE_QUEUE_ON_HOST_PROPERTIES, cl_command_queue_properties) \
+    F(cl_device_info, CL_DEVICE_QUEUE_ON_DEVICE_PROPERTIES, cl_command_queue_properties) \
+    F(cl_device_info, CL_DEVICE_QUEUE_ON_DEVICE_PREFERRED_SIZE, cl_uint) \
+    F(cl_device_info, CL_DEVICE_QUEUE_ON_DEVICE_MAX_SIZE, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_ON_DEVICE_QUEUES, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_ON_DEVICE_EVENTS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_MAX_PIPE_ARGS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_PIPE_MAX_ACTIVE_RESERVATIONS, cl_uint) \
+    F(cl_device_info, CL_DEVICE_PIPE_MAX_PACKET_SIZE, cl_uint) \
+    F(cl_device_info, CL_DEVICE_SVM_CAPABILITIES, 
