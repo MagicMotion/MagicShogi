@@ -1401,4 +1401,101 @@ CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_COMPUTE_CAPABILITY_MINOR_
 CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_REGISTERS_PER_BLOCK_NV, cl_uint)
 #endif
 #ifdef CL_DEVICE_WARP_SIZE_NV
-CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_WARP_SIZE_NV, cl_uin
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_WARP_SIZE_NV, cl_uint)
+#endif
+#ifdef CL_DEVICE_GPU_OVERLAP_NV
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_GPU_OVERLAP_NV, cl_bool)
+#endif
+#ifdef CL_DEVICE_KERNEL_EXEC_TIMEOUT_NV
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_KERNEL_EXEC_TIMEOUT_NV, cl_bool)
+#endif
+#ifdef CL_DEVICE_INTEGRATED_MEMORY_NV
+CL_HPP_DECLARE_PARAM_TRAITS_(cl_device_info, CL_DEVICE_INTEGRATED_MEMORY_NV, cl_bool)
+#endif
+
+// Convenience functions
+
+template <typename Func, typename T>
+inline cl_int
+getInfo(Func f, cl_uint name, T* param)
+{
+    return getInfoHelper(f, name, param, 0);
+}
+
+template <typename Func, typename Arg0>
+struct GetInfoFunctor0
+{
+    Func f_; const Arg0& arg0_;
+    cl_int operator ()(
+        cl_uint param, size_type size, void* value, size_type* size_ret)
+    { return f_(arg0_, param, size, value, size_ret); }
+};
+
+template <typename Func, typename Arg0, typename Arg1>
+struct GetInfoFunctor1
+{
+    Func f_; const Arg0& arg0_; const Arg1& arg1_;
+    cl_int operator ()(
+        cl_uint param, size_type size, void* value, size_type* size_ret)
+    { return f_(arg0_, arg1_, param, size, value, size_ret); }
+};
+
+template <typename Func, typename Arg0, typename T>
+inline cl_int
+getInfo(Func f, const Arg0& arg0, cl_uint name, T* param)
+{
+    GetInfoFunctor0<Func, Arg0> f0 = { f, arg0 };
+    return getInfoHelper(f0, name, param, 0);
+}
+
+template <typename Func, typename Arg0, typename Arg1, typename T>
+inline cl_int
+getInfo(Func f, const Arg0& arg0, const Arg1& arg1, cl_uint name, T* param)
+{
+    GetInfoFunctor1<Func, Arg0, Arg1> f0 = { f, arg0, arg1 };
+    return getInfoHelper(f0, name, param, 0);
+}
+
+
+template<typename T>
+struct ReferenceHandler
+{ };
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+/**
+ * OpenCL 1.2 devices do have retain/release.
+ */
+template <>
+struct ReferenceHandler<cl_device_id>
+{
+    /**
+     * Retain the device.
+     * \param device A valid device created using createSubDevices
+     * \return 
+     *   CL_SUCCESS if the function executed successfully.
+     *   CL_INVALID_DEVICE if device was not a valid subdevice
+     *   CL_OUT_OF_RESOURCES
+     *   CL_OUT_OF_HOST_MEMORY
+     */
+    static cl_int retain(cl_device_id device)
+    { return ::clRetainDevice(device); }
+    /**
+     * Retain the device.
+     * \param device A valid device created using createSubDevices
+     * \return 
+     *   CL_SUCCESS if the function executed successfully.
+     *   CL_INVALID_DEVICE if device was not a valid subdevice
+     *   CL_OUT_OF_RESOURCES
+     *   CL_OUT_OF_HOST_MEMORY
+     */
+    static cl_int release(cl_device_id device)
+    { return ::clReleaseDevice(device); }
+};
+#else // CL_HPP_TARGET_OPENCL_VERSION >= 120
+/**
+ * OpenCL 1.1 devices do not have retain/release.
+ */
+template <>
+struct ReferenceHandler<cl_device_id>
+{
+    // cl_device
