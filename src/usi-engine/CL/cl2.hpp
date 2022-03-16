@@ -1498,4 +1498,103 @@ struct ReferenceHandler<cl_device_id>
 template <>
 struct ReferenceHandler<cl_device_id>
 {
-    // cl_device
+    // cl_device_id does not have retain().
+    static cl_int retain(cl_device_id)
+    { return CL_SUCCESS; }
+    // cl_device_id does not have release().
+    static cl_int release(cl_device_id)
+    { return CL_SUCCESS; }
+};
+#endif // ! (CL_HPP_TARGET_OPENCL_VERSION >= 120)
+
+template <>
+struct ReferenceHandler<cl_platform_id>
+{
+    // cl_platform_id does not have retain().
+    static cl_int retain(cl_platform_id)
+    { return CL_SUCCESS; }
+    // cl_platform_id does not have release().
+    static cl_int release(cl_platform_id)
+    { return CL_SUCCESS; }
+};
+
+template <>
+struct ReferenceHandler<cl_context>
+{
+    static cl_int retain(cl_context context)
+    { return ::clRetainContext(context); }
+    static cl_int release(cl_context context)
+    { return ::clReleaseContext(context); }
+};
+
+template <>
+struct ReferenceHandler<cl_command_queue>
+{
+    static cl_int retain(cl_command_queue queue)
+    { return ::clRetainCommandQueue(queue); }
+    static cl_int release(cl_command_queue queue)
+    { return ::clReleaseCommandQueue(queue); }
+};
+
+template <>
+struct ReferenceHandler<cl_mem>
+{
+    static cl_int retain(cl_mem memory)
+    { return ::clRetainMemObject(memory); }
+    static cl_int release(cl_mem memory)
+    { return ::clReleaseMemObject(memory); }
+};
+
+template <>
+struct ReferenceHandler<cl_sampler>
+{
+    static cl_int retain(cl_sampler sampler)
+    { return ::clRetainSampler(sampler); }
+    static cl_int release(cl_sampler sampler)
+    { return ::clReleaseSampler(sampler); }
+};
+
+template <>
+struct ReferenceHandler<cl_program>
+{
+    static cl_int retain(cl_program program)
+    { return ::clRetainProgram(program); }
+    static cl_int release(cl_program program)
+    { return ::clReleaseProgram(program); }
+};
+
+template <>
+struct ReferenceHandler<cl_kernel>
+{
+    static cl_int retain(cl_kernel kernel)
+    { return ::clRetainKernel(kernel); }
+    static cl_int release(cl_kernel kernel)
+    { return ::clReleaseKernel(kernel); }
+};
+
+template <>
+struct ReferenceHandler<cl_event>
+{
+    static cl_int retain(cl_event event)
+    { return ::clRetainEvent(event); }
+    static cl_int release(cl_event event)
+    { return ::clReleaseEvent(event); }
+};
+
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120 && CL_HPP_MINIMUM_OPENCL_VERSION < 120
+// Extracts version number with major in the upper 16 bits, minor in the lower 16
+static cl_uint getVersion(const vector<char> &versionInfo)
+{
+    int highVersion = 0;
+    int lowVersion = 0;
+    int index = 7;
+    while(versionInfo[index] != '.' ) {
+        highVersion *= 10;
+        highVersion += versionInfo[index]-'0';
+        ++index;
+    }
+    ++index;
+    while(versionInfo[index] != ' ' &&  versionInfo[index] != '\0') {
+        lowVersion *= 10;
+        lowVersion += versionInfo[inde
