@@ -1597,4 +1597,114 @@ static cl_uint getVersion(const vector<char> &versionInfo)
     ++index;
     while(versionInfo[index] != ' ' &&  versionInfo[index] != '\0') {
         lowVersion *= 10;
-        lowVersion += versionInfo[inde
+        lowVersion += versionInfo[index]-'0';
+        ++index;
+    }
+    return (highVersion << 16) | lowVersion;
+}
+
+static cl_uint getPlatformVersion(cl_platform_id platform)
+{
+    size_type size = 0;
+    clGetPlatformInfo(platform, CL_PLATFORM_VERSION, 0, NULL, &size);
+
+    vector<char> versionInfo(size);
+    clGetPlatformInfo(platform, CL_PLATFORM_VERSION, size, versionInfo.data(), &size);
+    return getVersion(versionInfo);
+}
+
+static cl_uint getDevicePlatformVersion(cl_device_id device)
+{
+    cl_platform_id platform;
+    clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(platform), &platform, NULL);
+    return getPlatformVersion(platform);
+}
+
+static cl_uint getContextPlatformVersion(cl_context context)
+{
+    // The platform cannot be queried directly, so we first have to grab a
+    // device and obtain its context
+    size_type size = 0;
+    clGetContextInfo(context, CL_CONTEXT_DEVICES, 0, NULL, &size);
+    if (size == 0)
+        return 0;
+    vector<cl_device_id> devices(size/sizeof(cl_device_id));
+    clGetContextInfo(context, CL_CONTEXT_DEVICES, size, devices.data(), NULL);
+    return getDevicePlatformVersion(devices[0]);
+}
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120 && CL_HPP_MINIMUM_OPENCL_VERSION < 120
+
+template <typename T>
+class Wrapper
+{
+public:
+    typedef T cl_type;
+
+protected:
+    cl_type object_;
+
+public:
+    Wrapper() : object_(NULL) { }
+    
+    Wrapper(const cl_type &obj, bool retainObject) : object_(obj) 
+    {
+        if (retainObject) { 
+            detail::errHandler(retain(), __RETAIN_ERR); 
+        }
+    }
+
+    ~Wrapper()
+    {
+        if (object_ != NULL) { release(); }
+    }
+
+    Wrapper(const Wrapper<cl_type>& rhs)
+    {
+        object_ = rhs.object_;
+        detail::errHandler(retain(), __RETAIN_ERR);
+    }
+
+    Wrapper(Wrapper<cl_type>&& rhs) CL_HPP_NOEXCEPT_
+    {
+        object_ = rhs.object_;
+        rhs.object_ = NULL;
+    }
+
+    Wrapper<cl_type>& operator = (const Wrapper<cl_type>& rhs)
+    {
+        if (this != &rhs) {
+            detail::errHandler(release(), __RELEASE_ERR);
+            object_ = rhs.object_;
+            detail::errHandler(retain(), __RETAIN_ERR);
+        }
+        return *this;
+    }
+
+    Wrapper<cl_type>& operator = (Wrapper<cl_type>&& rhs)
+    {
+        if (this != &rhs) {
+            detail::errHandler(release(), __RELEASE_ERR);
+            object_ = rhs.object_;
+            rhs.object_ = NULL;
+        }
+        return *this;
+    }
+
+    Wrapper<cl_type>& operator = (const cl_type &rhs)
+    {
+        detail::errHandler(release(), __RELEASE_ERR);
+        object_ = rhs;
+        return *this;
+    }
+
+    const cl_type& operator ()() const { return object_; }
+
+    cl_type& operator ()() { return object_; }
+
+    const cl_type get() const { return object_; }
+
+    cl_type get() { return object_; }
+
+
+protected:
+    template<typename Func, typenam
