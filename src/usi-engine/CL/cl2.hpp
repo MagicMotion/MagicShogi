@@ -1818,4 +1818,116 @@ public:
         return *this;
     }
 
-    Wrapper<cl_t
+    Wrapper<cl_type>& operator = (const cl_type &rhs)
+    {
+        detail::errHandler(release(), __RELEASE_ERR);
+        object_ = rhs;
+        referenceCountable_ = isReferenceCountable(object_); 
+        return *this;
+    }
+
+    const cl_type& operator ()() const { return object_; }
+
+    cl_type& operator ()() { return object_; }
+
+    cl_type get() const { return object_; }
+
+protected:
+    template<typename Func, typename U>
+    friend inline cl_int getInfoHelper(Func, cl_uint, U*, int, typename U::cl_type);
+
+    template<typename Func, typename U>
+    friend inline cl_int getInfoHelper(Func, cl_uint, vector<U>*, int, typename U::cl_type);
+
+    cl_int retain() const
+    {
+        if( object_ != nullptr && referenceCountable_ ) {
+            return ReferenceHandler<cl_type>::retain(object_);
+        }
+        else {
+            return CL_SUCCESS;
+        }
+    }
+
+    cl_int release() const
+    {
+        if (object_ != nullptr && referenceCountable_) {
+            return ReferenceHandler<cl_type>::release(object_);
+        }
+        else {
+            return CL_SUCCESS;
+        }
+    }
+};
+
+template <typename T>
+inline bool operator==(const Wrapper<T> &lhs, const Wrapper<T> &rhs)
+{
+    return lhs() == rhs();
+}
+
+template <typename T>
+inline bool operator!=(const Wrapper<T> &lhs, const Wrapper<T> &rhs)
+{
+    return !operator==(lhs, rhs);
+}
+
+} // namespace detail
+//! \endcond
+
+
+using BuildLogType = vector<std::pair<cl::Device, typename detail::param_traits<detail::cl_program_build_info, CL_PROGRAM_BUILD_LOG>::param_type>>;
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+/**
+* Exception class for build errors to carry build info
+*/
+class BuildError : public Error
+{
+private:
+    BuildLogType buildLogs;
+public:
+    BuildError(cl_int err, const char * errStr, const BuildLogType &vec) : Error(err, errStr), buildLogs(vec)
+    {
+    }
+
+    BuildLogType getBuildLog() const
+    {
+        return buildLogs;
+    }
+};
+namespace detail {
+    static inline cl_int buildErrHandler(
+        cl_int err,
+        const char * errStr,
+        const BuildLogType &buildLogs)
+    {
+        if (err != CL_SUCCESS) {
+            throw BuildError(err, errStr, buildLogs);
+        }
+        return err;
+    }
+} // namespace detail
+
+#else
+namespace detail {
+    static inline cl_int buildErrHandler(
+        cl_int err,
+        const char * errStr,
+        const BuildLogType &buildLogs)
+    {
+        (void)buildLogs; // suppress unused variable warning
+        (void)errStr;
+        return err;
+    }
+} // namespace detail
+#endif // #if defined(CL_HPP_ENABLE_EXCEPTIONS)
+
+
+/*! \stuct ImageFormat
+ *  \brief Adds constructors and member functions for cl_image_format.
+ *
+ *  \see cl_image_format
+ */
+struct ImageFormat : public cl_image_format
+{
+    //! \b
