@@ -1707,4 +1707,115 @@ public:
 
 
 protected:
-    template<typename Func, typenam
+    template<typename Func, typename U>
+    friend inline cl_int getInfoHelper(Func, cl_uint, U*, int, typename U::cl_type);
+
+    cl_int retain() const
+    {
+        if (object_ != nullptr) {
+            return ReferenceHandler<cl_type>::retain(object_);
+        }
+        else {
+            return CL_SUCCESS;
+        }
+    }
+
+    cl_int release() const
+    {
+        if (object_ != nullptr) {
+            return ReferenceHandler<cl_type>::release(object_);
+        }
+        else {
+            return CL_SUCCESS;
+        }
+    }
+};
+
+template <>
+class Wrapper<cl_device_id>
+{
+public:
+    typedef cl_device_id cl_type;
+
+protected:
+    cl_type object_;
+    bool referenceCountable_;
+
+    static bool isReferenceCountable(cl_device_id device)
+    {
+        bool retVal = false;
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+#if CL_HPP_MINIMUM_OPENCL_VERSION < 120
+        if (device != NULL) {
+            int version = getDevicePlatformVersion(device);
+            if(version > ((1 << 16) + 1)) {
+                retVal = true;
+            }
+        }
+#else // CL_HPP_MINIMUM_OPENCL_VERSION < 120
+        retVal = true;
+#endif // CL_HPP_MINIMUM_OPENCL_VERSION < 120
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+        return retVal;
+    }
+
+public:
+    Wrapper() : object_(NULL), referenceCountable_(false) 
+    { 
+    }
+    
+    Wrapper(const cl_type &obj, bool retainObject) : 
+        object_(obj), 
+        referenceCountable_(false) 
+    {
+        referenceCountable_ = isReferenceCountable(obj); 
+
+        if (retainObject) {
+            detail::errHandler(retain(), __RETAIN_ERR);
+        }
+    }
+
+    ~Wrapper()
+    {
+        release();
+    }
+    
+    Wrapper(const Wrapper<cl_type>& rhs)
+    {
+        object_ = rhs.object_;
+        referenceCountable_ = isReferenceCountable(object_); 
+        detail::errHandler(retain(), __RETAIN_ERR);
+    }
+
+    Wrapper(Wrapper<cl_type>&& rhs) CL_HPP_NOEXCEPT_
+    {
+        object_ = rhs.object_;
+        referenceCountable_ = rhs.referenceCountable_;
+        rhs.object_ = NULL;
+        rhs.referenceCountable_ = false;
+    }
+
+    Wrapper<cl_type>& operator = (const Wrapper<cl_type>& rhs)
+    {
+        if (this != &rhs) {
+            detail::errHandler(release(), __RELEASE_ERR);
+            object_ = rhs.object_;
+            referenceCountable_ = rhs.referenceCountable_;
+            detail::errHandler(retain(), __RETAIN_ERR);
+        }
+        return *this;
+    }
+
+    Wrapper<cl_type>& operator = (Wrapper<cl_type>&& rhs)
+    {
+        if (this != &rhs) {
+            detail::errHandler(release(), __RELEASE_ERR);
+            object_ = rhs.object_;
+            referenceCountable_ = rhs.referenceCountable_;
+            rhs.object_ = NULL;
+            rhs.referenceCountable_ = false;
+        }
+        return *this;
+    }
+
+    Wrapper<cl_t
