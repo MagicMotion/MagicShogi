@@ -2444,4 +2444,95 @@ public:
             return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
         }
 
-        /
+        // Cannot trivially assign because we need to capture intermediates 
+        // with safe construction
+        // We must retain things we obtain from the API to avoid releasing
+        // API-owned objects.
+        if (devices) {
+            devices->resize(ids.size());
+
+            // Assign to param, constructing with retain behaviour
+            // to correctly capture each underlying CL object
+            for (size_type i = 0; i < ids.size(); i++) {
+                (*devices)[i] = Device(ids[i], true);
+            }
+        }
+        return CL_SUCCESS;
+    }
+#endif
+
+    /*! \brief Gets a list of available platforms.
+     * 
+     *  Wraps clGetPlatformIDs().
+     */
+    static cl_int get(
+        vector<Platform>* platforms)
+    {
+        cl_uint n = 0;
+
+        if( platforms == NULL ) {
+            return detail::errHandler(CL_INVALID_ARG_VALUE, __GET_PLATFORM_IDS_ERR);
+        }
+
+        cl_int err = ::clGetPlatformIDs(0, NULL, &n);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_PLATFORM_IDS_ERR);
+        }
+
+        vector<cl_platform_id> ids(n);
+        err = ::clGetPlatformIDs(n, ids.data(), NULL);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_PLATFORM_IDS_ERR);
+        }
+
+        if (platforms) {
+            platforms->resize(ids.size());
+
+            // Platforms don't reference count
+            for (size_type i = 0; i < ids.size(); i++) {
+                (*platforms)[i] = Platform(ids[i]);
+            }
+        }
+        return CL_SUCCESS;
+    }
+
+    /*! \brief Gets the first available platform.
+     * 
+     *  Wraps clGetPlatformIDs(), returning the first result.
+     */
+    static cl_int get(
+        Platform * platform)
+    {
+        cl_int err;
+        Platform default_platform = Platform::getDefault(&err);
+        if (platform) {
+            *platform = default_platform;
+        }
+        return err;
+    }
+
+    /*! \brief Gets the first available platform, returning it by value.
+     *
+     * \return Returns a valid platform if one is available.
+     *         If no platform is available will return a null platform.
+     * Throws an exception if no platforms are available
+     * or an error condition occurs.
+     * Wraps clGetPlatformIDs(), returning the first result.
+     */
+    static Platform get(
+        cl_int * errResult = NULL)
+    {
+        cl_int err;
+        Platform default_platform = Platform::getDefault(&err);
+        if (errResult) {
+            *errResult = err;
+        }
+        return default_platform;
+    }    
+    
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+    //! \brief Wrapper for clUnloadCompiler().
+    cl_int
+    unloadCompiler()
+    {
+        return ::clUnloadPlatformCompiler(
