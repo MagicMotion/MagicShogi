@@ -2194,4 +2194,92 @@ CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Device::default_error_ = CL_SUCCESS;
 class Platform : public detail::Wrapper<cl_platform_id>
 {
 private:
-    static std::once
+    static std::once_flag default_initialized_;
+    static Platform default_;
+    static cl_int default_error_;
+
+    /*! \brief Create the default context.
+    *
+    * This sets @c default_ and @c default_error_. It does not throw
+    * @c cl::Error.
+    */
+    static void makeDefault() {
+        /* Throwing an exception from a call_once invocation does not do
+        * what we wish, so we catch it and save the error.
+        */
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+        try
+#endif
+        {
+            // If default wasn't passed ,generate one
+            // Otherwise set it
+            cl_uint n = 0;
+
+            cl_int err = ::clGetPlatformIDs(0, NULL, &n);
+            if (err != CL_SUCCESS) {
+                default_error_ = err;
+                return;
+            }
+            if (n == 0) {
+                default_error_ = CL_INVALID_PLATFORM;
+                return;
+            }
+
+            vector<cl_platform_id> ids(n);
+            err = ::clGetPlatformIDs(n, ids.data(), NULL);
+            if (err != CL_SUCCESS) {
+                default_error_ = err;
+                return;
+            }
+
+            default_ = Platform(ids[0]);
+        }
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+        catch (cl::Error &e) {
+            default_error_ = e.err();
+        }
+#endif
+    }
+
+    /*! \brief Create the default platform from a provided platform.
+     *
+     * This sets @c default_. It does not throw
+     * @c cl::Error.
+     */
+    static void makeDefaultProvided(const Platform &p) {
+       default_ = p;
+    }
+    
+public:
+#ifdef CL_HPP_UNIT_TEST_ENABLE
+    /*! \brief Reset the default.
+    *
+    * This sets @c default_ to an empty value to support cleanup in
+    * the unit test framework.
+    * This function is not thread safe.
+    */
+    static void unitTestClearDefault() {
+        default_ = Platform();
+    }
+#endif // #ifdef CL_HPP_UNIT_TEST_ENABLE
+
+    //! \brief Default constructor - initializes to NULL.
+    Platform() : detail::Wrapper<cl_type>()  { }
+
+    /*! \brief Constructor from cl_platform_id.
+     * 
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  This simply copies the platform ID value, which is an inexpensive operation.
+     */
+    explicit Platform(const cl_platform_id &platform, bool retainObject = false) : 
+        detail::Wrapper<cl_type>(platform, retainObject) { }
+
+    /*! \brief Assignment operator from cl_platform_id.
+     * 
+     *  This simply copies the platform ID value, which is an inexpensive operation.
+     */
+    Platform& operator = (const cl_platform_id& rhs)
+    {
+        detail::Wrapper<cl_type>::ope
