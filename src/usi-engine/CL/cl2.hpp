@@ -1930,4 +1930,100 @@ namespace detail {
  */
 struct ImageFormat : public cl_image_format
 {
-    //! \b
+    //! \brief Default constructor - performs no initialization.
+    ImageFormat(){}
+
+    //! \brief Initializing constructor.
+    ImageFormat(cl_channel_order order, cl_channel_type type)
+    {
+        image_channel_order = order;
+        image_channel_data_type = type;
+    }
+
+    //! \brief Assignment operator.
+    ImageFormat& operator = (const ImageFormat& rhs)
+    {
+        if (this != &rhs) {
+            this->image_channel_data_type = rhs.image_channel_data_type;
+            this->image_channel_order     = rhs.image_channel_order;
+        }
+        return *this;
+    }
+};
+
+/*! \brief Class interface for cl_device_id.
+ *
+ *  \note Copies of these objects are inexpensive, since they don't 'own'
+ *        any underlying resources or data structures.
+ *
+ *  \see cl_device_id
+ */
+class Device : public detail::Wrapper<cl_device_id>
+{
+private:
+    static std::once_flag default_initialized_;
+    static Device default_;
+    static cl_int default_error_;
+
+    /*! \brief Create the default context.
+    *
+    * This sets @c default_ and @c default_error_. It does not throw
+    * @c cl::Error.
+    */
+    static void makeDefault();
+
+    /*! \brief Create the default platform from a provided platform.
+    *
+    * This sets @c default_. It does not throw
+    * @c cl::Error.
+    */
+    static void makeDefaultProvided(const Device &p) {
+        default_ = p;
+    }
+
+public:
+#ifdef CL_HPP_UNIT_TEST_ENABLE
+    /*! \brief Reset the default.
+    *
+    * This sets @c default_ to an empty value to support cleanup in
+    * the unit test framework.
+    * This function is not thread safe.
+    */
+    static void unitTestClearDefault() {
+        default_ = Device();
+    }
+#endif // #ifdef CL_HPP_UNIT_TEST_ENABLE
+
+    //! \brief Default constructor - initializes to NULL.
+    Device() : detail::Wrapper<cl_type>() { }
+
+    /*! \brief Constructor from cl_device_id.
+     * 
+     *  This simply copies the device ID value, which is an inexpensive operation.
+     */
+    explicit Device(const cl_device_id &device, bool retainObject = false) : 
+        detail::Wrapper<cl_type>(device, retainObject) { }
+
+    /*! \brief Returns the first device on the default context.
+     *
+     *  \see Context::getDefault()
+     */
+    static Device getDefault(
+        cl_int *errResult = NULL)
+    {
+        std::call_once(default_initialized_, makeDefault);
+        detail::errHandler(default_error_);
+        if (errResult != NULL) {
+            *errResult = default_error_;
+        }
+        return default_;
+    }
+
+    /**
+    * Modify the default device to be used by
+    * subsequent operations.
+    * Will only set the default if no default was previously created.
+    * @return updated default device.
+    *         Should be compared to the passed value to ensure that it was updated.
+    */
+    static Device setDefault(cons
