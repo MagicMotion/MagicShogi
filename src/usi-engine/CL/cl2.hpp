@@ -2365,4 +2365,83 @@ public:
 
             // Assign to param, constructing with retain behaviour
             // to correctly capture each underlying CL object
-   
+            for (size_type i = 0; i < ids.size(); i++) {
+                (*devices)[i] = Device(ids[i], true);
+            }
+        }
+        return CL_SUCCESS;
+    }
+
+#if defined(CL_HPP_USE_DX_INTEROP)
+   /*! \brief Get the list of available D3D10 devices.
+     *
+     *  \param d3d_device_source.
+     *
+     *  \param d3d_object.
+     *
+     *  \param d3d_device_set.
+     *
+     *  \param devices returns a vector of OpenCL D3D10 devices found. The cl::Device
+     *  values returned in devices can be used to identify a specific OpenCL
+     *  device. If \a devices argument is NULL, this argument is ignored.
+     *
+     *  \return One of the following values:
+     *    - CL_SUCCESS if the function is executed successfully.
+     *
+     *  The application can query specific capabilities of the OpenCL device(s)
+     *  returned by cl::getDevices. This can be used by the application to
+     *  determine which device(s) to use.
+     *
+     * \note In the case that exceptions are enabled and a return value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    cl_int getDevices(
+        cl_d3d10_device_source_khr d3d_device_source,
+        void *                     d3d_object,
+        cl_d3d10_device_set_khr    d3d_device_set,
+        vector<Device>* devices) const
+    {
+        typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clGetDeviceIDsFromD3D10KHR)(
+            cl_platform_id platform, 
+            cl_d3d10_device_source_khr d3d_device_source, 
+            void * d3d_object,
+            cl_d3d10_device_set_khr d3d_device_set,
+            cl_uint num_entries,
+            cl_device_id * devices,
+            cl_uint* num_devices);
+
+        if( devices == NULL ) {
+            return detail::errHandler(CL_INVALID_ARG_VALUE, __GET_DEVICE_IDS_ERR);
+        }
+
+        static PFN_clGetDeviceIDsFromD3D10KHR pfn_clGetDeviceIDsFromD3D10KHR = NULL;
+        CL_HPP_INIT_CL_EXT_FCN_PTR_PLATFORM_(object_, clGetDeviceIDsFromD3D10KHR);
+
+        cl_uint n = 0;
+        cl_int err = pfn_clGetDeviceIDsFromD3D10KHR(
+            object_, 
+            d3d_device_source, 
+            d3d_object,
+            d3d_device_set, 
+            0, 
+            NULL, 
+            &n);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
+        }
+
+        vector<cl_device_id> ids(n);
+        err = pfn_clGetDeviceIDsFromD3D10KHR(
+            object_, 
+            d3d_device_source, 
+            d3d_object,
+            d3d_device_set,
+            n, 
+            ids.data(), 
+            NULL);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
+        }
+
+        /
