@@ -2282,4 +2282,87 @@ public:
      */
     Platform& operator = (const cl_platform_id& rhs)
     {
-        detail::Wrapper<cl_type>::ope
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    static Platform getDefault(
+        cl_int *errResult = NULL)
+    {
+        std::call_once(default_initialized_, makeDefault);
+        detail::errHandler(default_error_);
+        if (errResult != NULL) {
+            *errResult = default_error_;
+        }
+        return default_;
+    }
+
+    /**
+     * Modify the default platform to be used by 
+     * subsequent operations.
+     * Will only set the default if no default was previously created.
+     * @return updated default platform. 
+     *         Should be compared to the passed value to ensure that it was updated.
+     */
+    static Platform setDefault(const Platform &default_platform)
+    {
+        std::call_once(default_initialized_, makeDefaultProvided, std::cref(default_platform));
+        detail::errHandler(default_error_);
+        return default_;
+    }
+
+    //! \brief Wrapper for clGetPlatformInfo().
+    cl_int getInfo(cl_platform_info name, string* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetPlatformInfo, object_, name, param),
+            __GET_PLATFORM_INFO_ERR);
+    }
+
+    //! \brief Wrapper for clGetPlatformInfo() that returns by value.
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_platform_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_platform_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    /*! \brief Gets a list of devices for this platform.
+     * 
+     *  Wraps clGetDeviceIDs().
+     */
+    cl_int getDevices(
+        cl_device_type type,
+        vector<Device>* devices) const
+    {
+        cl_uint n = 0;
+        if( devices == NULL ) {
+            return detail::errHandler(CL_INVALID_ARG_VALUE, __GET_DEVICE_IDS_ERR);
+        }
+        cl_int err = ::clGetDeviceIDs(object_, type, 0, NULL, &n);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
+        }
+
+        vector<cl_device_id> ids(n);
+        err = ::clGetDeviceIDs(object_, type, n, ids.data(), NULL);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
+        }
+
+        // Cannot trivially assign because we need to capture intermediates 
+        // with safe construction
+        // We must retain things we obtain from the API to avoid releasing
+        // API-owned objects.
+        if (devices) {
+            devices->resize(ids.size());
+
+            // Assign to param, constructing with retain behaviour
+            // to correctly capture each underlying CL object
+   
