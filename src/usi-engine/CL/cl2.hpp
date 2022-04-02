@@ -2116,4 +2116,82 @@ public:
         }
 
         // Cannot trivially assign because we need to capture intermediates 
-        // with safe 
+        // with safe construction
+        if (devices) {
+            devices->resize(ids.size());
+
+            // Assign to param, constructing with retain behaviour
+            // to correctly capture each underlying CL object
+            for (size_type i = 0; i < ids.size(); i++) {
+                // We do not need to retain because this device is being created 
+                // by the runtime
+                (*devices)[i] = Device(ids[i], false);
+            }
+        }
+
+        return CL_SUCCESS;
+    }
+#elif defined(CL_HPP_USE_CL_DEVICE_FISSION)
+
+/**
+ * CL 1.1 version that uses device fission extension.
+ */
+    cl_int createSubDevices(
+        const cl_device_partition_property_ext * properties,
+        vector<Device>* devices)
+    {
+        typedef CL_API_ENTRY cl_int 
+            ( CL_API_CALL * PFN_clCreateSubDevicesEXT)(
+                cl_device_id /*in_device*/,
+                const cl_device_partition_property_ext * /* properties */,
+                cl_uint /*num_entries*/,
+                cl_device_id * /*out_devices*/,
+                cl_uint * /*num_devices*/ ) CL_EXT_SUFFIX__VERSION_1_1;
+
+        static PFN_clCreateSubDevicesEXT pfn_clCreateSubDevicesEXT = NULL;
+        CL_HPP_INIT_CL_EXT_FCN_PTR_(clCreateSubDevicesEXT);
+
+        cl_uint n = 0;
+        cl_int err = pfn_clCreateSubDevicesEXT(object_, properties, 0, NULL, &n);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __CREATE_SUB_DEVICES_ERR);
+        }
+
+        vector<cl_device_id> ids(n);
+        err = pfn_clCreateSubDevicesEXT(object_, properties, n, ids.data(), NULL);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __CREATE_SUB_DEVICES_ERR);
+        }
+        // Cannot trivially assign because we need to capture intermediates 
+        // with safe construction
+        if (devices) {
+            devices->resize(ids.size());
+
+            // Assign to param, constructing with retain behaviour
+            // to correctly capture each underlying CL object
+            for (size_type i = 0; i < ids.size(); i++) {
+                // We do not need to retain because this device is being created 
+                // by the runtime
+                (*devices)[i] = Device(ids[i], false);
+            }
+        }
+        return CL_SUCCESS;
+    }
+#endif // defined(CL_HPP_USE_CL_DEVICE_FISSION)
+};
+
+CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Device::default_initialized_;
+CL_HPP_DEFINE_STATIC_MEMBER_ Device Device::default_;
+CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Device::default_error_ = CL_SUCCESS;
+
+/*! \brief Class interface for cl_platform_id.
+ *
+ *  \note Copies of these objects are inexpensive, since they don't 'own'
+ *        any underlying resources or data structures.
+ *
+ *  \see cl_platform_id
+ */
+class Platform : public detail::Wrapper<cl_platform_id>
+{
+private:
+    static std::once
