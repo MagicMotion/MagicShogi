@@ -2026,4 +2026,94 @@ public:
     * @return updated default device.
     *         Should be compared to the passed value to ensure that it was updated.
     */
-    static Device setDefault(cons
+    static Device setDefault(const Device &default_device)
+    {
+        std::call_once(default_initialized_, makeDefaultProvided, std::cref(default_device));
+        detail::errHandler(default_error_);
+        return default_;
+    }
+
+    /*! \brief Assignment operator from cl_device_id.
+     * 
+     *  This simply copies the device ID value, which is an inexpensive operation.
+     */
+    Device& operator = (const cl_device_id& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+    * Required for MSVC.
+    */
+    Device(const Device& dev) : detail::Wrapper<cl_type>(dev) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+    * Required for MSVC.
+    */
+    Device& operator = (const Device &dev)
+    {
+        detail::Wrapper<cl_type>::operator=(dev);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+    * Required for MSVC.
+    */
+    Device(Device&& dev) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(dev)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+    * Required for MSVC.
+    */
+    Device& operator = (Device &&dev)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(dev));
+        return *this;
+    }
+
+    //! \brief Wrapper for clGetDeviceInfo().
+    template <typename T>
+    cl_int getInfo(cl_device_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetDeviceInfo, object_, name, param),
+            __GET_DEVICE_INFO_ERR);
+    }
+
+    //! \brief Wrapper for clGetDeviceInfo() that returns by value.
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_device_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_device_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    /**
+     * CL 1.2 version
+     */
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+    //! \brief Wrapper for clCreateSubDevices().
+    cl_int createSubDevices(
+        const cl_device_partition_property * properties,
+        vector<Device>* devices)
+    {
+        cl_uint n = 0;
+        cl_int err = clCreateSubDevices(object_, properties, 0, NULL, &n);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __CREATE_SUB_DEVICES_ERR);
+        }
+
+        vector<cl_device_id> ids(n);
+        err = clCreateSubDevices(object_, properties, n, ids.data(), NULL);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __CREATE_SUB_DEVICES_ERR);
+        }
+
+        // Cannot trivially assign because we need to capture intermediates 
+        // with safe 
