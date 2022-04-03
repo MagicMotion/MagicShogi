@@ -2727,4 +2727,94 @@ public:
                 detail::errHandler(error, __CREATE_CONTEXT_FROM_TYPE_ERR);
                 if (err != NULL) {
                     *err = error;
-   
+                }
+                return;
+            }
+
+            // Check the platforms we found for a device of our specified type
+            cl_context_properties platform_id = 0;
+            for (unsigned int i = 0; i < platforms.size(); i++) {
+
+                vector<Device> devices;
+
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+                try {
+#endif
+
+                    error = platforms[i].getDevices(type, &devices);
+
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+                } catch (cl::Error& e) {
+                    error = e.err();
+                }
+    // Catch if exceptions are enabled as we don't want to exit if first platform has no devices of type
+    // We do error checking next anyway, and can throw there if needed
+#endif
+
+                // Only squash CL_SUCCESS and CL_DEVICE_NOT_FOUND
+                if (error != CL_SUCCESS && error != CL_DEVICE_NOT_FOUND) {
+                    detail::errHandler(error, __CREATE_CONTEXT_FROM_TYPE_ERR);
+                    if (err != NULL) {
+                        *err = error;
+                    }
+                }
+
+                if (devices.size() > 0) {
+                    platform_id = (cl_context_properties)platforms[i]();
+                    break;
+                }
+            }
+
+            if (platform_id == 0) {
+                detail::errHandler(CL_DEVICE_NOT_FOUND, __CREATE_CONTEXT_FROM_TYPE_ERR);
+                if (err != NULL) {
+                    *err = CL_DEVICE_NOT_FOUND;
+                }
+                return;
+            }
+
+            prop[1] = platform_id;
+            properties = &prop[0];
+        }
+#endif
+        object_ = ::clCreateContextFromType(
+            properties, type, notifyFptr, data, &error);
+
+        detail::errHandler(error, __CREATE_CONTEXT_FROM_TYPE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Context(const Context& ctx) : detail::Wrapper<cl_type>(ctx) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Context& operator = (const Context &ctx)
+    {
+        detail::Wrapper<cl_type>::operator=(ctx);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Context(Context&& ctx) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(ctx)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Context& operator = (Context &&ctx)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(ctx));
+        return *this;
+    }
+
+
+    /*! \brief Returns a singleton context including all devices of CL_DEVICE_TYPE_DEFAULT.
+     *
+     *  \note All 
