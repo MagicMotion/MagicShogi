@@ -2630,4 +2630,101 @@ public:
     /*! \brief Reset the default.
     *
     * This sets @c default_ to an empty value to support cleanup in
-    * the unit test
+    * the unit test framework.
+    * This function is not thread safe.
+    */
+    static void unitTestClearDefault() {
+        default_ = Context();
+    }
+#endif // #ifdef CL_HPP_UNIT_TEST_ENABLE
+
+    /*! \brief Constructs a context including a list of specified devices.
+     *
+     *  Wraps clCreateContext().
+     */
+    Context(
+        const vector<Device>& devices,
+        cl_context_properties* properties = NULL,
+        void (CL_CALLBACK * notifyFptr)(
+            const char *,
+            const void *,
+            size_type,
+            void *) = NULL,
+        void* data = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        size_type numDevices = devices.size();
+        vector<cl_device_id> deviceIDs(numDevices);
+
+        for( size_type deviceIndex = 0; deviceIndex < numDevices; ++deviceIndex ) {
+            deviceIDs[deviceIndex] = (devices[deviceIndex])();
+        }
+
+        object_ = ::clCreateContext(
+            properties, (cl_uint) numDevices,
+            deviceIDs.data(),
+            notifyFptr, data, &error);
+
+        detail::errHandler(error, __CREATE_CONTEXT_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    Context(
+        const Device& device,
+        cl_context_properties* properties = NULL,
+        void (CL_CALLBACK * notifyFptr)(
+            const char *,
+            const void *,
+            size_type,
+            void *) = NULL,
+        void* data = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        cl_device_id deviceID = device();
+
+        object_ = ::clCreateContext(
+            properties, 1,
+            &deviceID,
+            notifyFptr, data, &error);
+
+        detail::errHandler(error, __CREATE_CONTEXT_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+    
+    /*! \brief Constructs a context including all or a subset of devices of a specified type.
+     *
+     *  Wraps clCreateContextFromType().
+     */
+    Context(
+        cl_device_type type,
+        cl_context_properties* properties = NULL,
+        void (CL_CALLBACK * notifyFptr)(
+            const char *,
+            const void *,
+            size_type,
+            void *) = NULL,
+        void* data = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+#if !defined(__APPLE__) && !defined(__MACOS)
+        cl_context_properties prop[4] = {CL_CONTEXT_PLATFORM, 0, 0, 0 };
+
+        if (properties == NULL) {
+            // Get a valid platform ID as we cannot send in a blank one
+            vector<Platform> platforms;
+            error = Platform::get(&platforms);
+            if (error != CL_SUCCESS) {
+                detail::errHandler(error, __CREATE_CONTEXT_FROM_TYPE_ERR);
+                if (err != NULL) {
+                    *err = error;
+   
