@@ -2535,4 +2535,99 @@ public:
     cl_int
     unloadCompiler()
     {
-        return ::clUnloadPlatformCompiler(
+        return ::clUnloadPlatformCompiler(object_);
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+}; // class Platform
+
+CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Platform::default_initialized_;
+CL_HPP_DEFINE_STATIC_MEMBER_ Platform Platform::default_;
+CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Platform::default_error_ = CL_SUCCESS;
+
+
+/**
+ * Deprecated APIs for 1.2
+ */
+#if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+/**
+ * Unload the OpenCL compiler.
+ * \note Deprecated for OpenCL 1.2. Use Platform::unloadCompiler instead.
+ */
+inline CL_EXT_PREFIX__VERSION_1_1_DEPRECATED cl_int
+UnloadCompiler() CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+inline cl_int
+UnloadCompiler()
+{
+    return ::clUnloadCompiler();
+}
+#endif // #if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+
+/*! \brief Class interface for cl_context.
+ *
+ *  \note Copies of these objects are shallow, meaning that the copy will refer
+ *        to the same underlying cl_context as the original.  For details, see
+ *        clRetainContext() and clReleaseContext().
+ *
+ *  \see cl_context
+ */
+class Context 
+    : public detail::Wrapper<cl_context>
+{
+private:
+    static std::once_flag default_initialized_;
+    static Context default_;
+    static cl_int default_error_;
+
+    /*! \brief Create the default context from the default device type in the default platform.
+     *
+     * This sets @c default_ and @c default_error_. It does not throw
+     * @c cl::Error.
+     */
+    static void makeDefault() {
+        /* Throwing an exception from a call_once invocation does not do
+         * what we wish, so we catch it and save the error.
+         */
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+        try
+#endif
+        {
+#if !defined(__APPLE__) && !defined(__MACOS)
+            const Platform &p = Platform::getDefault();
+            cl_platform_id defaultPlatform = p();
+            cl_context_properties properties[3] = {
+                CL_CONTEXT_PLATFORM, (cl_context_properties)defaultPlatform, 0
+            };
+#else // #if !defined(__APPLE__) && !defined(__MACOS)
+            cl_context_properties *properties = nullptr;
+#endif // #if !defined(__APPLE__) && !defined(__MACOS)
+
+            default_ = Context(
+                CL_DEVICE_TYPE_DEFAULT,
+                properties,
+                NULL,
+                NULL,
+                &default_error_);
+        }
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+        catch (cl::Error &e) {
+            default_error_ = e.err();
+        }
+#endif
+    }
+
+
+    /*! \brief Create the default context from a provided Context.
+     *
+     * This sets @c default_. It does not throw
+     * @c cl::Error.
+     */
+    static void makeDefaultProvided(const Context &c) {
+        default_ = c;
+    }
+    
+public:
+#ifdef CL_HPP_UNIT_TEST_ENABLE
+    /*! \brief Reset the default.
+    *
+    * This sets @c default_ to an empty value to support cleanup in
+    * the unit test
