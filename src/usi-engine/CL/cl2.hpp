@@ -2993,4 +2993,93 @@ public:
      *  This effectively transfers ownership of a refcount on the cl_event
      *  into the new Event object.
      */
-    explicit Even
+    explicit Event(const cl_event& event, bool retainObject = false) : 
+        detail::Wrapper<cl_type>(event, retainObject) { }
+
+    /*! \brief Assignment operator from cl_event - takes ownership.
+     *
+     *  This effectively transfers ownership of a refcount on the rhs and calls
+     *  clReleaseEvent() on the value previously held by this instance.
+     */
+    Event& operator = (const cl_event& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    //! \brief Wrapper for clGetEventInfo().
+    template <typename T>
+    cl_int getInfo(cl_event_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetEventInfo, object_, name, param),
+            __GET_EVENT_INFO_ERR);
+    }
+
+    //! \brief Wrapper for clGetEventInfo() that returns by value.
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_event_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_event_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    //! \brief Wrapper for clGetEventProfilingInfo().
+    template <typename T>
+    cl_int getProfilingInfo(cl_profiling_info name, T* param) const
+    {
+        return detail::errHandler(detail::getInfo(
+            &::clGetEventProfilingInfo, object_, name, param),
+            __GET_EVENT_PROFILE_INFO_ERR);
+    }
+
+    //! \brief Wrapper for clGetEventProfilingInfo() that returns by value.
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_profiling_info, name>::param_type
+    getProfilingInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_profiling_info, name>::param_type param;
+        cl_int result = getProfilingInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    /*! \brief Blocks the calling thread until this event completes.
+     * 
+     *  Wraps clWaitForEvents().
+     */
+    cl_int wait() const
+    {
+        return detail::errHandler(
+            ::clWaitForEvents(1, &object_),
+            __WAIT_FOR_EVENTS_ERR);
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 110
+    /*! \brief Registers a user callback function for a specific command execution status.
+     *
+     *  Wraps clSetEventCallback().
+     */
+    cl_int setCallback(
+        cl_int type,
+        void (CL_CALLBACK * pfn_notify)(cl_event, cl_int, void *),		
+        void * user_data = NULL)
+    {
+        return detail::errHandler(
+            ::clSetEventCallback(
+                object_,
+                type,
+                pfn_notify,
+                user_data), 
+            __SET_EVENT_CALLBACK_ERR);
+    }
+#endi
