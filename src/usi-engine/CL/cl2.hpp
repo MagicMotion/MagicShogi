@@ -3082,4 +3082,104 @@ public:
                 user_data), 
             __SET_EVENT_CALLBACK_ERR);
     }
-#endi
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+
+    /*! \brief Blocks the calling thread until every event specified is complete.
+     * 
+     *  Wraps clWaitForEvents().
+     */
+    static cl_int
+    waitForEvents(const vector<Event>& events)
+    {
+        return detail::errHandler(
+            ::clWaitForEvents(
+                (cl_uint) events.size(), (events.size() > 0) ? (cl_event*)&events.front() : NULL),
+            __WAIT_FOR_EVENTS_ERR);
+    }
+};
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 110
+/*! \brief Class interface for user events (a subset of cl_event's).
+ * 
+ *  See Event for details about copy semantics, etc.
+ */
+class UserEvent : public Event
+{
+public:
+    /*! \brief Constructs a user event on a given context.
+     *
+     *  Wraps clCreateUserEvent().
+     */
+    UserEvent(
+        const Context& context,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateUserEvent(
+            context(),
+            &error);
+
+        detail::errHandler(error, __CREATE_USER_EVENT_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! \brief Default constructor - initializes to NULL.
+    UserEvent() : Event() { }
+
+    /*! \brief Sets the execution status of a user event object.
+     *
+     *  Wraps clSetUserEventStatus().
+     */
+    cl_int setStatus(cl_int status)
+    {
+        return detail::errHandler(
+            ::clSetUserEventStatus(object_,status), 
+            __SET_USER_EVENT_STATUS_ERR);
+    }
+};
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+
+/*! \brief Blocks the calling thread until every event specified is complete.
+ * 
+ *  Wraps clWaitForEvents().
+ */
+inline static cl_int
+WaitForEvents(const vector<Event>& events)
+{
+    return detail::errHandler(
+        ::clWaitForEvents(
+            (cl_uint) events.size(), (events.size() > 0) ? (cl_event*)&events.front() : NULL),
+        __WAIT_FOR_EVENTS_ERR);
+}
+
+/*! \brief Class interface for cl_mem.
+ *
+ *  \note Copies of these objects are shallow, meaning that the copy will refer
+ *        to the same underlying cl_mem as the original.  For details, see
+ *        clRetainMemObject() and clReleaseMemObject().
+ *
+ *  \see cl_mem
+ */
+class Memory : public detail::Wrapper<cl_mem>
+{
+public:
+    //! \brief Default constructor - initializes to NULL.
+    Memory() : detail::Wrapper<cl_type>() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     *  Optionally transfer ownership of a refcount on the cl_mem
+     *  into the new Memory object.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *
+     *  See Memory for further details.
+     */
+    explicit Memory(const cl_mem& memory, bool retainObject) :
+        detail::Wrapper<cl_type>(memory, retainObject) { }
+
+    /*! \brief A
