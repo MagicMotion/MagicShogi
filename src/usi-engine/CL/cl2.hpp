@@ -2817,4 +2817,87 @@ public:
 
     /*! \brief Returns a singleton context including all devices of CL_DEVICE_TYPE_DEFAULT.
      *
-     *  \note All 
+     *  \note All calls to this function return the same cl_context as the first.
+     */
+    static Context getDefault(cl_int * err = NULL) 
+    {
+        std::call_once(default_initialized_, makeDefault);
+        detail::errHandler(default_error_);
+        if (err != NULL) {
+            *err = default_error_;
+        }
+        return default_;
+    }
+
+    /**
+     * Modify the default context to be used by
+     * subsequent operations.
+     * Will only set the default if no default was previously created.
+     * @return updated default context.
+     *         Should be compared to the passed value to ensure that it was updated.
+     */
+    static Context setDefault(const Context &default_context)
+    {
+        std::call_once(default_initialized_, makeDefaultProvided, std::cref(default_context));
+        detail::errHandler(default_error_);
+        return default_;
+    }
+
+    //! \brief Default constructor - initializes to NULL.
+    Context() : detail::Wrapper<cl_type>() { }
+
+    /*! \brief Constructor from cl_context - takes ownership.
+     * 
+     *  This effectively transfers ownership of a refcount on the cl_context
+     *  into the new Context object.
+     */
+    explicit Context(const cl_context& context, bool retainObject = false) : 
+        detail::Wrapper<cl_type>(context, retainObject) { }
+
+    /*! \brief Assignment operator from cl_context - takes ownership.
+     * 
+     *  This effectively transfers ownership of a refcount on the rhs and calls
+     *  clReleaseContext() on the value previously held by this instance.
+     */
+    Context& operator = (const cl_context& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    //! \brief Wrapper for clGetContextInfo().
+    template <typename T>
+    cl_int getInfo(cl_context_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetContextInfo, object_, name, param),
+            __GET_CONTEXT_INFO_ERR);
+    }
+
+    //! \brief Wrapper for clGetContextInfo() that returns by value.
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_context_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_context_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    /*! \brief Gets a list of supported image formats.
+     *  
+     *  Wraps clGetSupportedImageFormats().
+     */
+    cl_int getSupportedImageFormats(
+        cl_mem_flags flags,
+        cl_mem_object_type type,
+        vector<ImageFormat>* formats) const
+    {
+        cl_uint numEntries;
+        
+        if (!formats) {
+            return 
