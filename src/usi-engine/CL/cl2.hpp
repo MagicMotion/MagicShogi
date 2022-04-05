@@ -2900,4 +2900,97 @@ public:
         cl_uint numEntries;
         
         if (!formats) {
-            return 
+            return CL_SUCCESS;
+        }
+
+        cl_int err = ::clGetSupportedImageFormats(
+           object_, 
+           flags,
+           type, 
+           0, 
+           NULL, 
+           &numEntries);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_SUPPORTED_IMAGE_FORMATS_ERR);
+        }
+
+        if (numEntries > 0) {
+            vector<ImageFormat> value(numEntries);
+            err = ::clGetSupportedImageFormats(
+                object_,
+                flags,
+                type,
+                numEntries,
+                (cl_image_format*)value.data(),
+                NULL);
+            if (err != CL_SUCCESS) {
+                return detail::errHandler(err, __GET_SUPPORTED_IMAGE_FORMATS_ERR);
+            }
+
+            formats->assign(begin(value), end(value));
+        }
+        else {
+            // If no values are being returned, ensure an empty vector comes back
+            formats->clear();
+        }
+
+        return CL_SUCCESS;
+    }
+};
+
+inline void Device::makeDefault()
+{
+    /* Throwing an exception from a call_once invocation does not do
+    * what we wish, so we catch it and save the error.
+    */
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+    try
+#endif
+    {
+        cl_int error = 0;
+
+        Context context = Context::getDefault(&error);
+        detail::errHandler(error, __CREATE_CONTEXT_ERR);
+
+        if (error != CL_SUCCESS) {
+            default_error_ = error;
+        }
+        else {
+            default_ = context.getInfo<CL_CONTEXT_DEVICES>()[0];
+            default_error_ = CL_SUCCESS;
+        }
+    }
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+    catch (cl::Error &e) {
+        default_error_ = e.err();
+    }
+#endif
+}
+
+CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Context::default_initialized_;
+CL_HPP_DEFINE_STATIC_MEMBER_ Context Context::default_;
+CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Context::default_error_ = CL_SUCCESS;
+
+/*! \brief Class interface for cl_event.
+ *
+ *  \note Copies of these objects are shallow, meaning that the copy will refer
+ *        to the same underlying cl_event as the original.  For details, see
+ *        clRetainEvent() and clReleaseEvent().
+ *
+ *  \see cl_event
+ */
+class Event : public detail::Wrapper<cl_event>
+{
+public:
+    //! \brief Default constructor - initializes to NULL.
+    Event() : detail::Wrapper<cl_type>() { }
+
+    /*! \brief Constructor from cl_event - takes ownership.
+     * 
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  This effectively transfers ownership of a refcount on the cl_event
+     *  into the new Event object.
+     */
+    explicit Even
