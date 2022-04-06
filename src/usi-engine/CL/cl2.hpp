@@ -3267,4 +3267,118 @@ public:
             ::clSetMemObjectDestructorCallback(
                 object_,
                 pfn_notify,
-      
+                user_data), 
+            __SET_MEM_OBJECT_DESTRUCTOR_CALLBACK_ERR);
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+
+};
+
+// Pre-declare copy functions
+class Buffer;
+template< typename IteratorType >
+cl_int copy( IteratorType startIterator, IteratorType endIterator, cl::Buffer &buffer );
+template< typename IteratorType >
+cl_int copy( const cl::Buffer &buffer, IteratorType startIterator, IteratorType endIterator );
+template< typename IteratorType >
+cl_int copy( const CommandQueue &queue, IteratorType startIterator, IteratorType endIterator, cl::Buffer &buffer );
+template< typename IteratorType >
+cl_int copy( const CommandQueue &queue, const cl::Buffer &buffer, IteratorType startIterator, IteratorType endIterator );
+
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+namespace detail
+{
+    class SVMTraitNull
+    {
+    public:
+        static cl_svm_mem_flags getSVMMemFlags()
+        {
+            return 0;
+        }
+    };
+} // namespace detail
+
+template<class Trait = detail::SVMTraitNull>
+class SVMTraitReadWrite
+{
+public:
+    static cl_svm_mem_flags getSVMMemFlags()
+    {
+        return CL_MEM_READ_WRITE |
+            Trait::getSVMMemFlags();
+    }
+};
+
+template<class Trait = detail::SVMTraitNull>
+class SVMTraitReadOnly
+{
+public:
+    static cl_svm_mem_flags getSVMMemFlags()
+    {
+        return CL_MEM_READ_ONLY |
+            Trait::getSVMMemFlags();
+    }
+};
+
+template<class Trait = detail::SVMTraitNull>
+class SVMTraitWriteOnly
+{
+public:
+    static cl_svm_mem_flags getSVMMemFlags()
+    {
+        return CL_MEM_WRITE_ONLY |
+            Trait::getSVMMemFlags();
+    }
+};
+
+template<class Trait = SVMTraitReadWrite<>>
+class SVMTraitCoarse
+{
+public:
+    static cl_svm_mem_flags getSVMMemFlags()
+    {
+        return Trait::getSVMMemFlags();
+    }
+};
+
+template<class Trait = SVMTraitReadWrite<>>
+class SVMTraitFine
+{
+public:
+    static cl_svm_mem_flags getSVMMemFlags()
+    {
+        return CL_MEM_SVM_FINE_GRAIN_BUFFER |
+            Trait::getSVMMemFlags();
+    }
+};
+
+template<class Trait = SVMTraitReadWrite<>>
+class SVMTraitAtomic
+{
+public:
+    static cl_svm_mem_flags getSVMMemFlags()
+    {
+        return
+            CL_MEM_SVM_FINE_GRAIN_BUFFER |
+            CL_MEM_SVM_ATOMICS |
+            Trait::getSVMMemFlags();
+    }
+};
+
+// Pre-declare SVM map function
+template<typename T>
+inline cl_int enqueueMapSVM(
+    T* ptr,
+    cl_bool blocking,
+    cl_map_flags flags,
+    size_type size,
+    const vector<Event>* events = NULL,
+    Event* event = NULL);
+
+/**
+ * STL-like allocator class for managing SVM objects provided for convenience.
+ *
+ * Note that while this behaves like an allocator for the purposes of constructing vectors and similar objects,
+ * care must be taken when using with smart pointers.
+ * The allocator should not be used to construct a unique_ptr if we are using coarse-grained SVM mod
