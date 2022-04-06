@@ -3492,4 +3492,111 @@ public:
 
     /**
      * Return the maximum possible allocation size.
-     * This is the minimum of 
+     * This is the minimum of the maximum sizes of all devices in the context.
+     */
+    size_type max_size() const CL_HPP_NOEXCEPT_
+    {
+        size_type maxSize = std::numeric_limits<size_type>::max() / sizeof(T);
+
+        for (const Device &d : context_.getInfo<CL_CONTEXT_DEVICES>()) {
+            maxSize = std::min(
+                maxSize, 
+                static_cast<size_type>(d.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>()));
+        }
+
+        return maxSize;
+    }
+
+    template< class U, class... Args >
+    void construct(U* p, Args&&... args)
+    {
+        new(p)T(args...);
+    }
+
+    template< class U >
+    void destroy(U* p)
+    {
+        p->~U();
+    }
+
+    /**
+     * Returns true if the contexts match.
+     */
+    inline bool operator==(SVMAllocator const& rhs)
+    {
+        return (context_==rhs.context_);
+    }
+
+    inline bool operator!=(SVMAllocator const& a)
+    {
+        return !operator==(a);
+    }
+}; // class SVMAllocator        return cl::pointer<T>(tmp, detail::Deleter<T, Alloc>{alloc, copies});
+
+
+template<class SVMTrait>
+class SVMAllocator<void, SVMTrait> {
+public:
+    typedef void value_type;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+
+    template<typename U>
+    struct rebind
+    {
+        typedef SVMAllocator<U, SVMTrait> other;
+    };
+
+    template<typename U, typename V>
+    friend class SVMAllocator;
+};
+
+#if !defined(CL_HPP_NO_STD_UNIQUE_PTR)
+namespace detail
+{
+    template<class Alloc>
+    class Deleter {
+    private:
+        Alloc alloc_;
+        size_type copies_;
+
+    public:
+        typedef typename std::allocator_traits<Alloc>::pointer pointer;
+
+        Deleter(const Alloc &alloc, size_type copies) : alloc_{ alloc }, copies_{ copies }
+        {
+        }
+
+        void operator()(pointer ptr) const {
+            Alloc tmpAlloc{ alloc_ };
+            std::allocator_traits<Alloc>::destroy(tmpAlloc, std::addressof(*ptr));
+            std::allocator_traits<Alloc>::deallocate(tmpAlloc, ptr, copies_);
+        }
+    };
+} // namespace detail
+
+/**
+ * Allocation operation compatible with std::allocate_ptr.
+ * Creates a unique_ptr<T> by default.
+ * This requirement is to ensure that the control block is not
+ * allocated in memory inaccessible to the host.
+ */
+template <class T, class Alloc, class... Args>
+cl::pointer<T, detail::Deleter<Alloc>> allocate_pointer(const Alloc &alloc_, Args&&... args)
+{
+    Alloc alloc(alloc_);
+    static const size_type copies = 1;
+
+    // Ensure that creation of the management block and the
+    // object are dealt with separately such that we only provide a deleter
+
+    T* tmp = std::allocator_traits<Alloc>::allocate(alloc, copies);
+    if (!tmp) {
+        std::bad_alloc excep;
+        throw excep;
+    }
+    try {
+        std::allocator_traits<Alloc>::construct(
+            alloc,
+            std::addressof(*tmp),
+        
