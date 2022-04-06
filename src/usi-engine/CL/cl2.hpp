@@ -3381,4 +3381,115 @@ inline cl_int enqueueMapSVM(
  *
  * Note that while this behaves like an allocator for the purposes of constructing vectors and similar objects,
  * care must be taken when using with smart pointers.
- * The allocator should not be used to construct a unique_ptr if we are using coarse-grained SVM mod
+ * The allocator should not be used to construct a unique_ptr if we are using coarse-grained SVM mode because
+ * the coarse-grained management behaviour would behave incorrectly with respect to reference counting.
+ *
+ * Instead the allocator embeds a Deleter which may be used with unique_ptr and is used
+ * with the allocate_shared and allocate_ptr supplied operations.
+ */
+template<typename T, class SVMTrait>
+class SVMAllocator {
+private:
+    Context context_;
+
+public:
+    typedef T value_type;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef std::size_t size_type;
+    typedef std::ptrdiff_t difference_type;
+
+    template<typename U>
+    struct rebind
+    {
+        typedef SVMAllocator<U, SVMTrait> other;
+    };
+
+    template<typename U, typename V>
+    friend class SVMAllocator;
+
+    SVMAllocator() :
+        context_(Context::getDefault())
+    {
+    }
+
+    explicit SVMAllocator(cl::Context context) :
+        context_(context)
+    {
+    }
+
+
+    SVMAllocator(const SVMAllocator &other) :
+        context_(other.context_)
+    {
+    }
+
+    template<typename U>
+    SVMAllocator(const SVMAllocator<U, SVMTrait> &other) :
+        context_(other.context_)
+    {
+    }
+
+    ~SVMAllocator()
+    {
+    }
+
+    pointer address(reference r) CL_HPP_NOEXCEPT_
+    {
+        return std::addressof(r);
+    }
+
+    const_pointer address(const_reference r) CL_HPP_NOEXCEPT_
+    {
+        return std::addressof(r);
+    }
+
+    /**
+     * Allocate an SVM pointer.
+     *
+     * If the allocator is coarse-grained, this will take ownership to allow
+     * containers to correctly construct data in place. 
+     */
+    pointer allocate(
+        size_type size,
+        typename cl::SVMAllocator<void, SVMTrait>::const_pointer = 0)
+    {
+        // Allocate memory with default alignment matching the size of the type
+        void* voidPointer =
+            clSVMAlloc(
+            context_(),
+            SVMTrait::getSVMMemFlags(),
+            size*sizeof(T),
+            0);
+        pointer retValue = reinterpret_cast<pointer>(
+            voidPointer);
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+        if (!retValue) {
+            std::bad_alloc excep;
+            throw excep;
+        }
+#endif // #if defined(CL_HPP_ENABLE_EXCEPTIONS)
+
+        // If allocation was coarse-grained then map it
+        if (!(SVMTrait::getSVMMemFlags() & CL_MEM_SVM_FINE_GRAIN_BUFFER)) {
+            cl_int err = enqueueMapSVM(retValue, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, size*sizeof(T));
+            if (err != CL_SUCCESS) {
+                std::bad_alloc excep;
+                throw excep;
+            }
+        }
+
+        // If exceptions disabled, return null pointer from allocator
+        return retValue;
+    }
+
+    void deallocate(pointer p, size_type)
+    {
+        clSVMFree(context_(), p);
+    }
+
+    /**
+     * Return the maximum possible allocation size.
+     * This is the minimum of 
