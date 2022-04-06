@@ -3182,4 +3182,89 @@ public:
     explicit Memory(const cl_mem& memory, bool retainObject) :
         detail::Wrapper<cl_type>(memory, retainObject) { }
 
-    /*! \brief A
+    /*! \brief Assignment operator from cl_mem - takes ownership.
+     *
+     *  This effectively transfers ownership of a refcount on the rhs and calls
+     *  clReleaseMemObject() on the value previously held by this instance.
+     */
+    Memory& operator = (const cl_mem& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Memory(const Memory& mem) : detail::Wrapper<cl_type>(mem) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Memory& operator = (const Memory &mem)
+    {
+        detail::Wrapper<cl_type>::operator=(mem);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Memory(Memory&& mem) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(mem)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Memory& operator = (Memory &&mem)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(mem));
+        return *this;
+    }
+
+
+    //! \brief Wrapper for clGetMemObjectInfo().
+    template <typename T>
+    cl_int getInfo(cl_mem_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetMemObjectInfo, object_, name, param),
+            __GET_MEM_OBJECT_INFO_ERR);
+    }
+
+    //! \brief Wrapper for clGetMemObjectInfo() that returns by value.
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_mem_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_mem_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 110
+    /*! \brief Registers a callback function to be called when the memory object
+     *         is no longer needed.
+     *
+     *  Wraps clSetMemObjectDestructorCallback().
+     *
+     *  Repeated calls to this function, for a given cl_mem value, will append
+     *  to the list of functions called (in reverse order) when memory object's
+     *  resources are freed and the memory object is deleted.
+     *
+     *  \note
+     *  The registered callbacks are associated with the underlying cl_mem
+     *  value - not the Memory class instance.
+     */
+    cl_int setDestructorCallback(
+        void (CL_CALLBACK * pfn_notify)(cl_mem, void *),		
+        void * user_data = NULL)
+    {
+        return detail::errHandler(
+            ::clSetMemObjectDestructorCallback(
+                object_,
+                pfn_notify,
+      
