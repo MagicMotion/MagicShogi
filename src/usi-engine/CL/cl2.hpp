@@ -3599,4 +3599,103 @@ cl::pointer<T, detail::Deleter<Alloc>> allocate_pointer(const Alloc &alloc_, Arg
         std::allocator_traits<Alloc>::construct(
             alloc,
             std::addressof(*tmp),
-        
+            std::forward<Args>(args)...);
+
+        return cl::pointer<T, detail::Deleter<Alloc>>(tmp, detail::Deleter<Alloc>{alloc, copies});
+    }
+    catch (std::bad_alloc b)
+    {
+        std::allocator_traits<Alloc>::deallocate(alloc, tmp, copies);
+        throw;
+    }
+}
+
+template< class T, class SVMTrait, class... Args >
+cl::pointer<T, detail::Deleter<SVMAllocator<T, SVMTrait>>> allocate_svm(Args... args)
+{
+    SVMAllocator<T, SVMTrait> alloc;
+    return cl::allocate_pointer<T>(alloc, args...);
+}
+
+template< class T, class SVMTrait, class... Args >
+cl::pointer<T, detail::Deleter<SVMAllocator<T, SVMTrait>>> allocate_svm(const cl::Context &c, Args... args)
+{
+    SVMAllocator<T, SVMTrait> alloc(c);
+    return cl::allocate_pointer<T>(alloc, args...);
+}
+#endif // #if !defined(CL_HPP_NO_STD_UNIQUE_PTR)
+
+/*! \brief Vector alias to simplify contruction of coarse-grained SVM containers.
+ * 
+ */
+template < class T >
+using coarse_svm_vector = vector<T, cl::SVMAllocator<int, cl::SVMTraitCoarse<>>>;
+
+/*! \brief Vector alias to simplify contruction of fine-grained SVM containers.
+*
+*/
+template < class T >
+using fine_svm_vector = vector<T, cl::SVMAllocator<int, cl::SVMTraitFine<>>>;
+
+/*! \brief Vector alias to simplify contruction of fine-grained SVM containers that support platform atomics.
+*
+*/
+template < class T >
+using atomic_svm_vector = vector<T, cl::SVMAllocator<int, cl::SVMTraitAtomic<>>>;
+
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+
+/*! \brief Class interface for Buffer Memory Objects.
+ * 
+ *  See Memory for details about copy semantics, etc.
+ *
+ *  \see Memory
+ */
+class Buffer : public Memory
+{
+public:
+
+    /*! \brief Constructs a Buffer in a specified context.
+     *
+     *  Wraps clCreateBuffer().
+     *
+     *  \param host_ptr Storage to be used if the CL_MEM_USE_HOST_PTR flag was
+     *                  specified.  Note alignment & exclusivity requirements.
+     */
+    Buffer(
+        const Context& context,
+        cl_mem_flags flags,
+        size_type size,
+        void* host_ptr = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateBuffer(context(), flags, size, host_ptr, &error);
+
+        detail::errHandler(error, __CREATE_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /*! \brief Constructs a Buffer in the default context.
+     *
+     *  Wraps clCreateBuffer().
+     *
+     *  \param host_ptr Storage to be used if the CL_MEM_USE_HOST_PTR flag was
+     *                  specified.  Note alignment & exclusivity requirements.
+     *
+     *  \see Context::getDefault()
+     */
+    Buffer(
+         cl_mem_flags flags,
+        size_type size,
+        void* host_ptr = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        Context context = Context::getDefault(err);
+
+        object_ = ::clCreateBuffer(c
