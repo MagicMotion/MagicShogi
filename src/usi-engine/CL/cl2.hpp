@@ -3972,4 +3972,107 @@ public:
  * 
  *  \see Memory
  */
-c
+class BufferGL : public Buffer
+{
+public:
+    /*! \brief Constructs a BufferGL in a specified context, from a given
+     *         GL buffer.
+     *
+     *  Wraps clCreateFromGLBuffer().
+     */
+    BufferGL(
+        const Context& context,
+        cl_mem_flags flags,
+        cl_GLuint bufobj,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateFromGLBuffer(
+            context(),
+            flags,
+            bufobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! \brief Default constructor - initializes to NULL.
+    BufferGL() : Buffer() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit BufferGL(const cl_mem& buffer, bool retainObject = false) :
+        Buffer(buffer, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *
+     *  See Memory for further details.
+     */
+    BufferGL& operator = (const cl_mem& rhs)
+    {
+        Buffer::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    BufferGL(const BufferGL& buf) : Buffer(buf) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    BufferGL& operator = (const BufferGL &buf)
+    {
+        Buffer::operator=(buf);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    BufferGL(BufferGL&& buf) CL_HPP_NOEXCEPT_ : Buffer(std::move(buf)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    BufferGL& operator = (BufferGL &&buf)
+    {
+        Buffer::operator=(std::move(buf));
+        return *this;
+    }
+
+    //! \brief Wrapper for clGetGLObjectInfo().
+    cl_int getObjectInfo(
+        cl_gl_object_type *type,
+        cl_GLuint * gl_object_name)
+    {
+        return detail::errHandler(
+            ::clGetGLObjectInfo(object_,type,gl_object_name),
+            __GET_GL_OBJECT_INFO_ERR);
+    }
+};
+
+/*! \brief Class interface for GL Render Buffer Memory Objects.
+ *
+ *  This is provided to facilitate interoperability with OpenGL.
+ * 
+ *  See Memory for details about copy semantics, etc.
+ * 
+ *  \see Memory
+ */
+class BufferRenderGL : public Buffer
+{
+public:
+    /*! \brief Constructs a BufferRenderGL in a specified context, from a given
+     *         GL Renderbuffer.
+     *
+     *  Wra
