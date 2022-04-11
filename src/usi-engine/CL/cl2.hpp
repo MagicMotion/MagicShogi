@@ -4381,4 +4381,109 @@ public:
     /*! \brief Constructor from cl_mem - takes ownership.
      *
      * \param retainObject will cause the constructor to retain its cl object.
-     *                     Defaults to false to maintain compatibility wit
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image1DBuffer(const cl_mem& image1D, bool retainObject = false) :
+        Image(image1D, retainObject) { }
+
+    Image1DBuffer& operator = (const cl_mem& rhs)
+    {
+        Image::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1DBuffer(const Image1DBuffer& img) : Image(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1DBuffer& operator = (const Image1DBuffer &img)
+    {
+        Image::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1DBuffer(Image1DBuffer&& img) CL_HPP_NOEXCEPT_ : Image(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1DBuffer& operator = (Image1DBuffer &&img)
+    {
+        Image::operator=(std::move(img));
+        return *this;
+    }
+
+};
+
+/*! \class Image1DArray
+ * \brief Image interface for arrays of 1D images.
+ */
+class Image1DArray : public Image
+{
+public:
+    Image1DArray(
+        const Context& context,
+        cl_mem_flags flags,
+        ImageFormat format,
+        size_type arraySize,
+        size_type width,
+        size_type rowPitch,
+        void* host_ptr = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        cl_image_desc desc =
+        {
+            CL_MEM_OBJECT_IMAGE1D_ARRAY,
+            width,
+            0, 0,  // height, depth (unused)
+            arraySize,
+            rowPitch,
+            0, 0, 0, 0
+        };
+        object_ = ::clCreateImage(
+            context(), 
+            flags, 
+            &format, 
+            &desc, 
+            host_ptr, 
+            &error);
+
+        detail::errHandler(error, __CREATE_IMAGE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    Image1DArray() { }
+  
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image1DArray(const cl_mem& imageArray, bool retainObject = false) :
+        Image(imageArray, retainObject) { }
+
+
+    Image1DArray& operator = (const cl_mem& rhs)
+    {
+        Image::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1DArray(const Image1DArray& 
