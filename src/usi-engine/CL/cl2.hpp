@@ -3881,4 +3881,95 @@ public:
         cl_int * err = NULL) : pfn_clCreateFromD3D10BufferKHR(nullptr)
     {
         typedef CL_API_ENTRY cl_mem (CL_API_CALL *PFN_clCreateFromD3D10BufferKHR)(
-            cl_context context, cl_mem_flags flags, ID3D1
+            cl_context context, cl_mem_flags flags, ID3D10Buffer*  buffer,
+            cl_int* errcode_ret);
+        PFN_clCreateFromD3D10BufferKHR pfn_clCreateFromD3D10BufferKHR;
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+        vector<cl_context_properties> props = context.getInfo<CL_CONTEXT_PROPERTIES>();
+        cl_platform platform = -1;
+        for( int i = 0; i < props.size(); ++i ) {
+            if( props[i] == CL_CONTEXT_PLATFORM ) {
+                platform = props[i+1];
+            }
+        }
+        CL_HPP_INIT_CL_EXT_FCN_PTR_PLATFORM_(platform, clCreateFromD3D10BufferKHR);
+#elif CL_HPP_TARGET_OPENCL_VERSION >= 110
+        CL_HPP_INIT_CL_EXT_FCN_PTR_(clCreateFromD3D10BufferKHR);
+#endif
+
+        cl_int error;
+        object_ = pfn_clCreateFromD3D10BufferKHR(
+            context(),
+            flags,
+            bufobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! \brief Default constructor - initializes to NULL.
+    BufferD3D10() : Buffer() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with 
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit BufferD3D10(const cl_mem& buffer, bool retainObject = false) : 
+        Buffer(buffer, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *
+     *  See Memory for further details.
+     */
+    BufferD3D10& operator = (const cl_mem& rhs)
+    {
+        Buffer::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    BufferD3D10(const BufferD3D10& buf) : 
+        Buffer(buf) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    BufferD3D10& operator = (const BufferD3D10 &buf)
+    {
+        Buffer::operator=(buf);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    BufferD3D10(BufferD3D10&& buf) CL_HPP_NOEXCEPT_ : Buffer(std::move(buf)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    BufferD3D10& operator = (BufferD3D10 &&buf)
+    {
+        Buffer::operator=(std::move(buf));
+        return *this;
+    }
+};
+#endif
+
+/*! \brief Class interface for GL Buffer Memory Objects.
+ *
+ *  This is provided to facilitate interoperability with OpenGL.
+ * 
+ *  See Memory for details about copy semantics, etc.
+ * 
+ *  \see Memory
+ */
+c
