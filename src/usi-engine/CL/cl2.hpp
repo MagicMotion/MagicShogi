@@ -4274,4 +4274,111 @@ public:
             0, 0, 0, 0, 0, 0, 0, 0
         };
         object_ = ::clCreateImage(
-          
+            context(), 
+            flags, 
+            &format, 
+            &desc, 
+            host_ptr, 
+            &error);
+
+        detail::errHandler(error, __CREATE_IMAGE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! \brief Default constructor - initializes to NULL.
+    Image1D() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image1D(const cl_mem& image1D, bool retainObject = false) :
+        Image(image1D, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *
+     *  See Memory for further details.
+     */
+    Image1D& operator = (const cl_mem& rhs)
+    {
+        Image::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1D(const Image1D& img) : Image(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1D& operator = (const Image1D &img)
+    {
+        Image::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1D(Image1D&& img) CL_HPP_NOEXCEPT_ : Image(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1D& operator = (Image1D &&img)
+    {
+        Image::operator=(std::move(img));
+        return *this;
+    }
+
+};
+
+/*! \class Image1DBuffer
+ * \brief Image interface for 1D buffer images.
+ */
+class Image1DBuffer : public Image
+{
+public:
+    Image1DBuffer(
+        const Context& context,
+        cl_mem_flags flags,
+        ImageFormat format,
+        size_type width,
+        const Buffer &buffer,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        cl_image_desc desc =
+        {
+            CL_MEM_OBJECT_IMAGE1D_BUFFER,
+            width,
+            0, 0, 0, 0, 0, 0, 0,
+            buffer()
+        };
+        object_ = ::clCreateImage(
+            context(), 
+            flags, 
+            &format, 
+            &desc, 
+            NULL, 
+            &error);
+
+        detail::errHandler(error, __CREATE_IMAGE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    Image1DBuffer() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility wit
