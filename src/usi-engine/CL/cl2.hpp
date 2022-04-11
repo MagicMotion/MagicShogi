@@ -4486,4 +4486,108 @@ public:
     /*! \brief Copy constructor to forward copy to the superclass correctly.
      * Required for MSVC.
      */
-    Image1DArray(const Image1DArray& 
+    Image1DArray(const Image1DArray& img) : Image(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1DArray& operator = (const Image1DArray &img)
+    {
+        Image::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1DArray(Image1DArray&& img) CL_HPP_NOEXCEPT_ : Image(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image1DArray& operator = (Image1DArray &&img)
+    {
+        Image::operator=(std::move(img));
+        return *this;
+    }
+
+};
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+
+/*! \brief Class interface for 2D Image Memory objects.
+ *
+ *  See Memory for details about copy semantics, etc.
+ * 
+ *  \see Memory
+ */
+class Image2D : public Image
+{
+public:
+    /*! \brief Constructs a 2D Image in a specified context.
+     *
+     *  Wraps clCreateImage().
+     */
+    Image2D(
+        const Context& context,
+        cl_mem_flags flags,
+        ImageFormat format,
+        size_type width,
+        size_type height,
+        size_type row_pitch = 0,
+        void* host_ptr = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        bool useCreateImage;
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120 && CL_HPP_MINIMUM_OPENCL_VERSION < 120
+        // Run-time decision based on the actual platform
+        {
+            cl_uint version = detail::getContextPlatformVersion(context());
+            useCreateImage = (version >= 0x10002); // OpenCL 1.2 or above
+        }
+#elif CL_HPP_TARGET_OPENCL_VERSION >= 120
+        useCreateImage = true;
+#else
+        useCreateImage = false;
+#endif
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+        if (useCreateImage)
+        {
+            cl_image_desc desc =
+            {
+                CL_MEM_OBJECT_IMAGE2D,
+                width,
+                height,
+                0, 0, // depth, array size (unused)
+                row_pitch,
+                0, 0, 0, 0
+            };
+            object_ = ::clCreateImage(
+                context(),
+                flags,
+                &format,
+                &desc,
+                host_ptr,
+                &error);
+
+            detail::errHandler(error, __CREATE_IMAGE_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+#if CL_HPP_MINIMUM_OPENCL_VERSION < 120
+        if (!useCreateImage)
+        {
+            object_ = ::clCreateImage2D(
+                context(), flags,&format, width, height, row_pitch, host_ptr, &error);
+
+            detail::errHandler(error, __CREATE_IMAGE2D_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // 
