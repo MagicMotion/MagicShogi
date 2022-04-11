@@ -4172,4 +4172,106 @@ protected:
 
     /*! \brief Constructor from cl_mem - takes ownership.
      *
-   
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image(const cl_mem& image, bool retainObject = false) :
+        Memory(image, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *
+     *  See Memory for further details.
+     */
+    Image& operator = (const cl_mem& rhs)
+    {
+        Memory::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image(const Image& img) : Memory(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image& operator = (const Image &img)
+    {
+        Memory::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image(Image&& img) CL_HPP_NOEXCEPT_ : Memory(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image& operator = (Image &&img)
+    {
+        Memory::operator=(std::move(img));
+        return *this;
+    }
+
+
+public:
+    //! \brief Wrapper for clGetImageInfo().
+    template <typename T>
+    cl_int getImageInfo(cl_image_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetImageInfo, object_, name, param),
+            __GET_IMAGE_INFO_ERR);
+    }
+    
+    //! \brief Wrapper for clGetImageInfo() that returns by value.
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_image_info, name>::param_type
+    getImageInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_image_info, name>::param_type param;
+        cl_int result = getImageInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+};
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+/*! \brief Class interface for 1D Image Memory objects.
+ *
+ *  See Memory for details about copy semantics, etc.
+ * 
+ *  \see Memory
+ */
+class Image1D : public Image
+{
+public:
+    /*! \brief Constructs a 1D Image in a specified context.
+     *
+     *  Wraps clCreateImage().
+     */
+    Image1D(
+        const Context& context,
+        cl_mem_flags flags,
+        ImageFormat format,
+        size_type width,
+        void* host_ptr = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        cl_image_desc desc =
+        {
+            CL_MEM_OBJECT_IMAGE1D,
+            width,
+            0, 0, 0, 0, 0, 0, 0, 0
+        };
+        object_ = ::clCreateImage(
+          
