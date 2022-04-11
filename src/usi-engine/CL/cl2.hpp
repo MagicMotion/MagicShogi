@@ -3698,4 +3698,86 @@ public:
 
         Context context = Context::getDefault(err);
 
-        object_ = ::clCreateBuffer(c
+        object_ = ::clCreateBuffer(context(), flags, size, host_ptr, &error);
+
+        detail::errHandler(error, __CREATE_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /*!
+     * \brief Construct a Buffer from a host container via iterators.
+     * IteratorType must be random access.
+     * If useHostPtr is specified iterators must represent contiguous data.
+     */
+    template< typename IteratorType >
+    Buffer(
+        IteratorType startIterator,
+        IteratorType endIterator,
+        bool readOnly,
+        bool useHostPtr = false,
+        cl_int* err = NULL)
+    {
+        typedef typename std::iterator_traits<IteratorType>::value_type DataType;
+        cl_int error;
+
+        cl_mem_flags flags = 0;
+        if( readOnly ) {
+            flags |= CL_MEM_READ_ONLY;
+        }
+        else {
+            flags |= CL_MEM_READ_WRITE;
+        }
+        if( useHostPtr ) {
+            flags |= CL_MEM_USE_HOST_PTR;
+        }
+        
+        size_type size = sizeof(DataType)*(endIterator - startIterator);
+
+        Context context = Context::getDefault(err);
+
+        if( useHostPtr ) {
+            object_ = ::clCreateBuffer(context(), flags, size, static_cast<DataType*>(&*startIterator), &error);
+        } else {
+            object_ = ::clCreateBuffer(context(), flags, size, 0, &error);
+        }
+
+        detail::errHandler(error, __CREATE_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+
+        if( !useHostPtr ) {
+            error = cl::copy(startIterator, endIterator, *this);
+            detail::errHandler(error, __CREATE_BUFFER_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+    }
+
+    /*!
+     * \brief Construct a Buffer from a host container via iterators using a specified context.
+     * IteratorType must be random access.
+     * If useHostPtr is specified iterators must represent contiguous data.
+     */
+    template< typename IteratorType >
+    Buffer(const Context &context, IteratorType startIterator, IteratorType endIterator,
+        bool readOnly, bool useHostPtr = false, cl_int* err = NULL);
+    
+    /*!
+    * \brief Construct a Buffer from a host container via iterators using a specified queue.
+    * If useHostPtr is specified iterators must be random access.
+    */
+    template< typename IteratorType >
+    Buffer(const CommandQueue &queue, IteratorType startIterator, IteratorType endIterator,
+        bool readOnly, bool useHostPtr = false, cl_int* err = NULL);
+
+    //! \brief Default constructor - initializes to NULL.
+    Buffer() : Memory() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     * 
