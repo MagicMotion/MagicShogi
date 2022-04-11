@@ -3780,4 +3780,105 @@ public:
     /*! \brief Constructor from cl_mem - takes ownership.
      *
      * \param retainObject will cause the constructor to retain its cl object.
-     * 
+     *                     Defaults to false to maintain compatibility with earlier versions.
+     *
+     *  See Memory for further details.
+     */
+    explicit Buffer(const cl_mem& buffer, bool retainObject = false) :
+        Memory(buffer, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+    *
+    *  See Memory for further details.
+    */
+    Buffer& operator = (const cl_mem& rhs)
+    {
+        Memory::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Buffer(const Buffer& buf) : Memory(buf) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Buffer& operator = (const Buffer &buf)
+    {
+        Memory::operator=(buf);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Buffer(Buffer&& buf) CL_HPP_NOEXCEPT_ : Memory(std::move(buf)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Buffer& operator = (Buffer &&buf)
+    {
+        Memory::operator=(std::move(buf));
+        return *this;
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 110
+    /*! \brief Creates a new buffer object from this.
+     *
+     *  Wraps clCreateSubBuffer().
+     */
+    Buffer createSubBuffer(
+        cl_mem_flags flags,
+        cl_buffer_create_type buffer_create_type,
+        const void * buffer_create_info,
+        cl_int * err = NULL)
+    {
+        Buffer result;
+        cl_int error;
+        result.object_ = ::clCreateSubBuffer(
+            object_, 
+            flags, 
+            buffer_create_type, 
+            buffer_create_info, 
+            &error);
+
+        detail::errHandler(error, __CREATE_SUBBUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+
+        return result;
+    }		
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+};
+
+#if defined (CL_HPP_USE_DX_INTEROP)
+/*! \brief Class interface for creating OpenCL buffers from ID3D10Buffer's.
+ *
+ *  This is provided to facilitate interoperability with Direct3D.
+ * 
+ *  See Memory for details about copy semantics, etc.
+ *
+ *  \see Memory
+ */
+class BufferD3D10 : public Buffer
+{
+public:
+   
+
+    /*! \brief Constructs a BufferD3D10, in a specified context, from a
+     *         given ID3D10Buffer.
+     *
+     *  Wraps clCreateFromD3D10BufferKHR().
+     */
+    BufferD3D10(
+        const Context& context,
+        cl_mem_flags flags,
+        ID3D10Buffer* bufobj,
+        cl_int * err = NULL) : pfn_clCreateFromD3D10BufferKHR(nullptr)
+    {
+        typedef CL_API_ENTRY cl_mem (CL_API_CALL *PFN_clCreateFromD3D10BufferKHR)(
+            cl_context context, cl_mem_flags flags, ID3D1
