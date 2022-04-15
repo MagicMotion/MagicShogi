@@ -4590,4 +4590,87 @@ public:
                 *err = error;
             }
         }
-#endif // 
+#endif // CL_HPP_MINIMUM_OPENCL_VERSION < 120
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200 || defined(CL_HPP_USE_CL_IMAGE2D_FROM_BUFFER_KHR)
+    /*! \brief Constructs a 2D Image from a buffer.
+    * \note This will share storage with the underlying buffer.
+    *
+    *  Wraps clCreateImage().
+    */
+    Image2D(
+        const Context& context,
+        ImageFormat format,
+        const Buffer &sourceBuffer,
+        size_type width,
+        size_type height,
+        size_type row_pitch = 0,
+        cl_int* err = nullptr)
+    {
+        cl_int error;
+
+        cl_image_desc desc =
+        {
+            CL_MEM_OBJECT_IMAGE2D,
+            width,
+            height,
+            0, 0, // depth, array size (unused)
+            row_pitch,
+            0, 0, 0,
+            // Use buffer as input to image
+            sourceBuffer()
+        };
+        object_ = ::clCreateImage(
+            context(),
+            0, // flags inherited from buffer
+            &format,
+            &desc,
+            nullptr,
+            &error);
+
+        detail::errHandler(error, __CREATE_IMAGE_ERR);
+        if (err != nullptr) {
+            *err = error;
+        }
+    }
+#endif //#if CL_HPP_TARGET_OPENCL_VERSION >= 200 || defined(CL_HPP_USE_CL_IMAGE2D_FROM_BUFFER_KHR)
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+    /*! \brief Constructs a 2D Image from an image.
+    * \note This will share storage with the underlying image but may
+    *       reinterpret the channel order and type.
+    *
+    * The image will be created matching with a descriptor matching the source. 
+    *
+    * \param order is the channel order to reinterpret the image data as.
+    *              The channel order may differ as described in the OpenCL 
+    *              2.0 API specification.
+    *
+    * Wraps clCreateImage().
+    */
+    Image2D(
+        const Context& context,
+        cl_channel_order order,
+        const Image &sourceImage,
+        cl_int* err = nullptr)
+    {
+        cl_int error;
+
+        // Descriptor fields have to match source image
+        size_type sourceWidth = 
+            sourceImage.getImageInfo<CL_IMAGE_WIDTH>();
+        size_type sourceHeight = 
+            sourceImage.getImageInfo<CL_IMAGE_HEIGHT>();
+        size_type sourceRowPitch =
+            sourceImage.getImageInfo<CL_IMAGE_ROW_PITCH>();
+        cl_uint sourceNumMIPLevels =
+            sourceImage.getImageInfo<CL_IMAGE_NUM_MIP_LEVELS>();
+        cl_uint sourceNumSamples =
+            sourceImage.getImageInfo<CL_IMAGE_NUM_SAMPLES>();
+        cl_image_format sourceFormat =
+            sourceImage.getImageInfo<CL_IMAGE_FORMAT>();
+
+        // Update only the channel order. 
+        // Channel format inherited from source.
+        sourceFormat.image_channel_order = 
