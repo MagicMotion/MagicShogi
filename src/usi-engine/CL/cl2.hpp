@@ -4978,4 +4978,106 @@ public:
             cl_uint version = detail::getContextPlatformVersion(context());
             useCreateImage = (version >= 0x10002); // OpenCL 1.2 or above
         }
-#elif CL_HPP_TARGET_OPENCL_VERSION >= 1
+#elif CL_HPP_TARGET_OPENCL_VERSION >= 120
+        useCreateImage = true;
+#else
+        useCreateImage = false;
+#endif
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+        if (useCreateImage)
+        {
+            cl_image_desc desc =
+            {
+                CL_MEM_OBJECT_IMAGE3D,
+                width,
+                height,
+                depth,
+                0,      // array size (unused)
+                row_pitch,
+                slice_pitch,
+                0, 0, 0
+            };
+            object_ = ::clCreateImage(
+                context(), 
+                flags, 
+                &format, 
+                &desc, 
+                host_ptr, 
+                &error);
+
+            detail::errHandler(error, __CREATE_IMAGE_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif  // CL_HPP_TARGET_OPENCL_VERSION >= 120
+#if CL_HPP_MINIMUM_OPENCL_VERSION < 120
+        if (!useCreateImage)
+        {
+            object_ = ::clCreateImage3D(
+                context(), flags, &format, width, height, depth, row_pitch,
+                slice_pitch, host_ptr, &error);
+
+            detail::errHandler(error, __CREATE_IMAGE3D_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // CL_HPP_MINIMUM_OPENCL_VERSION < 120
+    }
+
+    //! \brief Default constructor - initializes to NULL.
+    Image3D() : Image() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image3D(const cl_mem& image3D, bool retainObject = false) : 
+        Image(image3D, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *
+     *  See Memory for further details.
+     */
+    Image3D& operator = (const cl_mem& rhs)
+    {
+        Image::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image3D(const Image3D& img) : Image(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image3D& operator = (const Image3D &img)
+    {
+        Image::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image3D(Image3D&& img) CL_HPP_NOEXCEPT_ : Image(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image3D& operator = (Image3D &&img)
+    {
+        Image::operator=(std::move(img));
+        return *this;
+    }
+};
+
+#if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+/*! \brief Class interface for GL 3D Image Me
