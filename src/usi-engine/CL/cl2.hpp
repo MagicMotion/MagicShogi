@@ -4880,4 +4880,102 @@ public:
             0,       // depth (unused)
             arraySize,
             rowPitch,
-  
+            slicePitch,
+            0, 0, 0
+        };
+        object_ = ::clCreateImage(
+            context(), 
+            flags, 
+            &format, 
+            &desc, 
+            host_ptr, 
+            &error);
+
+        detail::errHandler(error, __CREATE_IMAGE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    Image2DArray() { }
+    
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image2DArray(const cl_mem& imageArray, bool retainObject = false) : Image(imageArray, retainObject) { }
+
+    Image2DArray& operator = (const cl_mem& rhs)
+    {
+        Image::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2DArray(const Image2DArray& img) : Image(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2DArray& operator = (const Image2DArray &img)
+    {
+        Image::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2DArray(Image2DArray&& img) CL_HPP_NOEXCEPT_ : Image(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2DArray& operator = (Image2DArray &&img)
+    {
+        Image::operator=(std::move(img));
+        return *this;
+    }
+};
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+/*! \brief Class interface for 3D Image Memory objects.
+ *
+ *  See Memory for details about copy semantics, etc.
+ * 
+ *  \see Memory
+ */
+class Image3D : public Image
+{
+public:
+    /*! \brief Constructs a 3D Image in a specified context.
+     *
+     *  Wraps clCreateImage().
+     */
+    Image3D(
+        const Context& context,
+        cl_mem_flags flags,
+        ImageFormat format,
+        size_type width,
+        size_type height,
+        size_type depth,
+        size_type row_pitch = 0,
+        size_type slice_pitch = 0,
+        void* host_ptr = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        bool useCreateImage;
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120 && CL_HPP_MINIMUM_OPENCL_VERSION < 120
+        // Run-time decision based on the actual platform
+        {
+            cl_uint version = detail::getContextPlatformVersion(context());
+            useCreateImage = (version >= 0x10002); // OpenCL 1.2 or above
+        }
+#elif CL_HPP_TARGET_OPENCL_VERSION >= 1
