@@ -4673,4 +4673,106 @@ public:
 
         // Update only the channel order. 
         // Channel format inherited from source.
-        sourceFormat.image_channel_order = 
+        sourceFormat.image_channel_order = order;
+        cl_image_desc desc =
+        {
+            CL_MEM_OBJECT_IMAGE2D,
+            sourceWidth,
+            sourceHeight,
+            0, 0, // depth (unused), array size (unused)
+            sourceRowPitch,
+            0, // slice pitch (unused)
+            sourceNumMIPLevels,
+            sourceNumSamples,
+            // Use buffer as input to image
+            sourceImage()
+        };
+        object_ = ::clCreateImage(
+            context(),
+            0, // flags should be inherited from mem_object
+            &sourceFormat,
+            &desc,
+            nullptr,
+            &error);
+
+        detail::errHandler(error, __CREATE_IMAGE_ERR);
+        if (err != nullptr) {
+            *err = error;
+        }
+    }
+#endif //#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+    //! \brief Default constructor - initializes to NULL.
+    Image2D() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image2D(const cl_mem& image2D, bool retainObject = false) :
+        Image(image2D, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *
+     *  See Memory for further details.
+     */
+    Image2D& operator = (const cl_mem& rhs)
+    {
+        Image::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2D(const Image2D& img) : Image(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2D& operator = (const Image2D &img)
+    {
+        Image::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2D(Image2D&& img) CL_HPP_NOEXCEPT_ : Image(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2D& operator = (Image2D &&img)
+    {
+        Image::operator=(std::move(img));
+        return *this;
+    }
+
+};
+
+
+#if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+/*! \brief Class interface for GL 2D Image Memory objects.
+ *
+ *  This is provided to facilitate interoperability with OpenGL.
+ * 
+ *  See Memory for details about copy semantics, etc.
+ * 
+ *  \see Memory
+ *  \note Deprecated for OpenCL 1.2. Please use ImageGL instead.
+ */
+class CL_EXT_PREFIX__VERSION_1_1_DEPRECATED Image2DGL : public Image2D 
+{
+public:
+    /*! \brief Constructs an Image2DGL in a specified context, from a given
+     *         GL Texture.
+     *
+     *  Wraps clCreateFromGLTexture2D().
+     */
+    Image2DGL(
+        const Context& context
