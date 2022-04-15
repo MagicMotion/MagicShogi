@@ -4775,4 +4775,109 @@ public:
      *  Wraps clCreateFromGLTexture2D().
      */
     Image2DGL(
-        const Context& context
+        const Context& context,
+        cl_mem_flags flags,
+        cl_GLenum target,
+        cl_GLint  miplevel,
+        cl_GLuint texobj,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateFromGLTexture2D(
+            context(),
+            flags,
+            target,
+            miplevel,
+            texobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_TEXTURE_2D_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+
+    }
+    
+    //! \brief Default constructor - initializes to NULL.
+    Image2DGL() : Image2D() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image2DGL(const cl_mem& image, bool retainObject = false) : 
+        Image2D(image, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *c
+     *  See Memory for further details.
+     */
+    Image2DGL& operator = (const cl_mem& rhs)
+    {
+        Image2D::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2DGL(const Image2DGL& img) : Image2D(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2DGL& operator = (const Image2DGL &img)
+    {
+        Image2D::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2DGL(Image2DGL&& img) CL_HPP_NOEXCEPT_ : Image2D(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image2DGL& operator = (Image2DGL &&img)
+    {
+        Image2D::operator=(std::move(img));
+        return *this;
+    }
+
+} CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED;
+#endif // CL_USE_DEPRECATED_OPENCL_1_1_APIS
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+/*! \class Image2DArray
+ * \brief Image interface for arrays of 2D images.
+ */
+class Image2DArray : public Image
+{
+public:
+    Image2DArray(
+        const Context& context,
+        cl_mem_flags flags,
+        ImageFormat format,
+        size_type arraySize,
+        size_type width,
+        size_type height,
+        size_type rowPitch,
+        size_type slicePitch,
+        void* host_ptr = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        cl_image_desc desc =
+        {
+            CL_MEM_OBJECT_IMAGE2D_ARRAY,
+            width,
+            height,
+            0,       // depth (unused)
+            arraySize,
+            rowPitch,
+  
