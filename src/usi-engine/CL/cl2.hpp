@@ -5182,4 +5182,105 @@ public:
 class ImageGL : public Image
 {
 public:
-   
+    ImageGL(
+        const Context& context,
+        cl_mem_flags flags,
+        cl_GLenum target,
+        cl_GLint  miplevel,
+        cl_GLuint texobj,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateFromGLTexture(
+            context(), 
+            flags, 
+            target,
+            miplevel,
+            texobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_TEXTURE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    ImageGL() : Image() { }
+    
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit ImageGL(const cl_mem& image, bool retainObject = false) : 
+        Image(image, retainObject) { }
+
+    ImageGL& operator = (const cl_mem& rhs)
+    {
+        Image::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    ImageGL(const ImageGL& img) : Image(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    ImageGL& operator = (const ImageGL &img)
+    {
+        Image::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    ImageGL(ImageGL&& img) CL_HPP_NOEXCEPT_ : Image(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    ImageGL& operator = (ImageGL &&img)
+    {
+        Image::operator=(std::move(img));
+        return *this;
+    }
+};
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+/*! \brief Class interface for Pipe Memory Objects.
+*
+*  See Memory for details about copy semantics, etc.
+*
+*  \see Memory
+*/
+class Pipe : public Memory
+{
+public:
+
+    /*! \brief Constructs a Pipe in a specified context.
+     *
+     * Wraps clCreatePipe().
+     * @param context Context in which to create the pipe.
+     * @param flags Bitfield. Only CL_MEM_READ_WRITE and CL_MEM_HOST_NO_ACCESS are valid.
+     * @param packet_size Size in bytes of a single packet of the pipe.
+     * @param max_packets Number of packets that may be stored in the pipe.
+     *
+     */
+    Pipe(
+        const Context& context,
+        cl_uint packet_size,
+        cl_uint max_packets,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_HOST_NO_AC
