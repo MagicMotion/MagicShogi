@@ -5080,4 +5080,106 @@ public:
 };
 
 #if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
-/*! \brief Class interface for GL 3D Image Me
+/*! \brief Class interface for GL 3D Image Memory objects.
+ *
+ *  This is provided to facilitate interoperability with OpenGL.
+ * 
+ *  See Memory for details about copy semantics, etc.
+ * 
+ *  \see Memory
+ */
+class Image3DGL : public Image3D
+{
+public:
+    /*! \brief Constructs an Image3DGL in a specified context, from a given
+     *         GL Texture.
+     *
+     *  Wraps clCreateFromGLTexture3D().
+     */
+    Image3DGL(
+        const Context& context,
+        cl_mem_flags flags,
+        cl_GLenum target,
+        cl_GLint  miplevel,
+        cl_GLuint texobj,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateFromGLTexture3D(
+            context(),
+            flags,
+            target,
+            miplevel,
+            texobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_TEXTURE_3D_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! \brief Default constructor - initializes to NULL.
+    Image3DGL() : Image3D() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  See Memory for further details.
+     */
+    explicit Image3DGL(const cl_mem& image, bool retainObject = false) : 
+        Image3D(image, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *
+     *  See Memory for further details.
+     */
+    Image3DGL& operator = (const cl_mem& rhs)
+    {
+        Image3D::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image3DGL(const Image3DGL& img) : Image3D(img) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image3DGL& operator = (const Image3DGL &img)
+    {
+        Image3D::operator=(img);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image3DGL(Image3DGL&& img) CL_HPP_NOEXCEPT_ : Image3D(std::move(img)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Image3DGL& operator = (Image3DGL &&img)
+    {
+        Image3D::operator=(std::move(img));
+        return *this;
+    }
+};
+#endif // CL_USE_DEPRECATED_OPENCL_1_1_APIS
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+/*! \class ImageGL
+ * \brief general image interface for GL interop.
+ * We abstract the 2D and 3D GL images into a single instance here
+ * that wraps all GL sourced images on the grounds that setup information
+ * was performed by OpenCL anyway.
+ */
+class ImageGL : public Image
+{
+public:
+   
