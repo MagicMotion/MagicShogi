@@ -5465,4 +5465,106 @@ public:
 
     /*! \brief Assignment operator from cl_sampler - takes ownership.
      *
-     *  This effectively 
+     *  This effectively transfers ownership of a refcount on the rhs and calls
+     *  clReleaseSampler() on the value previously held by this instance.
+     */
+    Sampler& operator = (const cl_sampler& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Sampler(const Sampler& sam) : detail::Wrapper<cl_type>(sam) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Sampler& operator = (const Sampler &sam)
+    {
+        detail::Wrapper<cl_type>::operator=(sam);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Sampler(Sampler&& sam) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(sam)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Sampler& operator = (Sampler &&sam)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(sam));
+        return *this;
+    }
+
+    //! \brief Wrapper for clGetSamplerInfo().
+    template <typename T>
+    cl_int getInfo(cl_sampler_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetSamplerInfo, object_, name, param),
+            __GET_SAMPLER_INFO_ERR);
+    }
+
+    //! \brief Wrapper for clGetSamplerInfo() that returns by value.
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_sampler_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_sampler_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+};
+
+class Program;
+class CommandQueue;
+class DeviceCommandQueue;
+class Kernel;
+
+//! \brief Class interface for specifying NDRange values.
+class NDRange
+{
+private:
+    size_type sizes_[3];
+    cl_uint dimensions_;
+
+public:
+    //! \brief Default constructor - resulting range has zero dimensions.
+    NDRange()
+        : dimensions_(0)
+    {
+        sizes_[0] = 0;
+        sizes_[1] = 0;
+        sizes_[2] = 0;
+    }
+
+    //! \brief Constructs one-dimensional range.
+    NDRange(size_type size0)
+        : dimensions_(1)
+    {
+        sizes_[0] = size0;
+        sizes_[1] = 1;
+        sizes_[2] = 1;
+    }
+
+    //! \brief Constructs two-dimensional range.
+    NDRange(size_type size0, size_type size1)
+        : dimensions_(2)
+    {
+        sizes_[0] = size0;
+        sizes_[1] = size1;
+        sizes_[2] = 1;
+    }
+
+    //! \brief Constructs three-dimensional range.
+    NDRange(size_type size0, size_type si
