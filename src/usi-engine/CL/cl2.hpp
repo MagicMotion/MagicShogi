@@ -5375,4 +5375,94 @@ public:
     {
         return detail::errHandler(
             detail::getInfo(&::clGetPipeInfo, object_, name, param),
-            __
+            __GET_PIPE_INFO_ERR);
+    }
+
+    //! \brief Wrapper for clGetMemObjectInfo() that returns by value.
+    template <cl_int name> typename
+        detail::param_traits<detail::cl_pipe_info, name>::param_type
+        getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_pipe_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+}; // class Pipe
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+
+/*! \brief Class interface for cl_sampler.
+ *
+ *  \note Copies of these objects are shallow, meaning that the copy will refer
+ *        to the same underlying cl_sampler as the original.  For details, see
+ *        clRetainSampler() and clReleaseSampler().
+ *
+ *  \see cl_sampler 
+ */
+class Sampler : public detail::Wrapper<cl_sampler>
+{
+public:
+    //! \brief Default constructor - initializes to NULL.
+    Sampler() { }
+
+    /*! \brief Constructs a Sampler in a specified context.
+     *
+     *  Wraps clCreateSampler().
+     */
+    Sampler(
+        const Context& context,
+        cl_bool normalized_coords,
+        cl_addressing_mode addressing_mode,
+        cl_filter_mode filter_mode,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+        cl_sampler_properties sampler_properties[] = {
+            CL_SAMPLER_NORMALIZED_COORDS, normalized_coords,
+            CL_SAMPLER_ADDRESSING_MODE, addressing_mode,
+            CL_SAMPLER_FILTER_MODE, filter_mode,
+            0 };
+        object_ = ::clCreateSamplerWithProperties(
+            context(),
+            sampler_properties,
+            &error);
+
+        detail::errHandler(error, __CREATE_SAMPLER_WITH_PROPERTIES_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+#else
+        object_ = ::clCreateSampler(
+            context(),
+            normalized_coords,
+            addressing_mode,
+            filter_mode,
+            &error);
+
+        detail::errHandler(error, __CREATE_SAMPLER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+#endif        
+    }
+
+    /*! \brief Constructor from cl_sampler - takes ownership.
+     * 
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  This effectively transfers ownership of a refcount on the cl_sampler
+     *  into the new Sampler object.
+     */
+    explicit Sampler(const cl_sampler& sampler, bool retainObject = false) : 
+        detail::Wrapper<cl_type>(sampler, retainObject) { }
+
+    /*! \brief Assignment operator from cl_sampler - takes ownership.
+     *
+     *  This effectively 
