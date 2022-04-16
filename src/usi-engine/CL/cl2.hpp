@@ -5283,4 +5283,96 @@ public:
     {
         cl_int error;
 
-        cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_HOST_NO_AC
+        cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS;
+        object_ = ::clCreatePipe(context(), flags, packet_size, max_packets, nullptr, &error);
+
+        detail::errHandler(error, __CREATE_PIPE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /*! \brief Constructs a Pipe in a the default context.
+     *
+     * Wraps clCreatePipe().
+     * @param flags Bitfield. Only CL_MEM_READ_WRITE and CL_MEM_HOST_NO_ACCESS are valid.
+     * @param packet_size Size in bytes of a single packet of the pipe.
+     * @param max_packets Number of packets that may be stored in the pipe.
+     *
+     */
+    Pipe(
+        cl_uint packet_size,
+        cl_uint max_packets,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        Context context = Context::getDefault(err);
+
+        cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS;
+        object_ = ::clCreatePipe(context(), flags, packet_size, max_packets, nullptr, &error);
+
+        detail::errHandler(error, __CREATE_PIPE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! \brief Default constructor - initializes to NULL.
+    Pipe() : Memory() { }
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with earlier versions.
+     *
+     *  See Memory for further details.
+     */
+    explicit Pipe(const cl_mem& pipe, bool retainObject = false) :
+        Memory(pipe, retainObject) { }
+
+    /*! \brief Assignment from cl_mem - performs shallow copy.
+     *
+     *  See Memory for further details.
+     */
+    Pipe& operator = (const cl_mem& rhs)
+    {
+        Memory::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Pipe(const Pipe& pipe) : Memory(pipe) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Pipe& operator = (const Pipe &pipe)
+    {
+        Memory::operator=(pipe);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Pipe(Pipe&& pipe) CL_HPP_NOEXCEPT_ : Memory(std::move(pipe)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Pipe& operator = (Pipe &&pipe)
+    {
+        Memory::operator=(std::move(pipe));
+        return *this;
+    }
+
+    //! \brief Wrapper for clGetMemObjectInfo().
+    template <typename T>
+    cl_int getInfo(cl_pipe_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetPipeInfo, object_, name, param),
+            __
