@@ -5567,4 +5567,114 @@ public:
     }
 
     //! \brief Constructs three-dimensional range.
-    NDRange(size_type size0, size_type si
+    NDRange(size_type size0, size_type size1, size_type size2)
+        : dimensions_(3)
+    {
+        sizes_[0] = size0;
+        sizes_[1] = size1;
+        sizes_[2] = size2;
+    }
+
+    /*! \brief Conversion operator to const size_type *.
+     *  
+     *  \returns a pointer to the size of the first dimension.
+     */
+    operator const size_type*() const { 
+        return sizes_; 
+    }
+
+    //! \brief Queries the number of dimensions in the range.
+    size_type dimensions() const 
+    { 
+        return dimensions_; 
+    }
+
+    //! \brief Returns the size of the object in bytes based on the
+    // runtime number of dimensions
+    size_type size() const
+    {
+        return dimensions_*sizeof(size_type);
+    }
+
+    size_type* get()
+    {
+        return sizes_;
+    }
+    
+    const size_type* get() const
+    {
+        return sizes_;
+    }
+};
+
+//! \brief A zero-dimensional range.
+static const NDRange NullRange;
+
+//! \brief Local address wrapper for use with Kernel::setArg
+struct LocalSpaceArg
+{
+    size_type size_;
+};
+
+namespace detail {
+
+template <typename T, class Enable = void>
+struct KernelArgumentHandler;
+
+// Enable for objects that are not subclasses of memory
+// Pointers, constants etc
+template <typename T>
+struct KernelArgumentHandler<T, typename std::enable_if<!std::is_base_of<cl::Memory, T>::value>::type>
+{
+    static size_type size(const T&) { return sizeof(T); }
+    static const T* ptr(const T& value) { return &value; }
+};
+
+// Enable for subclasses of memory where we want to get a reference to the cl_mem out
+// and pass that in for safety
+template <typename T>
+struct KernelArgumentHandler<T, typename std::enable_if<std::is_base_of<cl::Memory, T>::value>::type>
+{
+    static size_type size(const T&) { return sizeof(cl_mem); }
+    static const cl_mem* ptr(const T& value) { return &(value()); }
+};
+
+// Specialization for DeviceCommandQueue defined later
+
+template <>
+struct KernelArgumentHandler<LocalSpaceArg, void>
+{
+    static size_type size(const LocalSpaceArg& value) { return value.size_; }
+    static const void* ptr(const LocalSpaceArg&) { return NULL; }
+};
+
+} 
+//! \endcond
+
+/*! Local
+ * \brief Helper function for generating LocalSpaceArg objects.
+ */
+inline LocalSpaceArg
+Local(size_type size)
+{
+    LocalSpaceArg ret = { size };
+    return ret;
+}
+
+/*! \brief Class interface for cl_kernel.
+ *
+ *  \note Copies of these objects are shallow, meaning that the copy will refer
+ *        to the same underlying cl_kernel as the original.  For details, see
+ *        clRetainKernel() and clReleaseKernel().
+ *
+ *  \see cl_kernel
+ */
+class Kernel : public detail::Wrapper<cl_kernel>
+{
+public:
+    inline Kernel(const Program& program, const char* name, cl_int* err = NULL);
+
+    //! \brief Default constructor - initializes to NULL.
+    Kernel() { }
+
+    /*! \brief
