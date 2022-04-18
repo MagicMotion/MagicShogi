@@ -5918,4 +5918,81 @@ public:
      */
     cl_int enableFineGrainedSystemSVM(bool svmEnabled)
     {
-        cl_bool svmEnabled_ = svm
+        cl_bool svmEnabled_ = svmEnabled ? CL_TRUE : CL_FALSE;
+        return detail::errHandler(
+            ::clSetKernelExecInfo(
+                object_,
+                CL_KERNEL_EXEC_INFO_SVM_FINE_GRAIN_SYSTEM,
+                sizeof(cl_bool),
+                &svmEnabled_
+                )
+            );
+    }
+    
+    template<int index, int ArrayLength, class D, typename T0, typename T1, typename... Ts>
+    void setSVMPointersHelper(std::array<void*, ArrayLength> &pointerList, const pointer<T0, D> &t0, const pointer<T1, D> &t1, Ts & ... ts)
+    {
+        pointerList[index] = static_cast<void*>(t0.get());
+        setSVMPointersHelper<index + 1, ArrayLength>(pointerList, t1, ts...);
+    }
+
+    template<int index, int ArrayLength, typename T0, typename T1, typename... Ts>
+    typename std::enable_if<std::is_pointer<T0>::value, void>::type
+    setSVMPointersHelper(std::array<void*, ArrayLength> &pointerList, T0 t0, T1 t1, Ts... ts)
+    {
+        pointerList[index] = static_cast<void*>(t0);
+        setSVMPointersHelper<index + 1, ArrayLength>(pointerList, t1, ts...);
+    }
+
+    template<int index, int ArrayLength, typename T0, class D>
+    void setSVMPointersHelper(std::array<void*, ArrayLength> &pointerList, const pointer<T0, D> &t0)
+    {
+        pointerList[index] = static_cast<void*>(t0.get());
+    }
+
+
+    template<int index, int ArrayLength, typename T0>
+    typename std::enable_if<std::is_pointer<T0>::value, void>::type
+    setSVMPointersHelper(std::array<void*, ArrayLength> &pointerList, T0 t0)
+    {
+        pointerList[index] = static_cast<void*>(t0);
+    }
+
+    template<typename T0, typename... Ts>
+    cl_int setSVMPointers(const T0 &t0, Ts & ... ts)
+    {
+        std::array<void*, 1 + sizeof...(Ts)> pointerList;
+
+        setSVMPointersHelper<0, 1 + sizeof...(Ts)>(pointerList, t0, ts...);
+        return detail::errHandler(
+            ::clSetKernelExecInfo(
+            object_,
+            CL_KERNEL_EXEC_INFO_SVM_PTRS,
+            sizeof(void*)*(1 + sizeof...(Ts)),
+            pointerList.data()));
+    }
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+};
+
+/*! \class Program
+ * \brief Program interface that implements cl_program.
+ */
+class Program : public detail::Wrapper<cl_program>
+{
+public:
+#if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+    typedef vector<vector<unsigned char>> Binaries;
+    typedef vector<string> Sources;
+#else // #if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+    typedef vector<std::pair<const void*, size_type> > Binaries;
+    typedef vector<std::pair<const char*, size_type> > Sources;
+#endif // #if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+    
+    Program(
+        const string& source,
+        bool build = false,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+    
