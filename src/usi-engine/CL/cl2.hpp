@@ -5757,4 +5757,80 @@ public:
             __GET_KERNEL_ARG_INFO_ERR);
     }
 
-   
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_kernel_arg_info, name>::param_type
+    getArgInfo(cl_uint argIndex, cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_kernel_arg_info, name>::param_type param;
+        cl_int result = getArgInfo(argIndex, name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+    template <typename T>
+    cl_int getWorkGroupInfo(
+        const Device& device, cl_kernel_work_group_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(
+                &::clGetKernelWorkGroupInfo, object_, device(), name, param),
+                __GET_KERNEL_WORK_GROUP_INFO_ERR);
+    }
+
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_kernel_work_group_info, name>::param_type
+        getWorkGroupInfo(const Device& device, cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+        detail::cl_kernel_work_group_info, name>::param_type param;
+        cl_int result = getWorkGroupInfo(device, name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+    
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+#if defined(CL_HPP_USE_CL_SUB_GROUPS_KHR)
+    cl_int getSubGroupInfo(const cl::Device &dev, cl_kernel_sub_group_info name, const cl::NDRange &range, size_type* param) const
+    {
+        typedef clGetKernelSubGroupInfoKHR_fn PFN_clGetKernelSubGroupInfoKHR;
+        static PFN_clGetKernelSubGroupInfoKHR pfn_clGetKernelSubGroupInfoKHR = NULL;
+        CL_HPP_INIT_CL_EXT_FCN_PTR_(clGetKernelSubGroupInfoKHR);
+
+        return detail::errHandler(
+            pfn_clGetKernelSubGroupInfoKHR(object_, dev(), name, range.size(), range.get(), sizeof(size_type), param, nullptr),
+            __GET_KERNEL_ARG_INFO_ERR);
+    }
+
+    template <cl_int name>
+        size_type getSubGroupInfo(const cl::Device &dev, const cl::NDRange &range, cl_int* err = NULL) const
+    {
+        size_type param;
+        cl_int result = getSubGroupInfo(dev, name, range, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+#endif // #if defined(CL_HPP_USE_CL_SUB_GROUPS_KHR)
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+    /*! \brief setArg overload taking a shared_ptr type
+     */
+    template<typename T, class D>
+    cl_int setArg(cl_uint index, const cl::pointer<T, D> &argPtr)
+    {
+        return detail::errHandler(
+            ::clSetKernelArgSVMPointer(object_, index, argPtr.get()),
+            __SET_KERNEL_ARGS_ERR);
+    }
+
+    /*! \brief setArg overload taking a vector type.
+     */
+    template<typename T, class All
