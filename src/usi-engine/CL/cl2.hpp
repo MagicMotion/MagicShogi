@@ -5677,4 +5677,84 @@ public:
     //! \brief Default constructor - initializes to NULL.
     Kernel() { }
 
-    /*! \brief
+    /*! \brief Constructor from cl_kernel - takes ownership.
+     * 
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     *  This effectively transfers ownership of a refcount on the cl_kernel
+     *  into the new Kernel object.
+     */
+    explicit Kernel(const cl_kernel& kernel, bool retainObject = false) : 
+        detail::Wrapper<cl_type>(kernel, retainObject) { }
+
+    /*! \brief Assignment operator from cl_kernel - takes ownership.
+     *
+     *  This effectively transfers ownership of a refcount on the rhs and calls
+     *  clReleaseKernel() on the value previously held by this instance.
+     */
+    Kernel& operator = (const cl_kernel& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Kernel(const Kernel& kernel) : detail::Wrapper<cl_type>(kernel) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Kernel& operator = (const Kernel &kernel)
+    {
+        detail::Wrapper<cl_type>::operator=(kernel);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Kernel(Kernel&& kernel) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(kernel)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Kernel& operator = (Kernel &&kernel)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(kernel));
+        return *this;
+    }
+
+    template <typename T>
+    cl_int getInfo(cl_kernel_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetKernelInfo, object_, name, param),
+            __GET_KERNEL_INFO_ERR);
+    }
+
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_kernel_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_kernel_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+    template <typename T>
+    cl_int getArgInfo(cl_uint argIndex, cl_kernel_arg_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetKernelArgInfo, object_, argIndex, name, param),
+            __GET_KERNEL_ARG_INFO_ERR);
+    }
+
+   
