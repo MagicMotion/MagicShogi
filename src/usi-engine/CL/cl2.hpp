@@ -6230,4 +6230,92 @@ public:
         vector<cl_device_id> deviceIDs(numDevices);
         for( size_type deviceIndex = 0; deviceIndex < numDevices; ++deviceIndex ) {
             deviceIDs[deviceIndex] = (devices[deviceIndex])();
+        }
+        
+        object_ = ::clCreateProgramWithBuiltInKernels(
+            context(), 
+            (cl_uint) devices.size(),
+            deviceIDs.data(),
+            kernelNames.c_str(), 
+            &error);
+
+        detail::errHandler(error, __CREATE_PROGRAM_WITH_BUILT_IN_KERNELS_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+    Program() { }
+    
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     */
+    explicit Program(const cl_program& program, bool retainObject = false) : 
+        detail::Wrapper<cl_type>(program, retainObject) { }
+
+    Program& operator = (const cl_program& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Program(const Program& program) : detail::Wrapper<cl_type>(program) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    Program& operator = (const Program &program)
+    {
+        detail::Wrapper<cl_type>::operator=(program);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Program(Program&& program) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(program)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    Program& operator = (Program &&program)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(program));
+        return *this;
+    }
+
+    cl_int build(
+        const vector<Device>& devices,
+        const char* options = NULL,
+        void (CL_CALLBACK * notifyFptr)(cl_program, void *) = NULL,
+        void* data = NULL) const
+    {
+        size_type numDevices = devices.size();
+        vector<cl_device_id> deviceIDs(numDevices);
+        
+        for( size_type deviceIndex = 0; deviceIndex < numDevices; ++deviceIndex ) {
+            deviceIDs[deviceIndex] = (devices[deviceIndex])();
+        }
+
+        cl_int buildError = ::clBuildProgram(
+            object_,
+            (cl_uint)
+            devices.size(),
+            deviceIDs.data(),
+            options,
+            notifyFptr,
+            data);
+
+        return detail::buildErrHandler(buildError, __BUILD_PROGRAM_ERR, getBuildInfo<CL_PROGRAM_BUILD_LOG>());
+    }
+
+    cl_int build(
     
