@@ -6318,4 +6318,91 @@ public:
     }
 
     cl_int build(
+        const char* options = NULL,
+        void (CL_CALLBACK * notifyFptr)(cl_program, void *) = NULL,
+        void* data = NULL) const
+    {
+        cl_int buildError = ::clBuildProgram(
+            object_,
+            0,
+            NULL,
+            options,
+            notifyFptr,
+            data);
+
+
+        return detail::buildErrHandler(buildError, __BUILD_PROGRAM_ERR, getBuildInfo<CL_PROGRAM_BUILD_LOG>());
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+    cl_int compile(
+        const char* options = NULL,
+        void (CL_CALLBACK * notifyFptr)(cl_program, void *) = NULL,
+        void* data = NULL) const
+    {
+        cl_int error = ::clCompileProgram(
+            object_,
+            0,
+            NULL,
+            options,
+            0,
+            NULL,
+            NULL,
+            notifyFptr,
+            data);
+        return detail::buildErrHandler(error, __COMPILE_PROGRAM_ERR, getBuildInfo<CL_PROGRAM_BUILD_LOG>());
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+    template <typename T>
+    cl_int getInfo(cl_program_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(&::clGetProgramInfo, object_, name, param),
+            __GET_PROGRAM_INFO_ERR);
+    }
+
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_program_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_program_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    template <typename T>
+    cl_int getBuildInfo(
+        const Device& device, cl_program_build_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(
+                &::clGetProgramBuildInfo, object_, device(), name, param),
+                __GET_PROGRAM_BUILD_INFO_ERR);
+    }
+
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_program_build_info, name>::param_type
+    getBuildInfo(const Device& device, cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_program_build_info, name>::param_type param;
+        cl_int result = getBuildInfo(device, name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
     
+    /**
+     * Build info function that returns a vector of device/info pairs for the specified 
+     * info type and for all devices in the program.
+     * On an error reading the info for any device, an empty vector of info will be returned.
+     */
+    template <cl_int name>
+    vector<std::pair<cl::Device, typename detail::param_traits<detail::cl_program_build_info, name>::param_type>>
+        getBuildInfo(cl_int *err = N
