@@ -5833,4 +5833,89 @@ public:
 
     /*! \brief setArg overload taking a vector type.
      */
-    template<typename T, class All
+    template<typename T, class Alloc>
+    cl_int setArg(cl_uint index, const cl::vector<T, Alloc> &argPtr)
+    {
+        return detail::errHandler(
+            ::clSetKernelArgSVMPointer(object_, index, argPtr.data()),
+            __SET_KERNEL_ARGS_ERR);
+    }
+
+    /*! \brief setArg overload taking a pointer type
+     */
+    template<typename T>
+    typename std::enable_if<std::is_pointer<T>::value, cl_int>::type
+        setArg(cl_uint index, const T argPtr)
+    {
+        return detail::errHandler(
+            ::clSetKernelArgSVMPointer(object_, index, argPtr),
+            __SET_KERNEL_ARGS_ERR);
+    }
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+    /*! \brief setArg overload taking a POD type
+     */
+    template <typename T>
+    typename std::enable_if<!std::is_pointer<T>::value, cl_int>::type
+        setArg(cl_uint index, const T &value)
+    {
+        return detail::errHandler(
+            ::clSetKernelArg(
+                object_,
+                index,
+                detail::KernelArgumentHandler<T>::size(value),
+                detail::KernelArgumentHandler<T>::ptr(value)),
+            __SET_KERNEL_ARGS_ERR);
+    }
+
+    cl_int setArg(cl_uint index, size_type size, const void* argPtr)
+    {
+        return detail::errHandler(
+            ::clSetKernelArg(object_, index, size, argPtr),
+            __SET_KERNEL_ARGS_ERR);
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+    /*!
+     * Specify a vector of SVM pointers that the kernel may access in 
+     * addition to its arguments.
+     */
+    cl_int setSVMPointers(const vector<void*> &pointerList)
+    {
+        return detail::errHandler(
+            ::clSetKernelExecInfo(
+                object_,
+                CL_KERNEL_EXEC_INFO_SVM_PTRS,
+                sizeof(void*)*pointerList.size(),
+                pointerList.data()));
+    }
+
+    /*!
+     * Specify a std::array of SVM pointers that the kernel may access in
+     * addition to its arguments.
+     */
+    template<int ArrayLength>
+    cl_int setSVMPointers(const std::array<void*, ArrayLength> &pointerList)
+    {
+        return detail::errHandler(
+            ::clSetKernelExecInfo(
+                object_,
+                CL_KERNEL_EXEC_INFO_SVM_PTRS,
+                sizeof(void*)*pointerList.size(),
+                pointerList.data()));
+    }
+
+    /*! \brief Enable fine-grained system SVM.
+     *
+     * \note It is only possible to enable fine-grained system SVM if all devices
+     *       in the context associated with kernel support it.
+     * 
+     * \param svmEnabled True if fine-grained system SVM is requested. False otherwise.
+     * \return CL_SUCCESS if the function was executed succesfully. CL_INVALID_OPERATION
+     *         if no devices in the context support fine-grained system SVM.
+     *
+     * \see clSetKernelExecInfo
+     */
+    cl_int enableFineGrainedSystemSVM(bool svmEnabled)
+    {
+        cl_bool svmEnabled_ = svm
