@@ -6150,4 +6150,84 @@ public:
      *   CL_INVALID_VALUE if the length of devices is zero; or if the length of binaries does not match the length of devices; 
      *     or if any entry in binaries is NULL or has length 0.
      *   CL_INVALID_DEVICE if OpenCL devices listed in devices are not in the list of devices associated with context.
-     *   CL_INVALID_BINARY if an invalid program binary was encountered for any device. binaryStatus will return 
+     *   CL_INVALID_BINARY if an invalid program binary was encountered for any device. binaryStatus will return specific status for each device.
+     *   CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources required by the OpenCL implementation on the host.
+     */
+    Program(
+        const Context& context,
+        const vector<Device>& devices,
+        const Binaries& binaries,
+        vector<cl_int>* binaryStatus = NULL,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        
+        const size_type numDevices = devices.size();
+        
+        // Catch size mismatch early and return
+        if(binaries.size() != numDevices) {
+            error = CL_INVALID_VALUE;
+            detail::errHandler(error, __CREATE_PROGRAM_WITH_BINARY_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+            return;
+        }
+
+
+        vector<size_type> lengths(numDevices);
+        vector<const unsigned char*> images(numDevices);
+#if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+        for (size_type i = 0; i < numDevices; ++i) {
+            images[i] = binaries[i].data();
+            lengths[i] = binaries[(int)i].size();
+        }
+#else // #if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+        for (size_type i = 0; i < numDevices; ++i) {
+            images[i] = (const unsigned char*)binaries[i].first;
+            lengths[i] = binaries[(int)i].second;
+        }
+#endif // #if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+        
+        vector<cl_device_id> deviceIDs(numDevices);
+        for( size_type deviceIndex = 0; deviceIndex < numDevices; ++deviceIndex ) {
+            deviceIDs[deviceIndex] = (devices[deviceIndex])();
+        }
+
+        if(binaryStatus) {
+            binaryStatus->resize(numDevices);
+        }
+        
+        object_ = ::clCreateProgramWithBinary(
+            context(), (cl_uint) devices.size(),
+            deviceIDs.data(),
+            lengths.data(), images.data(), (binaryStatus != NULL && numDevices > 0)
+               ? &binaryStatus->front()
+               : NULL, &error);
+
+        detail::errHandler(error, __CREATE_PROGRAM_WITH_BINARY_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+    /**
+     * Create program using builtin kernels.
+     * \param kernelNames Semi-colon separated list of builtin kernel names
+     */
+    Program(
+        const Context& context,
+        const vector<Device>& devices,
+        const string& kernelNames,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+
+        size_type numDevices = devices.size();
+        vector<cl_device_id> deviceIDs(numDevices);
+        for( size_type deviceIndex = 0; deviceIndex < numDevices; ++deviceIndex ) {
+            deviceIDs[deviceIndex] = (devices[deviceIndex])();
+    
