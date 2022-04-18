@@ -6091,4 +6091,63 @@ public:
         }
 
         object_ = ::clCreateProgramWithSource(
-           
+            context(), (cl_uint)n, strings.data(), lengths.data(), &error);
+
+        detail::errHandler(error, __CREATE_PROGRAM_WITH_SOURCE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /**
+     * Create a program from a vector of source strings and a provided context.
+     * Does not compile or link the program.
+     */
+    Program(
+        const Context& context,
+        const Sources& sources,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        const size_type n = (size_type)sources.size();
+
+        vector<size_type> lengths(n);
+        vector<const char*> strings(n);
+
+        for (size_type i = 0; i < n; ++i) {
+#if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+            strings[i] = sources[(int)i].data();
+            lengths[i] = sources[(int)i].length();
+#else // #if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+            strings[i] = sources[(int)i].first;
+            lengths[i] = sources[(int)i].second;
+#endif // #if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+        }
+
+        object_ = ::clCreateProgramWithSource(
+            context(), (cl_uint)n, strings.data(), lengths.data(), &error);
+
+        detail::errHandler(error, __CREATE_PROGRAM_WITH_SOURCE_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /**
+     * Construct a program object from a list of devices and a per-device list of binaries.
+     * \param context A valid OpenCL context in which to construct the program.
+     * \param devices A vector of OpenCL device objects for which the program will be created.
+     * \param binaries A vector of pairs of a pointer to a binary object and its length.
+     * \param binaryStatus An optional vector that on completion will be resized to
+     *   match the size of binaries and filled with values to specify if each binary
+     *   was successfully loaded.
+     *   Set to CL_SUCCESS if the binary was successfully loaded.
+     *   Set to CL_INVALID_VALUE if the length is 0 or the binary pointer is NULL.
+     *   Set to CL_INVALID_BINARY if the binary provided is not valid for the matching device.
+     * \param err if non-NULL will be set to CL_SUCCESS on successful operation or one of the following errors:
+     *   CL_INVALID_CONTEXT if context is not a valid context.
+     *   CL_INVALID_VALUE if the length of devices is zero; or if the length of binaries does not match the length of devices; 
+     *     or if any entry in binaries is NULL or has length 0.
+     *   CL_INVALID_DEVICE if OpenCL devices listed in devices are not in the list of devices associated with context.
+     *   CL_INVALID_BINARY if an invalid program binary was encountered for any device. binaryStatus will return 
