@@ -5995,4 +5995,100 @@ public:
     {
         cl_int error;
 
-    
+        const char * strings = source.c_str();
+        const size_type length  = source.size();
+
+        Context context = Context::getDefault(err);
+
+        object_ = ::clCreateProgramWithSource(
+            context(), (cl_uint)1, &strings, &length, &error);
+
+        detail::errHandler(error, __CREATE_PROGRAM_WITH_SOURCE_ERR);
+
+        if (error == CL_SUCCESS && build) {
+
+            error = ::clBuildProgram(
+                object_,
+                0,
+                NULL,
+#if !defined(CL_HPP_CL_1_2_DEFAULT_BUILD)
+                "-cl-std=CL2.0",
+#else
+                "",
+#endif // #if !defined(CL_HPP_CL_1_2_DEFAULT_BUILD)
+                NULL,
+                NULL);
+
+            detail::buildErrHandler(error, __BUILD_PROGRAM_ERR, getBuildInfo<CL_PROGRAM_BUILD_LOG>());
+        }
+
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    Program(
+        const Context& context,
+        const string& source,
+        bool build = false,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        const char * strings = source.c_str();
+        const size_type length  = source.size();
+
+        object_ = ::clCreateProgramWithSource(
+            context(), (cl_uint)1, &strings, &length, &error);
+
+        detail::errHandler(error, __CREATE_PROGRAM_WITH_SOURCE_ERR);
+
+        if (error == CL_SUCCESS && build) {
+            error = ::clBuildProgram(
+                object_,
+                0,
+                NULL,
+#if !defined(CL_HPP_CL_1_2_DEFAULT_BUILD)
+                "-cl-std=CL2.0",
+#else
+                "",
+#endif // #if !defined(CL_HPP_CL_1_2_DEFAULT_BUILD)
+                NULL,
+                NULL);
+            
+            detail::buildErrHandler(error, __BUILD_PROGRAM_ERR, getBuildInfo<CL_PROGRAM_BUILD_LOG>());
+        }
+
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /**
+     * Create a program from a vector of source strings and the default context.
+     * Does not compile or link the program.
+     */
+    Program(
+        const Sources& sources,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        Context context = Context::getDefault(err);
+
+        const size_type n = (size_type)sources.size();
+
+        vector<size_type> lengths(n);
+        vector<const char*> strings(n);
+
+        for (size_type i = 0; i < n; ++i) {
+#if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+            strings[i] = sources[(int)i].data();
+            lengths[i] = sources[(int)i].length();
+#else // #if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+            strings[i] = sources[(int)i].first;
+            lengths[i] = sources[(int)i].second;
+#endif // #if !defined(CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY)
+        }
+
+        object_ = ::clCreateProgramWithSource(
+           
