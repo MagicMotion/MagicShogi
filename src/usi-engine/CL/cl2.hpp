@@ -6405,4 +6405,91 @@ public:
      */
     template <cl_int name>
     vector<std::pair<cl::Device, typename detail::param_traits<detail::cl_program_build_info, name>::param_type>>
-        getBuildInfo(cl_int *err = N
+        getBuildInfo(cl_int *err = NULL) const
+    {
+        cl_int result = CL_SUCCESS;
+
+        auto devs = getInfo<CL_PROGRAM_DEVICES>(&result);
+        vector<std::pair<cl::Device, typename detail::param_traits<detail::cl_program_build_info, name>::param_type>>
+            devInfo;
+
+        // If there was an initial error from getInfo return the error
+        if (result != CL_SUCCESS) {
+            if (err != NULL) {
+                *err = result;
+            }
+            return devInfo;
+        }
+
+        for (const cl::Device &d : devs) {
+            typename detail::param_traits<
+                detail::cl_program_build_info, name>::param_type param;
+            result = getBuildInfo(d, name, &param);
+            devInfo.push_back(
+                std::pair<cl::Device, typename detail::param_traits<detail::cl_program_build_info, name>::param_type>
+                (d, param));
+            if (result != CL_SUCCESS) {
+                // On error, leave the loop and return the error code
+                break;
+            }
+        }
+        if (err != NULL) {
+            *err = result;
+        }
+        if (result != CL_SUCCESS) {
+            devInfo.clear();
+        }
+        return devInfo;
+    }
+
+    cl_int createKernels(vector<Kernel>* kernels)
+    {
+        cl_uint numKernels;
+        cl_int err = ::clCreateKernelsInProgram(object_, 0, NULL, &numKernels);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __CREATE_KERNELS_IN_PROGRAM_ERR);
+        }
+
+        vector<cl_kernel> value(numKernels);
+        
+        err = ::clCreateKernelsInProgram(
+            object_, numKernels, value.data(), NULL);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __CREATE_KERNELS_IN_PROGRAM_ERR);
+        }
+
+        if (kernels) {
+            kernels->resize(value.size());
+
+            // Assign to param, constructing with retain behaviour
+            // to correctly capture each underlying CL object
+            for (size_type i = 0; i < value.size(); i++) {
+                // We do not need to retain because this kernel is being created 
+                // by the runtime
+                (*kernels)[i] = Kernel(value[i], false);
+            }
+        }
+        return CL_SUCCESS;
+    }
+};
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+inline Program linkProgram(
+    Program input1,
+    Program input2,
+    const char* options = NULL,
+    void (CL_CALLBACK * notifyFptr)(cl_program, void *) = NULL,
+    void* data = NULL,
+    cl_int* err = NULL) 
+{
+    cl_int error_local = CL_SUCCESS;
+
+    cl_program programs[2] = { input1(), input2() };
+
+    Context ctx = input1.getInfo<CL_PROGRAM_CONTEXT>(&error_local);
+    if(error_local!=CL_SUCCESS) {
+        detail::errHandler(error_local, __LINK_PROGRAM_ERR);
+    }
+
+    cl_program prog = ::clLinkProgram(
+ 
