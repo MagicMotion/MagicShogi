@@ -6701,4 +6701,86 @@ public:
             }
         }
         else {
-            Device device = context.getInfo<CL_CONTEXT_DEVICES>(
+            Device device = context.getInfo<CL_CONTEXT_DEVICES>()[0];
+            bool useWithProperties;
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
+            // Run-time decision based on the actual platform
+            {
+                cl_uint version = detail::getContextPlatformVersion(context());
+                useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
+            }
+#elif CL_HPP_TARGET_OPENCL_VERSION >= 200
+            useWithProperties = true;
+#else
+            useWithProperties = false;
+#endif
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+            if (useWithProperties) {
+                cl_queue_properties queue_properties[] = {
+                    CL_QUEUE_PROPERTIES, properties, 0 };
+                if ((properties & CL_QUEUE_ON_DEVICE) == 0) {
+                    object_ = ::clCreateCommandQueueWithProperties(
+                        context(), device(), queue_properties, &error);
+                }
+                else {
+                    error = CL_INVALID_QUEUE_PROPERTIES;
+                }
+
+                detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+                if (err != NULL) {
+                    *err = error;
+                }
+            }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 200
+#if CL_HPP_MINIMUM_OPENCL_VERSION < 200
+            if (!useWithProperties) {
+                object_ = ::clCreateCommandQueue(
+                    context(), device(), properties, &error);
+
+                detail::errHandler(error, __CREATE_COMMAND_QUEUE_ERR);
+                if (err != NULL) {
+                    *err = error;
+                }
+            }
+#endif // CL_HPP_MINIMUM_OPENCL_VERSION < 200
+        }
+    }
+
+   /*!
+    * \brief Constructs a CommandQueue based on passed properties.
+    * Will return an CL_INVALID_QUEUE_PROPERTIES error if CL_QUEUE_ON_DEVICE is specified.
+    */
+   CommandQueue(
+       QueueProperties properties,
+       cl_int* err = NULL)
+   {
+       cl_int error;
+
+       Context context = Context::getDefault(&error);
+       detail::errHandler(error, __CREATE_CONTEXT_ERR);
+
+       if (error != CL_SUCCESS) {
+           if (err != NULL) {
+               *err = error;
+           }
+       }
+       else {
+           Device device = context.getInfo<CL_CONTEXT_DEVICES>()[0];
+           bool useWithProperties;
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
+           // Run-time decision based on the actual platform
+           {
+               cl_uint version = detail::getContextPlatformVersion(context());
+               useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
+           }
+#elif CL_HPP_TARGET_OPENCL_VERSION >= 200
+           useWithProperties = true;
+#else
+           useWithProperties = false;
+#endif
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+   
