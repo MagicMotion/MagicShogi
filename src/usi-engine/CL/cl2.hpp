@@ -6492,4 +6492,108 @@ inline Program linkProgram(
     }
 
     cl_program prog = ::clLinkProgram(
- 
+        ctx(),
+        0,
+        NULL,
+        options,
+        2,
+        programs,
+        notifyFptr,
+        data,
+        &error_local);
+
+    detail::errHandler(error_local,__COMPILE_PROGRAM_ERR);
+    if (err != NULL) {
+        *err = error_local;
+    }
+
+    return Program(prog);
+}
+
+inline Program linkProgram(
+    vector<Program> inputPrograms,
+    const char* options = NULL,
+    void (CL_CALLBACK * notifyFptr)(cl_program, void *) = NULL,
+    void* data = NULL,
+    cl_int* err = NULL) 
+{
+    cl_int error_local = CL_SUCCESS;
+
+    vector<cl_program> programs(inputPrograms.size());
+
+    for (unsigned int i = 0; i < inputPrograms.size(); i++) {
+        programs[i] = inputPrograms[i]();
+    }
+    
+    Context ctx;
+    if(inputPrograms.size() > 0) {
+        ctx = inputPrograms[0].getInfo<CL_PROGRAM_CONTEXT>(&error_local);
+        if(error_local!=CL_SUCCESS) {
+            detail::errHandler(error_local, __LINK_PROGRAM_ERR);
+        }
+    }
+    cl_program prog = ::clLinkProgram(
+        ctx(),
+        0,
+        NULL,
+        options,
+        (cl_uint)inputPrograms.size(),
+        programs.data(),
+        notifyFptr,
+        data,
+        &error_local);
+
+    detail::errHandler(error_local,__COMPILE_PROGRAM_ERR);
+    if (err != NULL) {
+        *err = error_local;
+    }
+
+    return Program(prog, false);
+}
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+// Template specialization for CL_PROGRAM_BINARIES
+template <>
+inline cl_int cl::Program::getInfo(cl_program_info name, vector<vector<unsigned char>>* param) const
+{
+    if (name != CL_PROGRAM_BINARIES) {
+        return CL_INVALID_VALUE;
+    }
+    if (param) {
+        // Resize the parameter array appropriately for each allocation
+        // and pass down to the helper
+
+        vector<size_type> sizes = getInfo<CL_PROGRAM_BINARY_SIZES>();
+        size_type numBinaries = sizes.size();
+
+        // Resize the parameter array and constituent arrays
+        param->resize(numBinaries);
+        for (size_type i = 0; i < numBinaries; ++i) {
+            (*param)[i].resize(sizes[i]);
+        }
+
+        return detail::errHandler(
+            detail::getInfo(&::clGetProgramInfo, object_, name, param),
+            __GET_PROGRAM_INFO_ERR);
+    }
+
+    return CL_SUCCESS;
+}
+
+template<>
+inline vector<vector<unsigned char>> cl::Program::getInfo<CL_PROGRAM_BINARIES>(cl_int* err) const
+{
+    vector<vector<unsigned char>> binariesVectors;
+
+    cl_int result = getInfo(CL_PROGRAM_BINARIES, &binariesVectors);
+    if (err != NULL) {
+        *err = result;
+    }
+    return binariesVectors;
+}
+
+inline Kernel::Kernel(const Program& program, const char* name, cl_int* err)
+{
+    cl_int error;
+
+    object_ = ::clCreateKernel(program(), na
