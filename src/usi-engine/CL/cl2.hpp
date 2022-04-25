@@ -6596,4 +6596,109 @@ inline Kernel::Kernel(const Program& program, const char* name, cl_int* err)
 {
     cl_int error;
 
-    object_ = ::clCreateKernel(program(), na
+    object_ = ::clCreateKernel(program(), name, &error);
+    detail::errHandler(error, __CREATE_KERNEL_ERR);
+
+    if (err != NULL) {
+        *err = error;
+    }
+
+}
+
+enum class QueueProperties : cl_command_queue_properties
+{
+    None = 0,
+    Profiling = CL_QUEUE_PROFILING_ENABLE,
+    OutOfOrder = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
+};
+
+inline QueueProperties operator|(QueueProperties lhs, QueueProperties rhs)
+{
+    return static_cast<QueueProperties>(static_cast<cl_command_queue_properties>(lhs) | static_cast<cl_command_queue_properties>(rhs));
+}
+
+/*! \class CommandQueue
+ * \brief CommandQueue interface for cl_command_queue.
+ */
+class CommandQueue : public detail::Wrapper<cl_command_queue>
+{
+private:
+    static std::once_flag default_initialized_;
+    static CommandQueue default_;
+    static cl_int default_error_;
+
+    /*! \brief Create the default command queue returned by @ref getDefault.
+     *
+     * It sets default_error_ to indicate success or failure. It does not throw
+     * @c cl::Error.
+     */
+    static void makeDefault()
+    {
+        /* We don't want to throw an error from this function, so we have to
+         * catch and set the error flag.
+         */
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+        try
+#endif
+        {
+            int error;
+            Context context = Context::getDefault(&error);
+
+            if (error != CL_SUCCESS) {
+                default_error_ = error;
+            }
+            else {
+                Device device = Device::getDefault();
+                default_ = CommandQueue(context, device, 0, &default_error_);
+            }
+        }
+#if defined(CL_HPP_ENABLE_EXCEPTIONS)
+        catch (cl::Error &e) {
+            default_error_ = e.err();
+        }
+#endif
+    }
+
+    /*! \brief Create the default command queue.
+     *
+     * This sets @c default_. It does not throw
+     * @c cl::Error.
+     */
+    static void makeDefaultProvided(const CommandQueue &c) {
+        default_ = c;
+    }
+
+public:
+#ifdef CL_HPP_UNIT_TEST_ENABLE
+    /*! \brief Reset the default.
+    *
+    * This sets @c default_ to an empty value to support cleanup in
+    * the unit test framework.
+    * This function is not thread safe.
+    */
+    static void unitTestClearDefault() {
+        default_ = CommandQueue();
+    }
+#endif // #ifdef CL_HPP_UNIT_TEST_ENABLE
+        
+
+    /*!
+     * \brief Constructs a CommandQueue based on passed properties.
+     * Will return an CL_INVALID_QUEUE_PROPERTIES error if CL_QUEUE_ON_DEVICE is specified.
+     */
+   CommandQueue(
+        cl_command_queue_properties properties,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        Context context = Context::getDefault(&error);
+        detail::errHandler(error, __CREATE_CONTEXT_ERR);
+
+        if (error != CL_SUCCESS) {
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+        else {
+            Device device = context.getInfo<CL_CONTEXT_DEVICES>(
