@@ -6860,4 +6860,86 @@ public:
             }
 
             detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
-            if (err !=
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 200
+#if CL_HPP_MINIMUM_OPENCL_VERSION < 200
+        if (!useWithProperties) {
+            object_ = ::clCreateCommandQueue(
+                context(), devices[0](), properties, &error);
+
+            detail::errHandler(error, __CREATE_COMMAND_QUEUE_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // CL_HPP_MINIMUM_OPENCL_VERSION < 200
+    }
+
+    /*!
+    * \brief Constructs a CommandQueue for an implementation defined device in the given context
+    * Will return an CL_INVALID_QUEUE_PROPERTIES error if CL_QUEUE_ON_DEVICE is specified.
+    */
+    explicit CommandQueue(
+        const Context& context,
+        QueueProperties properties,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        bool useWithProperties;
+        vector<cl::Device> devices;
+        error = context.getInfo(CL_CONTEXT_DEVICES, &devices);
+
+        detail::errHandler(error, __CREATE_CONTEXT_ERR);
+
+        if (error != CL_SUCCESS)
+        {
+            if (err != NULL) {
+                *err = error;
+            }
+            return;
+        }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200 && CL_HPP_MINIMUM_OPENCL_VERSION < 200
+        // Run-time decision based on the actual platform
+        {
+            cl_uint version = detail::getContextPlatformVersion(context());
+            useWithProperties = (version >= 0x20000); // OpenCL 2.0 or above
+        }
+#elif CL_HPP_TARGET_OPENCL_VERSION >= 200
+        useWithProperties = true;
+#else
+        useWithProperties = false;
+#endif
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+        if (useWithProperties) {
+            cl_queue_properties queue_properties[] = {
+                CL_QUEUE_PROPERTIES, static_cast<cl_queue_properties>(properties), 0 };
+            object_ = ::clCreateCommandQueueWithProperties(
+                context(), devices[0](), queue_properties, &error);
+
+            detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 200
+#if CL_HPP_MINIMUM_OPENCL_VERSION < 200
+        if (!useWithProperties) {
+            object_ = ::clCreateCommandQueue(
+                context(), devices[0](), static_cast<cl_command_queue_properties>(properties), &error);
+
+            detail::errHandler(error, __CREATE_COMMAND_QUEUE_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // CL_HPP_MINIMUM_OPENCL_VERSION < 200
+    }
+
+    /*!
+     * \brief Constructs a CommandQueue for a passed device and context
+     * Will return an CL_INVALID_QUEUE_PROPERTIES error if CL_QUEUE_ON_DEVICE i
