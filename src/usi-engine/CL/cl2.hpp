@@ -7021,4 +7021,85 @@ public:
             cl_queue_properties queue_properties[] = {
                 CL_QUEUE_PROPERTIES, static_cast<cl_queue_properties>(properties), 0 };
             object_ = ::clCreateCommandQueueWithProperties(
-                context(), device(),
+                context(), device(), queue_properties, &error);
+
+            detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 200
+#if CL_HPP_MINIMUM_OPENCL_VERSION < 200
+        if (!useWithProperties) {
+            object_ = ::clCreateCommandQueue(
+                context(), device(), static_cast<cl_command_queue_properties>(properties), &error);
+
+            detail::errHandler(error, __CREATE_COMMAND_QUEUE_ERR);
+            if (err != NULL) {
+                *err = error;
+            }
+        }
+#endif // CL_HPP_MINIMUM_OPENCL_VERSION < 200
+    }
+
+    static CommandQueue getDefault(cl_int * err = NULL) 
+    {
+        std::call_once(default_initialized_, makeDefault);
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+        detail::errHandler(default_error_, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+#else // CL_HPP_TARGET_OPENCL_VERSION >= 200
+        detail::errHandler(default_error_, __CREATE_COMMAND_QUEUE_ERR);
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 200
+        if (err != NULL) {
+            *err = default_error_;
+        }
+        return default_;
+    }
+
+    /**
+     * Modify the default command queue to be used by
+     * subsequent operations.
+     * Will only set the default if no default was previously created.
+     * @return updated default command queue.
+     *         Should be compared to the passed value to ensure that it was updated.
+     */
+    static CommandQueue setDefault(const CommandQueue &default_queue)
+    {
+        std::call_once(default_initialized_, makeDefaultProvided, std::cref(default_queue));
+        detail::errHandler(default_error_);
+        return default_;
+    }
+
+    CommandQueue() { }
+
+
+    /*! \brief Constructor from cl_mem - takes ownership.
+     *
+     * \param retainObject will cause the constructor to retain its cl object.
+     *                     Defaults to false to maintain compatibility with
+     *                     earlier versions.
+     */
+    explicit CommandQueue(const cl_command_queue& commandQueue, bool retainObject = false) : 
+        detail::Wrapper<cl_type>(commandQueue, retainObject) { }
+
+    CommandQueue& operator = (const cl_command_queue& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    CommandQueue(const CommandQueue& queue) : detail::Wrapper<cl_type>(queue) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    CommandQueue& operator = (const CommandQueue &queue)
+    {
+        detail::Wrapper<cl_type>::operator=(queue);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly
