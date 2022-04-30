@@ -7102,4 +7102,96 @@ public:
         return *this;
     }
 
-    /*! \brief Move constructor to forward move to the superclass correctly
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    CommandQueue(CommandQueue&& queue) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(queue)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    CommandQueue& operator = (CommandQueue &&queue)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(queue));
+        return *this;
+    }
+
+    template <typename T>
+    cl_int getInfo(cl_command_queue_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(
+                &::clGetCommandQueueInfo, object_, name, param),
+                __GET_COMMAND_QUEUE_INFO_ERR);
+    }
+
+    template <cl_int name> typename
+    detail::param_traits<detail::cl_command_queue_info, name>::param_type
+    getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_command_queue_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    cl_int enqueueReadBuffer(
+        const Buffer& buffer,
+        cl_bool blocking,
+        size_type offset,
+        size_type size,
+        void* ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueReadBuffer(
+                object_, buffer(), blocking, offset, size,
+                ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_READ_BUFFER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    cl_int enqueueWriteBuffer(
+        const Buffer& buffer,
+        cl_bool blocking,
+        size_type offset,
+        size_type size,
+        const void* ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueWriteBuffer(
+                object_, buffer(), blocking, offset, size,
+                ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+                __ENQUEUE_WRITE_BUFFER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    cl_int enqueueCopyBuffer(
+        const Buffer& src,
+        const Buffer& dst,
+        size_type src_offset,
+        size_type dst_offset,
+        size_type size,
+        const 
