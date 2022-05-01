@@ -7278,4 +7278,84 @@ public:
                 buffer_slice_pitch,
                 host_row_pitch,
                 host_slice_pitch,
-         
+                ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+                __ENQUEUE_WRITE_BUFFER_RECT_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    cl_int enqueueCopyBufferRect(
+        const Buffer& src,
+        const Buffer& dst,
+        const array<size_type, 3>& src_origin,
+        const array<size_type, 3>& dst_origin,
+        const array<size_type, 3>& region,
+        size_type src_row_pitch,
+        size_type src_slice_pitch,
+        size_type dst_row_pitch,
+        size_type dst_slice_pitch,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueCopyBufferRect(
+                object_, 
+                src(), 
+                dst(), 
+                src_origin.data(),
+                dst_origin.data(),
+                region.data(),
+                src_row_pitch,
+                src_slice_pitch,
+                dst_row_pitch,
+                dst_slice_pitch,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQEUE_COPY_BUFFER_RECT_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+    /**
+     * Enqueue a command to fill a buffer object with a pattern
+     * of a given size. The pattern is specified as a vector type.
+     * \tparam PatternType The datatype of the pattern field. 
+     *     The pattern type must be an accepted OpenCL data type.
+     * \tparam offset Is the offset in bytes into the buffer at 
+     *     which to start filling. This must be a multiple of 
+     *     the pattern size.
+     * \tparam size Is the size in bytes of the region to fill.
+     *     This must be a multiple of the pattern size.
+     */
+    template<typename PatternType>
+    cl_int enqueueFillBuffer(
+        const Buffer& buffer,
+        PatternType pattern,
+        size_type offset,
+        size_type size,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueFillBuffer(
+                object_, 
+                buffer(),
+                static_cast<void*>(&pattern),
+                sizeof(PatternType), 
+                offset, 
+                size,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != 
