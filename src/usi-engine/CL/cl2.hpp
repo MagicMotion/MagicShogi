@@ -7194,4 +7194,88 @@ public:
         size_type src_offset,
         size_type dst_offset,
         size_type size,
-        const 
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueCopyBuffer(
+                object_, src(), dst(), src_offset, dst_offset, size,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQEUE_COPY_BUFFER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#if CL_HPP_TARGET_OPENCL_VERSION >= 110
+    cl_int enqueueReadBufferRect(
+        const Buffer& buffer,
+        cl_bool blocking,
+        const array<size_type, 3>& buffer_offset,
+        const array<size_type, 3>& host_offset,
+        const array<size_type, 3>& region,
+        size_type buffer_row_pitch,
+        size_type buffer_slice_pitch,
+        size_type host_row_pitch,
+        size_type host_slice_pitch,
+        void *ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueReadBufferRect(
+                object_, 
+                buffer(), 
+                blocking,
+                buffer_offset.data(),
+                host_offset.data(),
+                region.data(),
+                buffer_row_pitch,
+                buffer_slice_pitch,
+                host_row_pitch,
+                host_slice_pitch,
+                ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+                __ENQUEUE_READ_BUFFER_RECT_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    cl_int enqueueWriteBufferRect(
+        const Buffer& buffer,
+        cl_bool blocking,
+        const array<size_type, 3>& buffer_offset,
+        const array<size_type, 3>& host_offset,
+        const array<size_type, 3>& region,
+        size_type buffer_row_pitch,
+        size_type buffer_slice_pitch,
+        size_type host_row_pitch,
+        size_type host_slice_pitch,
+        const void *ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueWriteBufferRect(
+                object_, 
+                buffer(), 
+                blocking,
+                buffer_offset.data(),
+                host_offset.data(),
+                region.data(),
+                buffer_row_pitch,
+                buffer_slice_pitch,
+                host_row_pitch,
+                host_slice_pitch,
+         
