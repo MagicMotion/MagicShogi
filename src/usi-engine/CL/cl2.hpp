@@ -7358,4 +7358,95 @@ public:
                 offset, 
                 size,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != 
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+                __ENQUEUE_FILL_BUFFER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+    cl_int enqueueReadImage(
+        const Image& image,
+        cl_bool blocking,
+        const array<size_type, 3>& origin,
+        const array<size_type, 3>& region,
+        size_type row_pitch,
+        size_type slice_pitch,
+        void* ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueReadImage(
+                object_, 
+                image(), 
+                blocking, 
+                origin.data(),
+                region.data(), 
+                row_pitch, 
+                slice_pitch, 
+                ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_READ_IMAGE_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    cl_int enqueueWriteImage(
+        const Image& image,
+        cl_bool blocking,
+        const array<size_type, 3>& origin,
+        const array<size_type, 3>& region,
+        size_type row_pitch,
+        size_type slice_pitch,
+        const void* ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueWriteImage(
+                object_, 
+                image(), 
+                blocking, 
+                origin.data(),
+                region.data(), 
+                row_pitch, 
+                slice_pitch, 
+                ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_WRITE_IMAGE_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    cl_int enqueueCopyImage(
+        const Image& src,
+        const Image& dst,
+        const array<size_type, 3>& src_origin,
+        const array<size_type, 3>& dst_origin,
+        const array<size_type, 3>& region,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueCopyImage(
+                object_, 
+                src(), 
+                dst(), 
