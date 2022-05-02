@@ -7450,3 +7450,81 @@ public:
                 object_, 
                 src(), 
                 dst(), 
+                src_origin.data(),
+                dst_origin.data(), 
+                region.data(),
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_COPY_IMAGE_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+    /**
+     * Enqueue a command to fill an image object with a specified color.
+     * \param fillColor is the color to use to fill the image.
+     *     This is a four component RGBA floating-point color value if
+     *     the image channel data type is not an unnormalized signed or
+     *     unsigned data type.
+     */
+    cl_int enqueueFillImage(
+        const Image& image,
+        cl_float4 fillColor,
+        const array<size_type, 3>& origin,
+        const array<size_type, 3>& region,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueFillImage(
+                object_, 
+                image(),
+                static_cast<void*>(&fillColor), 
+                origin.data(),
+                region.data(),
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+                __ENQUEUE_FILL_IMAGE_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    /**
+     * Enqueue a command to fill an image object with a specified color.
+     * \param fillColor is the color to use to fill the image.
+     *     This is a four component RGBA signed integer color value if
+     *     the image channel data type is an unnormalized signed integer
+     *     type.
+     */
+    cl_int enqueueFillImage(
+        const Image& image,
+        cl_int4 fillColor,
+        const array<size_type, 3>& origin,
+        const array<size_type, 3>& region,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueFillImage(
+                object_, 
+                image(),
+                static_cast<void*>(&fillColor), 
+                origin.data(),
+                region.data(),
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+                __ENQUEUE_FILL_IMAGE_ERR);
+
+ 
