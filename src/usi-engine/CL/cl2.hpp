@@ -7527,4 +7527,91 @@ public:
                 (event != NULL) ? &tmp : NULL),
                 __ENQUEUE_FILL_IMAGE_ERR);
 
- 
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    /**
+     * Enqueue a command to fill an image object with a specified color.
+     * \param fillColor is the color to use to fill the image.
+     *     This is a four component RGBA unsigned integer color value if
+     *     the image channel data type is an unnormalized unsigned integer
+     *     type.
+     */
+    cl_int enqueueFillImage(
+        const Image& image,
+        cl_uint4 fillColor,
+        const array<size_type, 3>& origin,
+        const array<size_type, 3>& region,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueFillImage(
+                object_, 
+                image(),
+                static_cast<void*>(&fillColor), 
+                origin.data(),
+                region.data(),
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+                __ENQUEUE_FILL_IMAGE_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+    cl_int enqueueCopyImageToBuffer(
+        const Image& src,
+        const Buffer& dst,
+        const array<size_type, 3>& src_origin,
+        const array<size_type, 3>& region,
+        size_type dst_offset,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueCopyImageToBuffer(
+                object_, 
+                src(), 
+                dst(), 
+                src_origin.data(),
+                region.data(), 
+                dst_offset,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_COPY_IMAGE_TO_BUFFER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    cl_int enqueueCopyBufferToImage(
+        const Buffer& src,
+        const Image& dst,
+        size_type src_offset,
+        const array<size_type, 3>& dst_origin,
+        const array<size_type, 3>& region,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueCopyBufferToImage(
+                object_, 
+                src(), 
+                dst(), 
+                src_offset,
+                dst_origin.data(), 
+                region.data()
