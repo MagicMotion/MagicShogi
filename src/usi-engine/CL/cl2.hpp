@@ -7614,4 +7614,94 @@ public:
                 dst(), 
                 src_offset,
                 dst_origin.data(), 
-                region.data()
+                region.data(),
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_COPY_BUFFER_TO_IMAGE_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    void* enqueueMapBuffer(
+        const Buffer& buffer,
+        cl_bool blocking,
+        cl_map_flags flags,
+        size_type offset,
+        size_type size,
+        const vector<Event>* events = NULL,
+        Event* event = NULL,
+        cl_int* err = NULL) const
+    {
+        cl_event tmp;
+        cl_int error;
+        void * result = ::clEnqueueMapBuffer(
+            object_, buffer(), blocking, flags, offset, size,
+            (events != NULL) ? (cl_uint) events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+            (event != NULL) ? &tmp : NULL,
+            &error);
+
+        detail::errHandler(error, __ENQUEUE_MAP_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+        if (event != NULL && error == CL_SUCCESS)
+            *event = tmp;
+
+        return result;
+    }
+
+    void* enqueueMapImage(
+        const Image& buffer,
+        cl_bool blocking,
+        cl_map_flags flags,
+        const array<size_type, 3>& origin,
+        const array<size_type, 3>& region,
+        size_type * row_pitch,
+        size_type * slice_pitch,
+        const vector<Event>* events = NULL,
+        Event* event = NULL,
+        cl_int* err = NULL) const
+    {
+        cl_event tmp;
+        cl_int error;
+        void * result = ::clEnqueueMapImage(
+            object_, buffer(), blocking, flags,
+            origin.data(), 
+            region.data(),
+            row_pitch, slice_pitch,
+            (events != NULL) ? (cl_uint) events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+            (event != NULL) ? &tmp : NULL,
+            &error);
+
+        detail::errHandler(error, __ENQUEUE_MAP_IMAGE_ERR);
+        if (err != NULL) {
+              *err = error;
+        }
+        if (event != NULL && error == CL_SUCCESS)
+            *event = tmp;
+        return result;
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+    /**
+     * Enqueues a command that will allow the host to update a region of a coarse-grained SVM buffer.
+     * This variant takes a raw SVM pointer.
+     */
+    template<typename T>
+    cl_int enqueueMapSVM(
+        T* ptr,
+        cl_bool blocking,
+        cl_map_flags flags,
+        size_type size,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(::clEnqueueSVMMap(
+            object_, b
