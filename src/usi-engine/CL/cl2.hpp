@@ -7704,4 +7704,84 @@ public:
     {
         cl_event tmp;
         cl_int err = detail::errHandler(::clEnqueueSVMMap(
-            object_, b
+            object_, blocking, flags, static_cast<void*>(ptr), size,
+            (events != NULL) ? (cl_uint)events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*)&events->front() : NULL,
+            (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_MAP_BUFFER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+
+    /**
+     * Enqueues a command that will allow the host to update a region of a coarse-grained SVM buffer.
+     * This variant takes a cl::pointer instance.
+     */
+    template<typename T, class D>
+    cl_int enqueueMapSVM(
+        cl::pointer<T, D> &ptr,
+        cl_bool blocking,
+        cl_map_flags flags,
+        size_type size,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(::clEnqueueSVMMap(
+            object_, blocking, flags, static_cast<void*>(ptr.get()), size,
+            (events != NULL) ? (cl_uint)events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*)&events->front() : NULL,
+            (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_MAP_BUFFER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    /**
+     * Enqueues a command that will allow the host to update a region of a coarse-grained SVM buffer.
+     * This variant takes a cl::vector instance.
+     */
+    template<typename T, class Alloc>
+    cl_int enqueueMapSVM(
+        cl::vector<T, Alloc> &container,
+        cl_bool blocking,
+        cl_map_flags flags,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(::clEnqueueSVMMap(
+            object_, blocking, flags, static_cast<void*>(container.data()), container.size(),
+            (events != NULL) ? (cl_uint)events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*)&events->front() : NULL,
+            (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_MAP_BUFFER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+    cl_int enqueueUnmapMemObject(
+        const Memory& memory,
+        void* mapped_ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueUnmapMemObject(
+                object_, memory(), mapped_ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+  
