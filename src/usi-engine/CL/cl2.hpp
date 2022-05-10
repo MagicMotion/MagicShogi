@@ -7784,4 +7784,92 @@ public:
                 (events != NULL) ? (cl_uint) events->size() : 0,
                 (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (event != NULL) ? &tmp : NULL),
-  
+            __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+    /**
+     * Enqueues a command that will release a coarse-grained SVM buffer back to the OpenCL runtime.
+     * This variant takes a raw SVM pointer.
+     */
+    template<typename T>
+    cl_int enqueueUnmapSVM(
+        T* ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueSVMUnmap(
+            object_, static_cast<void*>(ptr),
+            (events != NULL) ? (cl_uint)events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*)&events->front() : NULL,
+            (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    /**
+     * Enqueues a command that will release a coarse-grained SVM buffer back to the OpenCL runtime.
+     * This variant takes a cl::pointer instance.
+     */
+    template<typename T, class D>
+    cl_int enqueueUnmapSVM(
+        cl::pointer<T, D> &ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueSVMUnmap(
+            object_, static_cast<void*>(ptr.get()),
+            (events != NULL) ? (cl_uint)events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*)&events->front() : NULL,
+            (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    /**
+     * Enqueues a command that will release a coarse-grained SVM buffer back to the OpenCL runtime.
+     * This variant takes a cl::vector instance.
+     */
+    template<typename T, class Alloc>
+    cl_int enqueueUnmapSVM(
+        cl::vector<T, Alloc> &container,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueSVMUnmap(
+            object_, static_cast<void*>(container.data()),
+            (events != NULL) ? (cl_uint)events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*)&events->front() : NULL,
+            (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+    /**
+     * Enqueues a marker command which waits for ei
