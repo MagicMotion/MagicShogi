@@ -7938,4 +7938,86 @@ public:
     cl_int enqueueMigrateMemObjects(
         const vector<Memory> &memObjects,
         cl_mem_migration_flags flags,
-      
+        const vector<Event>* events = NULL,
+        Event* event = NULL
+        ) const
+    {
+        cl_event tmp;
+        
+        vector<cl_mem> localMemObjects(memObjects.size());
+
+        for( int i = 0; i < (int)memObjects.size(); ++i ) {
+            localMemObjects[i] = memObjects[i]();
+        }
+
+
+        cl_int err = detail::errHandler(
+            ::clEnqueueMigrateMemObjects(
+                object_, 
+                (cl_uint)memObjects.size(), 
+                localMemObjects.data(),
+                flags,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+
+    cl_int enqueueNDRangeKernel(
+        const Kernel& kernel,
+        const NDRange& offset,
+        const NDRange& global,
+        const NDRange& local = NullRange,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueNDRangeKernel(
+                object_, kernel(), (cl_uint) global.dimensions(),
+                offset.dimensions() != 0 ? (const size_type*) offset : NULL,
+                (const size_type*) global,
+                local.dimensions() != 0 ? (const size_type*) local : NULL,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_NDRANGE_KERNEL_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+#if defined(CL_USE_DEPRECATED_OPENCL_1_2_APIS)
+    CL_EXT_PREFIX__VERSION_1_2_DEPRECATED cl_int enqueueTask(
+        const Kernel& kernel,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const CL_EXT_SUFFIX__VERSION_1_2_DEPRECATED
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueTask(
+                object_, kernel(),
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_TASK_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#endif // #if defined(CL_USE_DEPRECATED_OPENCL_1_2_APIS)
+
+    cl_int enqueueNativeKernel(
+        void (CL_CALLBACK *userFptr)(void *),
+        std::pair<void*, size_type> args,
+        const vector<Memory>* mem_objects = NUL
