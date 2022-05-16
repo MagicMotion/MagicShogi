@@ -7872,4 +7872,70 @@ public:
 
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
     /**
-     * Enqueues a marker command which waits for ei
+     * Enqueues a marker command which waits for either a list of events to complete, 
+     * or all previously enqueued commands to complete.
+     *
+     * Enqueues a marker command which waits for either a list of events to complete, 
+     * or if the list is empty it waits for all commands previously enqueued in command_queue 
+     * to complete before it completes. This command returns an event which can be waited on, 
+     * i.e. this event can be waited on to insure that all events either in the event_wait_list 
+     * or all previously enqueued commands, queued before this command to command_queue, 
+     * have completed.
+     */
+    cl_int enqueueMarkerWithWaitList(
+        const vector<Event> *events = 0,
+        Event *event = 0) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueMarkerWithWaitList(
+                object_,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_MARKER_WAIT_LIST_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    /**
+     * A synchronization point that enqueues a barrier operation.
+     *
+     * Enqueues a barrier command which waits for either a list of events to complete, 
+     * or if the list is empty it waits for all commands previously enqueued in command_queue 
+     * to complete before it completes. This command blocks command execution, that is, any 
+     * following commands enqueued after it do not execute until it completes. This command 
+     * returns an event which can be waited on, i.e. this event can be waited on to insure that 
+     * all events either in the event_wait_list or all previously enqueued commands, queued 
+     * before this command to command_queue, have completed.
+     */
+    cl_int enqueueBarrierWithWaitList(
+        const vector<Event> *events = 0,
+        Event *event = 0) const
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueBarrierWithWaitList(
+                object_,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_BARRIER_WAIT_LIST_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+    
+    /**
+     * Enqueues a command to indicate with which device a set of memory objects
+     * should be associated.
+     */
+    cl_int enqueueMigrateMemObjects(
+        const vector<Memory> &memObjects,
+        cl_mem_migration_flags flags,
+      
