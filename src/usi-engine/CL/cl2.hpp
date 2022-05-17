@@ -8097,4 +8097,67 @@ public:
                  (mem_objects != NULL && mem_objects->size() > 0) ? (const cl_mem *) &mem_objects->front(): NULL,
                  (events != NULL) ? (cl_uint) events->size() : 0,
                  (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
-             
+                 (event != NULL) ? &tmp : NULL),
+             __ENQUEUE_ACQUIRE_GL_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+     }
+
+    cl_int enqueueReleaseGLObjects(
+         const vector<Memory>* mem_objects = NULL,
+         const vector<Event>* events = NULL,
+         Event* event = NULL) const
+     {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+             ::clEnqueueReleaseGLObjects(
+                 object_,
+                 (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
+                 (mem_objects != NULL && mem_objects->size() > 0) ? (const cl_mem *) &mem_objects->front(): NULL,
+                 (events != NULL) ? (cl_uint) events->size() : 0,
+                 (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                 (event != NULL) ? &tmp : NULL),
+             __ENQUEUE_RELEASE_GL_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+     }
+
+#if defined (CL_HPP_USE_DX_INTEROP)
+typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clEnqueueAcquireD3D10ObjectsKHR)(
+    cl_command_queue command_queue, cl_uint num_objects,
+    const cl_mem* mem_objects, cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list, cl_event* event);
+typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clEnqueueReleaseD3D10ObjectsKHR)(
+    cl_command_queue command_queue, cl_uint num_objects,
+    const cl_mem* mem_objects,  cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list, cl_event* event);
+
+    cl_int enqueueAcquireD3D10Objects(
+         const vector<Memory>* mem_objects = NULL,
+         const vector<Event>* events = NULL,
+         Event* event = NULL) const
+    {
+        static PFN_clEnqueueAcquireD3D10ObjectsKHR pfn_clEnqueueAcquireD3D10ObjectsKHR = NULL;
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+        cl_context context = getInfo<CL_QUEUE_CONTEXT>();
+        cl::Device device(getInfo<CL_QUEUE_DEVICE>());
+        cl_platform_id platform = device.getInfo<CL_DEVICE_PLATFORM>();
+        CL_HPP_INIT_CL_EXT_FCN_PTR_PLATFORM_(platform, clEnqueueAcquireD3D10ObjectsKHR);
+#endif
+#if CL_HPP_TARGET_OPENCL_VERSION >= 110
+        CL_HPP_INIT_CL_EXT_FCN_PTR_(clEnqueueAcquireD3D10ObjectsKHR);
+#endif
+        
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+             pfn_clEnqueueAcquireD3D10ObjectsKHR(
+                 object_,
+                 (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
+                 (mem_objects != NULL && mem_objects->size() > 0) ? (const cl_mem *) &mem_objects->front(): NULL,
+                 (events != NULL) ? (cl_
