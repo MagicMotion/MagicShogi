@@ -8020,4 +8020,81 @@ public:
     cl_int enqueueNativeKernel(
         void (CL_CALLBACK *userFptr)(void *),
         std::pair<void*, size_type> args,
-        const vector<Memory>* mem_objects = NUL
+        const vector<Memory>* mem_objects = NULL,
+        const vector<const void*>* mem_locs = NULL,
+        const vector<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        size_type elements = 0;
+        if (mem_objects != NULL) {
+            elements = mem_objects->size();
+        }
+        vector<cl_mem> mems(elements);
+        for (unsigned int i = 0; i < elements; i++) {
+            mems[i] = ((*mem_objects)[i])();
+        }
+        
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueNativeKernel(
+                object_, userFptr, args.first, args.second,
+                (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
+                mems.data(),
+                (mem_locs != NULL && mem_locs->size() > 0) ? (const void **) &mem_locs->front() : NULL,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_NATIVE_KERNEL);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+/**
+ * Deprecated APIs for 1.2
+ */
+#if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+    CL_EXT_PREFIX__VERSION_1_1_DEPRECATED 
+    cl_int enqueueMarker(Event* event = NULL) const CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED
+    {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            ::clEnqueueMarker(
+                object_, 
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_MARKER_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+
+    CL_EXT_PREFIX__VERSION_1_1_DEPRECATED
+    cl_int enqueueWaitForEvents(const vector<Event>& events) const CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED
+    {
+        return detail::errHandler(
+            ::clEnqueueWaitForEvents(
+                object_,
+                (cl_uint) events.size(),
+                events.size() > 0 ? (const cl_event*) &events.front() : NULL),
+            __ENQUEUE_WAIT_FOR_EVENTS_ERR);
+    }
+#endif // defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+
+    cl_int enqueueAcquireGLObjects(
+         const vector<Memory>* mem_objects = NULL,
+         const vector<Event>* events = NULL,
+         Event* event = NULL) const
+     {
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+             ::clEnqueueAcquireGLObjects(
+                 object_,
+                 (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
+                 (mem_objects != NULL && mem_objects->size() > 0) ? (const cl_mem *) &mem_objects->front(): NULL,
+                 (events != NULL) ? (cl_uint) events->size() : 0,
+                 (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+             
