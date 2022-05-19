@@ -8160,4 +8160,81 @@ typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clEnqueueReleaseD3D10ObjectsKHR)(
                  object_,
                  (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
                  (mem_objects != NULL && mem_objects->size() > 0) ? (const cl_mem *) &mem_objects->front(): NULL,
-                 (events != NULL) ? (cl_
+                 (events != NULL) ? (cl_uint) events->size() : 0,
+                 (events != NULL) ? (cl_event*) &events->front() : NULL,
+                 (event != NULL) ? &tmp : NULL),
+             __ENQUEUE_ACQUIRE_GL_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+     }
+
+    cl_int enqueueReleaseD3D10Objects(
+         const vector<Memory>* mem_objects = NULL,
+         const vector<Event>* events = NULL,
+         Event* event = NULL) const
+    {
+        static PFN_clEnqueueReleaseD3D10ObjectsKHR pfn_clEnqueueReleaseD3D10ObjectsKHR = NULL;
+#if CL_HPP_TARGET_OPENCL_VERSION >= 120
+        cl_context context = getInfo<CL_QUEUE_CONTEXT>();
+        cl::Device device(getInfo<CL_QUEUE_DEVICE>());
+        cl_platform_id platform = device.getInfo<CL_DEVICE_PLATFORM>();
+        CL_HPP_INIT_CL_EXT_FCN_PTR_PLATFORM_(platform, clEnqueueReleaseD3D10ObjectsKHR);
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
+#if CL_HPP_TARGET_OPENCL_VERSION >= 110
+        CL_HPP_INIT_CL_EXT_FCN_PTR_(clEnqueueReleaseD3D10ObjectsKHR);
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+
+        cl_event tmp;
+        cl_int err = detail::errHandler(
+            pfn_clEnqueueReleaseD3D10ObjectsKHR(
+                object_,
+                (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
+                (mem_objects != NULL && mem_objects->size() > 0) ? (const cl_mem *) &mem_objects->front(): NULL,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (event != NULL) ? &tmp : NULL),
+            __ENQUEUE_RELEASE_GL_ERR);
+
+        if (event != NULL && err == CL_SUCCESS)
+            *event = tmp;
+
+        return err;
+    }
+#endif
+
+/**
+ * Deprecated APIs for 1.2
+ */
+#if defined(CL_USE_DEPRECATED_OPENCL_1_1_APIS)
+    CL_EXT_PREFIX__VERSION_1_1_DEPRECATED
+    cl_int enqueueBarrier() const CL_EXT_SUFFIX__VERSION_1_1_DEPRECATED
+    {
+        return detail::errHandler(
+            ::clEnqueueBarrier(object_),
+            __ENQUEUE_BARRIER_ERR);
+    }
+#endif // CL_USE_DEPRECATED_OPENCL_1_1_APIS
+
+    cl_int flush() const
+    {
+        return detail::errHandler(::clFlush(object_), __FLUSH_ERR);
+    }
+
+    cl_int finish() const
+    {
+        return detail::errHandler(::clFinish(object_), __FINISH_ERR);
+    }
+}; // CommandQueue
+
+CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag CommandQueue::default_initialized_;
+CL_HPP_DEFINE_STATIC_MEMBER_ CommandQueue CommandQueue::default_;
+CL_HPP_DEFINE_STATIC_MEMBER_ cl_int CommandQueue::default_error_ = CL_SUCCESS;
+
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+enum class DeviceQueueProperties : cl_command_queue_properties
+{
+    None = 
