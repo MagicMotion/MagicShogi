@@ -8237,4 +8237,85 @@ CL_HPP_DEFINE_STATIC_MEMBER_ cl_int CommandQueue::default_error_ = CL_SUCCESS;
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200
 enum class DeviceQueueProperties : cl_command_queue_properties
 {
-    None = 
+    None = 0,
+    Profiling = CL_QUEUE_PROFILING_ENABLE,
+};
+
+inline DeviceQueueProperties operator|(DeviceQueueProperties lhs, DeviceQueueProperties rhs)
+{
+    return static_cast<DeviceQueueProperties>(static_cast<cl_command_queue_properties>(lhs) | static_cast<cl_command_queue_properties>(rhs));
+}
+
+/*! \class DeviceCommandQueue
+ * \brief DeviceCommandQueue interface for device cl_command_queues.
+ */
+class DeviceCommandQueue : public detail::Wrapper<cl_command_queue>
+{
+public:
+
+    /*!
+     * Trivial empty constructor to create a null queue.
+     */
+    DeviceCommandQueue() { }
+
+    /*!
+     * Default construct device command queue on default context and device
+     */
+    DeviceCommandQueue(DeviceQueueProperties properties, cl_int* err = NULL)
+    {
+        cl_int error;
+        cl::Context context = cl::Context::getDefault();
+        cl::Device device = cl::Device::getDefault();
+
+        cl_command_queue_properties mergedProperties =
+            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE | static_cast<cl_command_queue_properties>(properties);
+
+        cl_queue_properties queue_properties[] = {
+            CL_QUEUE_PROPERTIES, mergedProperties, 0 };
+        object_ = ::clCreateCommandQueueWithProperties(
+            context(), device(), queue_properties, &error);
+
+        detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /*!
+     * Create a device command queue for a specified device in the passed context.
+     */
+    DeviceCommandQueue(
+        const Context& context,
+        const Device& device,
+        DeviceQueueProperties properties = DeviceQueueProperties::None,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        cl_command_queue_properties mergedProperties =
+            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE | static_cast<cl_command_queue_properties>(properties);
+        cl_queue_properties queue_properties[] = {
+            CL_QUEUE_PROPERTIES, mergedProperties, 0 };
+        object_ = ::clCreateCommandQueueWithProperties(
+            context(), device(), queue_properties, &error);
+
+        detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /*!
+     * Create a device command queue for a specified device in the passed context.
+     */
+    DeviceCommandQueue(
+        const Context& context,
+        const Device& device,
+        cl_uint queueSize,
+        DeviceQueueProperties properties = DeviceQueueProperties::None,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+
+        cl_command_queue_properties mergedProperties =
+            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE | static_cast<cl_command_queue_properties>(prope
