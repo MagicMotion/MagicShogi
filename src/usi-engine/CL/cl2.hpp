@@ -8318,4 +8318,85 @@ public:
         cl_int error;
 
         cl_command_queue_properties mergedProperties =
-            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE | static_cast<cl_command_queue_properties>(prope
+            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE | static_cast<cl_command_queue_properties>(properties);
+        cl_queue_properties queue_properties[] = {
+            CL_QUEUE_PROPERTIES, mergedProperties,
+            CL_QUEUE_SIZE, queueSize, 
+            0 };
+        object_ = ::clCreateCommandQueueWithProperties(
+            context(), device(), queue_properties, &error);
+
+        detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    /*! \brief Constructor from cl_command_queue - takes ownership.
+    *
+    * \param retainObject will cause the constructor to retain its cl object.
+    *                     Defaults to false to maintain compatibility with
+    *                     earlier versions.
+    */
+    explicit DeviceCommandQueue(const cl_command_queue& commandQueue, bool retainObject = false) :
+        detail::Wrapper<cl_type>(commandQueue, retainObject) { }
+
+    DeviceCommandQueue& operator = (const cl_command_queue& rhs)
+    {
+        detail::Wrapper<cl_type>::operator=(rhs);
+        return *this;
+    }
+
+    /*! \brief Copy constructor to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    DeviceCommandQueue(const DeviceCommandQueue& queue) : detail::Wrapper<cl_type>(queue) {}
+
+    /*! \brief Copy assignment to forward copy to the superclass correctly.
+     * Required for MSVC.
+     */
+    DeviceCommandQueue& operator = (const DeviceCommandQueue &queue)
+    {
+        detail::Wrapper<cl_type>::operator=(queue);
+        return *this;
+    }
+
+    /*! \brief Move constructor to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    DeviceCommandQueue(DeviceCommandQueue&& queue) CL_HPP_NOEXCEPT_ : detail::Wrapper<cl_type>(std::move(queue)) {}
+
+    /*! \brief Move assignment to forward move to the superclass correctly.
+     * Required for MSVC.
+     */
+    DeviceCommandQueue& operator = (DeviceCommandQueue &&queue)
+    {
+        detail::Wrapper<cl_type>::operator=(std::move(queue));
+        return *this;
+    }
+
+    template <typename T>
+    cl_int getInfo(cl_command_queue_info name, T* param) const
+    {
+        return detail::errHandler(
+            detail::getInfo(
+            &::clGetCommandQueueInfo, object_, name, param),
+            __GET_COMMAND_QUEUE_INFO_ERR);
+    }
+
+    template <cl_int name> typename
+        detail::param_traits<detail::cl_command_queue_info, name>::param_type
+        getInfo(cl_int* err = NULL) const
+    {
+        typename detail::param_traits<
+            detail::cl_command_queue_info, name>::param_type param;
+        cl_int result = getInfo(name, &param);
+        if (err != NULL) {
+            *err = result;
+        }
+        return param;
+    }
+
+    /*!
+    * Create a new default device command queue for the default device,
+    * in the default context an
