@@ -8399,4 +8399,79 @@ public:
 
     /*!
     * Create a new default device command queue for the default device,
-    * in the default context an
+    * in the default context and of the default size.
+    * If there is already a default queue for the specified device this
+    * function will return the pre-existing queue.
+    */
+    static DeviceCommandQueue makeDefault(
+        cl_int *err = nullptr)
+    {
+        cl_int error;
+        cl::Context context = cl::Context::getDefault();
+        cl::Device device = cl::Device::getDefault();
+
+        cl_command_queue_properties properties =
+            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE | CL_QUEUE_ON_DEVICE_DEFAULT;
+        cl_queue_properties queue_properties[] = {
+            CL_QUEUE_PROPERTIES, properties,
+            0 };
+        DeviceCommandQueue deviceQueue(
+            ::clCreateCommandQueueWithProperties(
+            context(), device(), queue_properties, &error));
+
+        detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+
+        return deviceQueue;
+    }
+
+    /*!
+    * Create a new default device command queue for the specified device
+    * and of the default size.
+    * If there is already a default queue for the specified device this
+    * function will return the pre-existing queue.
+    */
+    static DeviceCommandQueue makeDefault(
+        const Context &context, const Device &device, cl_int *err = nullptr)
+    {
+        cl_int error;
+
+        cl_command_queue_properties properties =
+            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE | CL_QUEUE_ON_DEVICE_DEFAULT;
+        cl_queue_properties queue_properties[] = {
+            CL_QUEUE_PROPERTIES, properties,
+            0 };
+        DeviceCommandQueue deviceQueue(
+            ::clCreateCommandQueueWithProperties(
+            context(), device(), queue_properties, &error));
+
+        detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+
+        return deviceQueue;
+    }
+
+    /*!
+     * Create a new default device command queue for the specified device 
+     * and of the requested size in bytes.
+     * If there is already a default queue for the specified device this
+     * function will return the pre-existing queue.
+     */
+    static DeviceCommandQueue makeDefault(
+        const Context &context, const Device &device, cl_uint queueSize, cl_int *err = nullptr)
+    {
+        cl_int error;
+
+        cl_command_queue_properties properties =
+            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_ON_DEVICE | CL_QUEUE_ON_DEVICE_DEFAULT;
+        cl_queue_properties queue_properties[] = {
+            CL_QUEUE_PROPERTIES, properties,
+            CL_QUEUE_SIZE, queueSize,
+            0 };
+        DeviceCommandQueue deviceQueue(
+            ::clCreateCommandQueueWithProperties(
+                context(), device()
