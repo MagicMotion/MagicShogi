@@ -8474,4 +8474,111 @@ public:
             0 };
         DeviceCommandQueue deviceQueue(
             ::clCreateCommandQueueWithProperties(
-                context(), device()
+                context(), device(), queue_properties, &error));
+
+        detail::errHandler(error, __CREATE_COMMAND_QUEUE_WITH_PROPERTIES_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+
+        return deviceQueue;
+    }
+}; // DeviceCommandQueue
+
+namespace detail
+{
+    // Specialization for device command queue
+    template <>
+    struct KernelArgumentHandler<cl::DeviceCommandQueue, void>
+    {
+        static size_type size(const cl::DeviceCommandQueue&) { return sizeof(cl_command_queue); }
+        static const cl_command_queue* ptr(const cl::DeviceCommandQueue& value) { return &(value()); }
+    };
+} // namespace detail
+
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+
+template< typename IteratorType >
+Buffer::Buffer(
+    const Context &context,
+    IteratorType startIterator,
+    IteratorType endIterator,
+    bool readOnly,
+    bool useHostPtr,
+    cl_int* err)
+{
+    typedef typename std::iterator_traits<IteratorType>::value_type DataType;
+    cl_int error;
+
+    cl_mem_flags flags = 0;
+    if( readOnly ) {
+        flags |= CL_MEM_READ_ONLY;
+    }
+    else {
+        flags |= CL_MEM_READ_WRITE;
+    }
+    if( useHostPtr ) {
+        flags |= CL_MEM_USE_HOST_PTR;
+    }
+    
+    size_type size = sizeof(DataType)*(endIterator - startIterator);
+
+    if( useHostPtr ) {
+        object_ = ::clCreateBuffer(context(), flags, size, static_cast<DataType*>(&*startIterator), &error);
+    } else {
+        object_ = ::clCreateBuffer(context(), flags, size, 0, &error);
+    }
+
+    detail::errHandler(error, __CREATE_BUFFER_ERR);
+    if (err != NULL) {
+        *err = error;
+    }
+
+    if( !useHostPtr ) {
+        CommandQueue queue(context, 0, &error);
+        detail::errHandler(error, __CREATE_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+
+        error = cl::copy(queue, startIterator, endIterator, *this);
+        detail::errHandler(error, __CREATE_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+}
+
+template< typename IteratorType >
+Buffer::Buffer(
+    const CommandQueue &queue,
+    IteratorType startIterator,
+    IteratorType endIterator,
+    bool readOnly,
+    bool useHostPtr,
+    cl_int* err)
+{
+    typedef typename std::iterator_traits<IteratorType>::value_type DataType;
+    cl_int error;
+
+    cl_mem_flags flags = 0;
+    if (readOnly) {
+        flags |= CL_MEM_READ_ONLY;
+    }
+    else {
+        flags |= CL_MEM_READ_WRITE;
+    }
+    if (useHostPtr) {
+        flags |= CL_MEM_USE_HOST_PTR;
+    }
+
+    size_type size = sizeof(DataType)*(endIterator - startIterator);
+
+    Context context = queue.getInfo<CL_QUEUE_CONTEXT>();
+
+    if (useHostPtr) {
+        object_ = ::clCreateBuffer(context(), flags, size, static_cast<DataType*>(&*startIterator), &error);
+    }
+    else {
+        object_ = ::clCreateBuffer(cont
