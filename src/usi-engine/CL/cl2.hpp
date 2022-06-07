@@ -8581,4 +8581,113 @@ Buffer::Buffer(
         object_ = ::clCreateBuffer(context(), flags, size, static_cast<DataType*>(&*startIterator), &error);
     }
     else {
-        object_ = ::clCreateBuffer(cont
+        object_ = ::clCreateBuffer(context(), flags, size, 0, &error);
+    }
+
+    detail::errHandler(error, __CREATE_BUFFER_ERR);
+    if (err != NULL) {
+        *err = error;
+    }
+
+    if (!useHostPtr) {
+        error = cl::copy(queue, startIterator, endIterator, *this);
+        detail::errHandler(error, __CREATE_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+}
+
+inline cl_int enqueueReadBuffer(
+    const Buffer& buffer,
+    cl_bool blocking,
+    size_type offset,
+    size_type size,
+    void* ptr,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueReadBuffer(buffer, blocking, offset, size, ptr, events, event);
+}
+
+inline cl_int enqueueWriteBuffer(
+        const Buffer& buffer,
+        cl_bool blocking,
+        size_type offset,
+        size_type size,
+        const void* ptr,
+        const vector<Event>* events = NULL,
+        Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueWriteBuffer(buffer, blocking, offset, size, ptr, events, event);
+}
+
+inline void* enqueueMapBuffer(
+        const Buffer& buffer,
+        cl_bool blocking,
+        cl_map_flags flags,
+        size_type offset,
+        size_type size,
+        const vector<Event>* events = NULL,
+        Event* event = NULL,
+        cl_int* err = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    detail::errHandler(error, __ENQUEUE_MAP_BUFFER_ERR);
+    if (err != NULL) {
+        *err = error;
+    }
+
+    void * result = ::clEnqueueMapBuffer(
+            queue(), buffer(), blocking, flags, offset, size,
+            (events != NULL) ? (cl_uint) events->size() : 0,
+            (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+            (cl_event*) event,
+            &error);
+
+    detail::errHandler(error, __ENQUEUE_MAP_BUFFER_ERR);
+    if (err != NULL) {
+        *err = error;
+    }
+    return result;
+}
+
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+/**
+ * Enqueues to the default queue a command that will allow the host to
+ * update a region of a coarse-grained SVM buffer.
+ * This variant takes a raw SVM pointer.
+ */
+template<typename T>
+inline cl_int enqueueMapSVM(
+    T* ptr,
+    cl_bool blocking,
+    cl_map_flags flags,
+    size_type size,
+    const vector<Event>* events,
+    Event* event)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    if (error != CL_SUCCESS) {
+        return detail::errHandler(error, __ENQUEUE_MAP_BUFFER_ERR);
+    }
+
+    return queue.enqueueMapSVM(
+        ptr, blocking
