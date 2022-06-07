@@ -8690,4 +8690,102 @@ inline cl_int enqueueMapSVM(
     }
 
     return queue.enqueueMapSVM(
-        ptr, blocking
+        ptr, blocking, flags, size, events, event);
+}
+
+/**
+ * Enqueues to the default queue a command that will allow the host to 
+ * update a region of a coarse-grained SVM buffer.
+ * This variant takes a cl::pointer instance.
+ */
+template<typename T, class D>
+inline cl_int enqueueMapSVM(
+    cl::pointer<T, D> ptr,
+    cl_bool blocking,
+    cl_map_flags flags,
+    size_type size,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    if (error != CL_SUCCESS) {
+        return detail::errHandler(error, __ENQUEUE_MAP_BUFFER_ERR);
+    }
+
+    return queue.enqueueMapSVM(
+        ptr, blocking, flags, size, events, event);
+}
+
+/**
+ * Enqueues to the default queue a command that will allow the host to
+ * update a region of a coarse-grained SVM buffer.
+ * This variant takes a cl::vector instance.
+ */
+template<typename T, class Alloc>
+inline cl_int enqueueMapSVM(
+    cl::vector<T, Alloc> container,
+    cl_bool blocking,
+    cl_map_flags flags,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    if (error != CL_SUCCESS) {
+        return detail::errHandler(error, __ENQUEUE_MAP_BUFFER_ERR);
+    }
+
+    return queue.enqueueMapSVM(
+        container, blocking, flags, events, event);
+}
+
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+inline cl_int enqueueUnmapMemObject(
+    const Memory& memory,
+    void* mapped_ptr,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    detail::errHandler(error, __ENQUEUE_MAP_BUFFER_ERR);
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    cl_event tmp;
+    cl_int err = detail::errHandler(
+        ::clEnqueueUnmapMemObject(
+        queue(), memory(), mapped_ptr,
+        (events != NULL) ? (cl_uint)events->size() : 0,
+        (events != NULL && events->size() > 0) ? (cl_event*)&events->front() : NULL,
+        (event != NULL) ? &tmp : NULL),
+        __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+
+    if (event != NULL && err == CL_SUCCESS)
+        *event = tmp;
+
+    return err;
+}
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+/**
+ * Enqueues to the default queue a command that will release a coarse-grained 
+ * SVM buffer back to the OpenCL runtime.
+ * This variant takes a raw SVM pointer.
+ */
+template<typename T>
+inline cl_int enqueueUnmapSVM(
+    T* ptr,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    if (error != CL_SUCCESS) {
+        return detail::errHandler(error, __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+    }
+
+    return detail::errHandler(que
