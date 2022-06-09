@@ -8788,4 +8788,105 @@ inline cl_int enqueueUnmapSVM(
         return detail::errHandler(error, __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
     }
 
-    return detail::errHandler(que
+    return detail::errHandler(queue.enqueueUnmapSVM(ptr, events, event), 
+        __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+
+}
+
+/**
+ * Enqueues to the default queue a command that will release a coarse-grained 
+ * SVM buffer back to the OpenCL runtime.
+ * This variant takes a cl::pointer instance.
+ */
+template<typename T, class D>
+inline cl_int enqueueUnmapSVM(
+    cl::pointer<T, D> &ptr,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    if (error != CL_SUCCESS) {
+        return detail::errHandler(error, __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+    }
+
+    return detail::errHandler(queue.enqueueUnmapSVM(ptr, events, event),
+        __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+}
+
+/**
+ * Enqueues to the default queue a command that will release a coarse-grained 
+ * SVM buffer back to the OpenCL runtime.
+ * This variant takes a cl::vector instance.
+ */
+template<typename T, class Alloc>
+inline cl_int enqueueUnmapSVM(
+    cl::vector<T, Alloc> &container,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    if (error != CL_SUCCESS) {
+        return detail::errHandler(error, __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+    }
+
+    return detail::errHandler(queue.enqueueUnmapSVM(container, events, event),
+        __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
+}
+
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+inline cl_int enqueueCopyBuffer(
+        const Buffer& src,
+        const Buffer& dst,
+        size_type src_offset,
+        size_type dst_offset,
+        size_type size,
+        const vector<Event>* events = NULL,
+        Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueCopyBuffer(src, dst, src_offset, dst_offset, size, events, event);
+}
+
+/**
+ * Blocking copy operation between iterators and a buffer.
+ * Host to Device.
+ * Uses default command queue.
+ */
+template< typename IteratorType >
+inline cl_int copy( IteratorType startIterator, IteratorType endIterator, cl::Buffer &buffer )
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    if (error != CL_SUCCESS)
+        return error;
+
+    return cl::copy(queue, startIterator, endIterator, buffer);
+}
+
+/**
+ * Blocking copy operation between iterators and a buffer.
+ * Device to Host.
+ * Uses default command queue.
+ */
+template< typename IteratorType >
+inline cl_int copy( const cl::Buffer &buffer, IteratorType startIterator, IteratorType endIterator )
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+    if (error != CL_SUCCESS)
+        return error;
+
+    return cl::copy(queue, buffer, startIterator, endIterator);
+}
+
+/**
+ * Blocking copy operation between iterators an
