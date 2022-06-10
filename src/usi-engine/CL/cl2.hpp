@@ -8889,4 +8889,95 @@ inline cl_int copy( const cl::Buffer &buffer, IteratorType startIterator, Iterat
 }
 
 /**
- * Blocking copy operation between iterators an
+ * Blocking copy operation between iterators and a buffer.
+ * Host to Device.
+ * Uses specified queue.
+ */
+template< typename IteratorType >
+inline cl_int copy( const CommandQueue &queue, IteratorType startIterator, IteratorType endIterator, cl::Buffer &buffer )
+{
+    typedef typename std::iterator_traits<IteratorType>::value_type DataType;
+    cl_int error;
+    
+    size_type length = endIterator-startIterator;
+    size_type byteLength = length*sizeof(DataType);
+
+    DataType *pointer = 
+        static_cast<DataType*>(queue.enqueueMapBuffer(buffer, CL_TRUE, CL_MAP_WRITE, 0, byteLength, 0, 0, &error));
+    // if exceptions enabled, enqueueMapBuffer will throw
+    if( error != CL_SUCCESS ) {
+        return error;
+    }
+#if defined(_MSC_VER)
+    std::copy(
+        startIterator, 
+        endIterator, 
+        stdext::checked_array_iterator<DataType*>(
+            pointer, length));
+#else
+    std::copy(startIterator, endIterator, pointer);
+#endif
+    Event endEvent;
+    error = queue.enqueueUnmapMemObject(buffer, pointer, 0, &endEvent);
+    // if exceptions enabled, enqueueUnmapMemObject will throw
+    if( error != CL_SUCCESS ) { 
+        return error;
+    }
+    endEvent.wait();
+    return CL_SUCCESS;
+}
+
+/**
+ * Blocking copy operation between iterators and a buffer.
+ * Device to Host.
+ * Uses specified queue.
+ */
+template< typename IteratorType >
+inline cl_int copy( const CommandQueue &queue, const cl::Buffer &buffer, IteratorType startIterator, IteratorType endIterator )
+{
+    typedef typename std::iterator_traits<IteratorType>::value_type DataType;
+    cl_int error;
+        
+    size_type length = endIterator-startIterator;
+    size_type byteLength = length*sizeof(DataType);
+
+    DataType *pointer = 
+        static_cast<DataType*>(queue.enqueueMapBuffer(buffer, CL_TRUE, CL_MAP_READ, 0, byteLength, 0, 0, &error));
+    // if exceptions enabled, enqueueMapBuffer will throw
+    if( error != CL_SUCCESS ) {
+        return error;
+    }
+    std::copy(pointer, pointer + length, startIterator);
+    Event endEvent;
+    error = queue.enqueueUnmapMemObject(buffer, pointer, 0, &endEvent);
+    // if exceptions enabled, enqueueUnmapMemObject will throw
+    if( error != CL_SUCCESS ) { 
+        return error;
+    }
+    endEvent.wait();
+    return CL_SUCCESS;
+}
+
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+/**
+ * Blocking SVM map operation - performs a blocking map underneath.
+ */
+template<typename T, class Alloc>
+inline cl_int mapSVM(cl::vector<T, Alloc> &container)
+{
+    return enqueueMapSVM(container, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE);
+}
+
+/**
+* Blocking SVM map operation - performs a blocking map underneath.
+*/
+template<typename T, class Alloc>
+inline cl_int unmapSVM(cl::vector<T, Alloc> &container)
+{
+    return enqueueUnmapSVM(container);
+}
+
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+#if CL_HPP_TARGET_OPE
