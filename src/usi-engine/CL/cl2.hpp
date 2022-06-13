@@ -8980,4 +8980,121 @@ inline cl_int unmapSVM(cl::vector<T, Alloc> &container)
 
 #endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
 
-#if CL_HPP_TARGET_OPE
+#if CL_HPP_TARGET_OPENCL_VERSION >= 110
+inline cl_int enqueueReadBufferRect(
+    const Buffer& buffer,
+    cl_bool blocking,
+    const array<size_type, 3>& buffer_offset,
+    const array<size_type, 3>& host_offset,
+    const array<size_type, 3>& region,
+    size_type buffer_row_pitch,
+    size_type buffer_slice_pitch,
+    size_type host_row_pitch,
+    size_type host_slice_pitch,
+    void *ptr,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueReadBufferRect(
+        buffer, 
+        blocking, 
+        buffer_offset, 
+        host_offset,
+        region,
+        buffer_row_pitch,
+        buffer_slice_pitch,
+        host_row_pitch,
+        host_slice_pitch,
+        ptr, 
+        events, 
+        event);
+}
+
+inline cl_int enqueueWriteBufferRect(
+    const Buffer& buffer,
+    cl_bool blocking,
+    const array<size_type, 3>& buffer_offset,
+    const array<size_type, 3>& host_offset,
+    const array<size_type, 3>& region,
+    size_type buffer_row_pitch,
+    size_type buffer_slice_pitch,
+    size_type host_row_pitch,
+    size_type host_slice_pitch,
+    const void *ptr,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueWriteBufferRect(
+        buffer, 
+        blocking, 
+        buffer_offset, 
+        host_offset,
+        region,
+        buffer_row_pitch,
+        buffer_slice_pitch,
+        host_row_pitch,
+        host_slice_pitch,
+        ptr, 
+        events, 
+        event);
+}
+
+inline cl_int enqueueCopyBufferRect(
+    const Buffer& src,
+    const Buffer& dst,
+    const array<size_type, 3>& src_origin,
+    const array<size_type, 3>& dst_origin,
+    const array<size_type, 3>& region,
+    size_type src_row_pitch,
+    size_type src_slice_pitch,
+    size_type dst_row_pitch,
+    size_type dst_slice_pitch,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueCopyBufferRect(
+        src,
+        dst,
+        src_origin,
+        dst_origin,
+        region,
+        src_row_pitch,
+        src_slice_pitch,
+        dst_row_pitch,
+        dst_slice_pitch,
+        events, 
+        event);
+}
+#endif // CL_HPP_TARGET_OPENCL_VERSION >= 110
+
+inline cl_int enqueueReadImage(
+    const Image& image,
+    cl_bool blocking,
+    const array<size_type, 3>& origin,
+    const array<size_type, 3>& region,
+    size_type row_pitch,
+    size_type slice_pitch,
+    void* ptr,
+    const vector<Event>* events = NULL,
+    Ev
