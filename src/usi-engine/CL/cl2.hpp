@@ -9097,4 +9097,134 @@ inline cl_int enqueueReadImage(
     size_type slice_pitch,
     void* ptr,
     const vector<Event>* events = NULL,
-    Ev
+    Event* event = NULL) 
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueReadImage(
+        image,
+        blocking,
+        origin,
+        region,
+        row_pitch,
+        slice_pitch,
+        ptr,
+        events, 
+        event);
+}
+
+inline cl_int enqueueWriteImage(
+    const Image& image,
+    cl_bool blocking,
+    const array<size_type, 3>& origin,
+    const array<size_type, 3>& region,
+    size_type row_pitch,
+    size_type slice_pitch,
+    const void* ptr,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueWriteImage(
+        image,
+        blocking,
+        origin,
+        region,
+        row_pitch,
+        slice_pitch,
+        ptr,
+        events, 
+        event);
+}
+
+inline cl_int enqueueCopyImage(
+    const Image& src,
+    const Image& dst,
+    const array<size_type, 3>& src_origin,
+    const array<size_type, 3>& dst_origin,
+    const array<size_type, 3>& region,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueCopyImage(
+        src,
+        dst,
+        src_origin,
+        dst_origin,
+        region,
+        events,
+        event);
+}
+
+inline cl_int enqueueCopyImageToBuffer(
+    const Image& src,
+    const Buffer& dst,
+    const array<size_type, 3>& src_origin,
+    const array<size_type, 3>& region,
+    size_type dst_offset,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueCopyImageToBuffer(
+        src,
+        dst,
+        src_origin,
+        region,
+        dst_offset,
+        events,
+        event);
+}
+
+inline cl_int enqueueCopyBufferToImage(
+    const Buffer& src,
+    const Image& dst,
+    size_type src_offset,
+    const array<size_type, 3>& dst_origin,
+    const array<size_type, 3>& region,
+    const vector<Event>* events = NULL,
+    Event* event = NULL)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.enqueueCopyBufferToImage(
+        src,
+        dst,
+        src_offset,
+        dst_origin,
+        region,
+        events,
+        event);
+}
+
+
+inline cl_int flush(
