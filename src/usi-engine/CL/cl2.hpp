@@ -9227,4 +9227,138 @@ inline cl_int enqueueCopyBufferToImage(
 }
 
 
-inline cl_int flush(
+inline cl_int flush(void)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    }
+
+    return queue.flush();
+}
+
+inline cl_int finish(void)
+{
+    cl_int error;
+    CommandQueue queue = CommandQueue::getDefault(&error);
+
+    if (error != CL_SUCCESS) {
+        return error;
+    } 
+
+
+    return queue.finish();
+}
+
+class EnqueueArgs
+{
+private:
+    CommandQueue queue_;
+    const NDRange offset_;
+    const NDRange global_;
+    const NDRange local_;
+    vector<Event> events_;
+
+    template<typename... Ts>
+    friend class KernelFunctor;
+
+public:
+    EnqueueArgs(NDRange global) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(NullRange), 
+      global_(global),
+      local_(NullRange)
+    {
+
+    }
+
+    EnqueueArgs(NDRange global, NDRange local) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(NullRange), 
+      global_(global),
+      local_(local)
+    {
+
+    }
+
+    EnqueueArgs(NDRange offset, NDRange global, NDRange local) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(offset), 
+      global_(global),
+      local_(local)
+    {
+
+    }
+
+    EnqueueArgs(Event e, NDRange global) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(NullRange), 
+      global_(global),
+      local_(NullRange)
+    {
+        events_.push_back(e);
+    }
+
+    EnqueueArgs(Event e, NDRange global, NDRange local) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(NullRange), 
+      global_(global),
+      local_(local)
+    {
+        events_.push_back(e);
+    }
+
+    EnqueueArgs(Event e, NDRange offset, NDRange global, NDRange local) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(offset), 
+      global_(global),
+      local_(local)
+    {
+        events_.push_back(e);
+    }
+
+    EnqueueArgs(const vector<Event> &events, NDRange global) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(NullRange), 
+      global_(global),
+      local_(NullRange),
+      events_(events)
+    {
+
+    }
+
+    EnqueueArgs(const vector<Event> &events, NDRange global, NDRange local) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(NullRange), 
+      global_(global),
+      local_(local),
+      events_(events)
+    {
+
+    }
+
+    EnqueueArgs(const vector<Event> &events, NDRange offset, NDRange global, NDRange local) : 
+      queue_(CommandQueue::getDefault()),
+      offset_(offset), 
+      global_(global),
+      local_(local),
+      events_(events)
+    {
+
+    }
+
+    EnqueueArgs(CommandQueue &queue, NDRange global) : 
+      queue_(queue),
+      offset_(NullRange), 
+      global_(global),
+      local_(NullRange)
+    {
+
+    }
+
+    EnqueueArgs(CommandQueue &queue, NDRange global, NDRange local) : 
+      queue_(queue),
+      offset_(NullRange), 
+      global_(gl
