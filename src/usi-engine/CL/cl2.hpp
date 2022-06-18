@@ -9361,4 +9361,134 @@ public:
     EnqueueArgs(CommandQueue &queue, NDRange global, NDRange local) : 
       queue_(queue),
       offset_(NullRange), 
-      global_(gl
+      global_(global),
+      local_(local)
+    {
+
+    }
+
+    EnqueueArgs(CommandQueue &queue, NDRange offset, NDRange global, NDRange local) : 
+      queue_(queue),
+      offset_(offset), 
+      global_(global),
+      local_(local)
+    {
+
+    }
+
+    EnqueueArgs(CommandQueue &queue, Event e, NDRange global) : 
+      queue_(queue),
+      offset_(NullRange), 
+      global_(global),
+      local_(NullRange)
+    {
+        events_.push_back(e);
+    }
+
+    EnqueueArgs(CommandQueue &queue, Event e, NDRange global, NDRange local) : 
+      queue_(queue),
+      offset_(NullRange), 
+      global_(global),
+      local_(local)
+    {
+        events_.push_back(e);
+    }
+
+    EnqueueArgs(CommandQueue &queue, Event e, NDRange offset, NDRange global, NDRange local) : 
+      queue_(queue),
+      offset_(offset), 
+      global_(global),
+      local_(local)
+    {
+        events_.push_back(e);
+    }
+
+    EnqueueArgs(CommandQueue &queue, const vector<Event> &events, NDRange global) : 
+      queue_(queue),
+      offset_(NullRange), 
+      global_(global),
+      local_(NullRange),
+      events_(events)
+    {
+
+    }
+
+    EnqueueArgs(CommandQueue &queue, const vector<Event> &events, NDRange global, NDRange local) : 
+      queue_(queue),
+      offset_(NullRange), 
+      global_(global),
+      local_(local),
+      events_(events)
+    {
+
+    }
+
+    EnqueueArgs(CommandQueue &queue, const vector<Event> &events, NDRange offset, NDRange global, NDRange local) : 
+      queue_(queue),
+      offset_(offset), 
+      global_(global),
+      local_(local),
+      events_(events)
+    {
+
+    }
+};
+
+
+//----------------------------------------------------------------------------------------------
+
+
+/**
+ * Type safe kernel functor.
+ * 
+ */
+template<typename... Ts>
+class KernelFunctor
+{
+private:
+    Kernel kernel_;
+
+    template<int index, typename T0, typename... T1s>
+    void setArgs(T0&& t0, T1s&&... t1s)
+    {
+        kernel_.setArg(index, t0);
+        setArgs<index + 1, T1s...>(std::forward<T1s>(t1s)...);
+    }
+
+    template<int index, typename T0>
+    void setArgs(T0&& t0)
+    {
+        kernel_.setArg(index, t0);
+    }
+
+    template<int index>
+    void setArgs()
+    {
+    }
+
+
+public:
+    KernelFunctor(Kernel kernel) : kernel_(kernel)
+    {}
+
+    KernelFunctor(
+        const Program& program,
+        const string name,
+        cl_int * err = NULL) :
+        kernel_(program, name.c_str(), err)
+    {}
+
+    //! \brief Return type of the functor
+    typedef Event result_type;
+
+    /**
+     * Enqueue kernel.
+     * @param args Launch parameters of the kernel.
+     * @param t0... List of kernel arguments based on the template type of the functor.
+     */
+    Event operator() (
+        const EnqueueArgs& args,
+        Ts... ts)
+    {
+        Event event;
+        setArgs<0>(st
