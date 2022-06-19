@@ -9491,4 +9491,113 @@ public:
         Ts... ts)
     {
         Event event;
-        setArgs<0>(st
+        setArgs<0>(std::forward<Ts>(ts)...);
+        
+        args.queue_.enqueueNDRangeKernel(
+            kernel_,
+            args.offset_,
+            args.global_,
+            args.local_,
+            &args.events_,
+            &event);
+
+        return event;
+    }
+
+    /**
+    * Enqueue kernel with support for error code.
+    * @param args Launch parameters of the kernel.
+    * @param t0... List of kernel arguments based on the template type of the functor.
+    * @param error Out parameter returning the error code from the execution.
+    */
+    Event operator() (
+        const EnqueueArgs& args,
+        Ts... ts,
+        cl_int &error)
+    {
+        Event event;
+        setArgs<0>(std::forward<Ts>(ts)...);
+
+        error = args.queue_.enqueueNDRangeKernel(
+            kernel_,
+            args.offset_,
+            args.global_,
+            args.local_,
+            &args.events_,
+            &event);
+        
+        return event;
+    }
+
+#if CL_HPP_TARGET_OPENCL_VERSION >= 200
+    cl_int setSVMPointers(const vector<void*> &pointerList)
+    {
+        return kernel_.setSVMPointers(pointerList);
+    }
+
+    template<typename T0, typename... T1s>
+    cl_int setSVMPointers(const T0 &t0, T1s &... ts)
+    {
+        return kernel_.setSVMPointers(t0, ts...);
+    }
+#endif // #if CL_HPP_TARGET_OPENCL_VERSION >= 200
+
+    Kernel getKernel()
+    {
+        return kernel_;
+    }
+};
+
+namespace compatibility {
+    /**
+     * Backward compatibility class to ensure that cl.hpp code works with cl2.hpp.
+     * Please use KernelFunctor directly.
+     */
+    template<typename... Ts>
+    struct make_kernel
+    {
+        typedef KernelFunctor<Ts...> FunctorType;
+
+        FunctorType functor_;
+
+        make_kernel(
+            const Program& program,
+            const string name,
+            cl_int * err = NULL) :
+            functor_(FunctorType(program, name, err))
+        {}
+
+        make_kernel(
+            const Kernel kernel) :
+            functor_(FunctorType(kernel))
+        {}
+
+        //! \brief Return type of the functor
+        typedef Event result_type;
+
+        //! \brief Function signature of kernel functor with no event dependency.
+        typedef Event type_(
+            const EnqueueArgs&,
+            Ts...);
+
+        Event operator()(
+            const EnqueueArgs& enqueueArgs,
+            Ts... args)
+        {
+            return functor_(
+                enqueueArgs, args...);
+        }
+    };
+} // namespace compatibility
+
+
+//----------------------------------------------------------------------------------------------------------------------
+
+#undef CL_HPP_ERR_STR_
+#if !defined(CL_HPP_USER_OVERRIDE_ERROR_STRINGS)
+#undef __GET_DEVICE_INFO_ERR
+#undef __GET_PLATFORM_INFO_ERR
+#undef __GET_DEVICE_IDS_ERR
+#undef __GET_CONTEXT_INFO_ERR
+#undef __GET_EVENT_INFO_ERR
+#undef __GET_EVENT_PROFILE_I
