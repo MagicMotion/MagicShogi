@@ -59,3 +59,85 @@ public:
     */
     static constexpr int NO_VERTEX = 0;
     /*
+        vertex of a pass
+    */
+    static constexpr int PASS   = -1;
+    /*
+        vertex of a "resign move"
+    */
+    static constexpr int RESIGN = -2;
+
+    /*
+        possible contents of a vertex
+    */
+    enum vertex_t : char {
+        BLACK = 0, WHITE = 1, EMPTY = 2, INVAL = 3
+    };
+
+    int get_boardsize() const;
+    vertex_t get_state(int x, int y) const;
+    vertex_t get_state(int vertex) const ;
+    int get_vertex(int x, int y) const;
+    void set_state(int x, int y, vertex_t content);
+    void set_state(int vertex, vertex_t content);
+    std::pair<int, int> get_xy(int vertex) const;
+
+    bool is_suicide(int i, int color) const;
+    int count_pliberties(const int i) const;
+    bool is_eye(const int color, const int vtx) const;
+
+    float area_score(float komi) const;
+
+    int get_prisoners(int side) const;
+    bool black_to_move() const;
+    bool white_to_move() const;
+    int get_to_move() const;
+    void set_to_move(int color);
+
+    std::string move_to_text(int move) const;
+    int text_to_move(std::string move) const;
+    std::string move_to_text_sgf(int move) const;
+    std::string get_stone_list() const;
+    std::string get_string(int vertex) const;
+
+    void reset_board(int size);
+    void display_board(int lastmove = -1);
+
+    static bool starpoint(int size, int point);
+    static bool starpoint(int size, int x, int y);
+
+protected:
+    /*
+        bit masks to detect eyes on neighbors
+    */
+    static const std::array<int,      2> s_eyemask;
+    static const std::array<vertex_t, 4> s_cinvert; /* color inversion */
+
+    std::array<vertex_t, NUM_VERTICES>         m_state;      /* board contents */
+    std::array<unsigned short, NUM_VERTICES+1> m_next;       /* next stone in string */
+    std::array<unsigned short, NUM_VERTICES+1> m_parent;     /* parent node of string */
+    std::array<unsigned short, NUM_VERTICES+1> m_libs;       /* liberties per string parent */
+    std::array<unsigned short, NUM_VERTICES+1> m_stones;     /* stones per string parent */
+    std::array<unsigned short, NUM_VERTICES>   m_neighbours; /* counts of neighboring stones */
+    std::array<int, 4>                         m_dirs;       /* movement directions 4 way */
+    std::array<int, 2>                         m_prisoners;  /* prisoners per color */
+    std::array<unsigned short, NUM_VERTICES>   m_empty;      /* empty intersections */
+    std::array<unsigned short, NUM_VERTICES>   m_empty_idx;  /* intersection indices */
+    int m_empty_cnt;                                         /* count of empties */
+
+    int m_tomove;
+    int m_numvertices;
+
+    int m_boardsize;
+    int m_sidevertices;
+
+    int calc_reach_color(int color) const;
+
+    int count_neighbours(const int color, const int i) const;
+    void merge_strings(const int ip, const int aip);
+    void add_neighbour(const int i, const int color);
+    void remove_neighbour(const int i, const int color);
+    void print_columns();
+};
+
+#endif
