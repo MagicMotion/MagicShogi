@@ -763,3 +763,648 @@ void GTP::execute(GameState & game, const std::string& xinput) {
         /* white wins */
         if (ftmp < -0.1) {
             gtp_printf(id, "W+%3.1f", float(fabs(ftmp)));
+        } else if (ftmp > 0.1) {
+            gtp_printf(id, "B+%3.1f", ftmp);
+        } else {
+            gtp_printf(id, "0");
+        }
+        return;
+    } else if (command.find("final_status_list") == 0) {
+        if (command.find("alive") != std::string::npos) {
+            std::string livelist = get_life_list(game, true);
+            gtp_printf(id, livelist.c_str());
+        } else if (command.find("dead") != std::string::npos) {
+            std::string deadlist = get_life_list(game, false);
+            gtp_printf(id, deadlist.c_str());
+        } else {
+            gtp_printf(id, "");
+        }
+        return;
+    } else if (command.find("time_settings") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp;
+        int maintime, byotime, byostones;
+
+        cmdstream >> tmp >> maintime >> byotime >> byostones;
+
+        if (!cmdstream.fail()) {
+            // convert to centiseconds and set
+            game.set_timecontrol(maintime * 100, byotime * 100, byostones, 0);
+
+            gtp_printf(id, "");
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+        return;
+    } else if (command.find("time_left") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, color;
+        int time, stones;
+
+        cmdstream >> tmp >> color >> time >> stones;
+
+        if (!cmdstream.fail()) {
+            int icolor;
+
+            if (color == "w" || color == "white") {
+                icolor = FastBoard::WHITE;
+            } else if (color == "b" || color == "black") {
+                icolor = FastBoard::BLACK;
+            } else {
+                gtp_fail_printf(id, "Color in time adjust not understood.\n");
+                return;
+            }
+
+            game.adjust_time(icolor, time * 100, stones);
+
+            gtp_printf(id, "");
+
+            if (cfg_allow_pondering) {
+                // KGS sends this after our move
+                // now start pondering
+                if (!game.has_resigned()) {
+                    search->ponder();
+                }
+            }
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+        return;
+    } else if (command.find("auto") == 0) {
+        do {
+            int move = search->think(game.get_to_move(), UCTSearch::NORMAL);
+            game.play_move(move);
+            game.display_state();
+
+        } while (game.get_passes() < 2 && !game.has_resigned());
+
+        return;
+    } else if (command.find("go") == 0 && command.size() < 6) {
+        int move = search->think(game.get_to_move());
+        game.play_move(move);
+
+        std::string vertex = game.move_to_text(move);
+        myprintf("%s\n", vertex.c_str());
+        return;
+    } else if (command.find("heatmap") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp;
+        std::string symmetry;
+
+        cmdstream >> tmp;   // eat heatmap
+        cmdstream >> symmetry;
+/*
+        Network::Netresult vec;
+        if (cmdstream.fail()) {
+            // Default = DIRECT with no symmetric change
+            vec = s_network->get_output(
+                &game, Network::Ensemble::DIRECT,
+                Network::IDENTITY_SYMMETRY, false);
+        } else if (symmetry == "all") {
+            for (auto s = 0; s < Network::NUM_SYMMETRIES; ++s) {
+                vec = s_network->get_output(
+                    &game, Network::Ensemble::DIRECT, s, false);
+                Network::show_heatmap(&game, vec, false);
+            }
+        } else if (symmetry == "average" || symmetry == "avg") {
+            vec = s_network->get_output(
+                &game, Network::Ensemble::AVERAGE, -1, false);
+        } else {
+            vec = s_network->get_output(
+                &game, Network::Ensemble::DIRECT, std::stoi(symmetry), false);
+        }
+
+        if (symmetry != "all") {
+            Network::show_heatmap(&game, vec, false);
+        }
+*/
+        gtp_printf(id, "");
+        return;
+    } else if (command.find("fixed_handicap") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp;
+        int stones;
+
+        cmdstream >> tmp;   // eat fixed_handicap
+        cmdstream >> stones;
+
+        if (!cmdstream.fail() && game.set_fixed_handicap(stones)) {
+            auto stonestring = game.board.get_stone_list();
+            gtp_printf(id, "%s", stonestring.c_str());
+        } else {
+            gtp_fail_printf(id, "Not a valid number of handicap stones");
+        }
+        return;
+    } else if (command.find("last_move") == 0) {
+        auto last_move = game.get_last_move();
+        if (last_move == FastBoard::NO_VERTEX) {
+            gtp_fail_printf(id, "no previous move known");
+            return;
+        }
+        auto coordinate = game.move_to_text(last_move);
+        auto color = game.get_to_move() == FastBoard::WHITE ? "black" : "white";
+        gtp_printf(id, "%s %s", color, coordinate.c_str());
+        return;
+    } else if (command.find("move_history") == 0) {
+        if (game.get_movenum() == 0) {
+            gtp_printf_raw("= \n");
+        } else {
+            gtp_printf_raw("= ");
+        }
+        auto game_history = game.get_game_history();
+        // undone moves may still be present, so reverse the portion of the
+        // array we need and resize to trim it down for iteration.
+        std::reverse(begin(game_history),
+                     begin(game_history) + game.get_movenum() + 1);
+        game_history.resize(game.get_movenum());
+        for (const auto &state : game_history) {
+            auto coordinate = game.move_to_text(state->get_last_move());
+            auto color = state->get_to_move() == FastBoard::WHITE ? "black" : "white";
+            gtp_printf_raw("%s %s\n", color, coordinate.c_str());
+        }
+        gtp_printf_raw("\n");
+        return;
+    } else if (command.find("place_free_handicap") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp;
+        int stones;
+
+        cmdstream >> tmp;   // eat place_free_handicap
+        cmdstream >> stones;
+
+        if (!cmdstream.fail()) {
+            game.place_free_handicap(stones, *s_network);
+            auto stonestring = game.board.get_stone_list();
+            gtp_printf(id, "%s", stonestring.c_str());
+        } else {
+            gtp_fail_printf(id, "Not a valid number of handicap stones");
+        }
+
+        return;
+    } else if (command.find("set_free_handicap") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp;
+
+        cmdstream >> tmp;   // eat set_free_handicap
+
+        do {
+            std::string vertex;
+
+            cmdstream >> vertex;
+
+            if (!cmdstream.fail()) {
+                if (!game.play_textmove("black", vertex)) {
+                    gtp_fail_printf(id, "illegal move");
+                } else {
+                    game.set_handicap(game.get_handicap() + 1);
+                }
+            }
+        } while (!cmdstream.fail());
+
+        std::string stonestring = game.board.get_stone_list();
+        gtp_printf(id, "%s", stonestring.c_str());
+
+        return;
+    } else if (command.find("loadsgf") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, filename;
+        int movenum;
+
+        cmdstream >> tmp;   // eat loadsgf
+        cmdstream >> filename;
+
+        if (!cmdstream.fail()) {
+            cmdstream >> movenum;
+
+            if (cmdstream.fail()) {
+                movenum = 999;
+            }
+        } else {
+            gtp_fail_printf(id, "Missing filename.");
+            return;
+        }
+
+        auto sgftree = std::make_unique<SGFTree>();
+
+        try {
+            sgftree->load_from_file(filename);
+            game = sgftree->follow_mainline_state(movenum - 1);
+            gtp_printf(id, "");
+        } catch (const std::exception&) {
+            gtp_fail_printf(id, "cannot load file");
+        }
+        return;
+    } else if (command.find("kgs-chat") == 0) {
+        // kgs-chat (game|private) Name Message
+        std::istringstream cmdstream(command);
+        std::string tmp;
+
+        cmdstream >> tmp; // eat kgs-chat
+        cmdstream >> tmp; // eat game|private
+        cmdstream >> tmp; // eat player name
+        do {
+            cmdstream >> tmp; // eat message
+        } while (!cmdstream.fail());
+
+        gtp_fail_printf(id, "I'm a go bot, not a chat bot.");
+        return;
+    } else if (command.find("kgs-game_over") == 0) {
+        // Do nothing. Particularly, don't ponder.
+        gtp_printf(id, "");
+        return;
+    } else if (command.find("kgs-time_settings") == 0) {
+        // none, absolute, byoyomi, or canadian
+        std::istringstream cmdstream(command);
+        std::string tmp;
+        std::string tc_type;
+        int maintime, byotime, byostones, byoperiods;
+
+        cmdstream >> tmp >> tc_type;
+
+        if (tc_type.find("none") != std::string::npos) {
+            // 30 mins
+            game.set_timecontrol(30 * 60 * 100, 0, 0, 0);
+        } else if (tc_type.find("absolute") != std::string::npos) {
+            cmdstream >> maintime;
+            game.set_timecontrol(maintime * 100, 0, 0, 0);
+        } else if (tc_type.find("canadian") != std::string::npos) {
+            cmdstream >> maintime >> byotime >> byostones;
+            // convert to centiseconds and set
+            game.set_timecontrol(maintime * 100, byotime * 100, byostones, 0);
+        } else if (tc_type.find("byoyomi") != std::string::npos) {
+            // KGS style Fischer clock
+            cmdstream >> maintime >> byotime >> byoperiods;
+            game.set_timecontrol(maintime * 100, byotime * 100, 0, byoperiods);
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+            return;
+        }
+
+        if (!cmdstream.fail()) {
+            gtp_printf(id, "");
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+        return;
+    } else if (command.find("netbench") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp;
+        int iterations;
+
+        cmdstream >> tmp;  // eat netbench
+        cmdstream >> iterations;
+
+        if (!cmdstream.fail()) {
+            s_network->benchmark(&game, iterations);
+        } else {
+            s_network->benchmark(&game);
+        }
+        gtp_printf(id, "");
+        return;
+
+    } else if (command.find("printsgf") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, filename;
+
+        cmdstream >> tmp;   // eat printsgf
+        cmdstream >> filename;
+
+        auto sgf_text = SGFTree::state_to_string(game, 0);
+        // GTP says consecutive newlines terminate the output,
+        // so we must filter those.
+        boost::replace_all(sgf_text, "\n\n", "\n");
+
+        if (cmdstream.fail()) {
+            gtp_printf(id, "%s\n", sgf_text.c_str());
+        } else {
+            std::ofstream out(filename);
+            out << sgf_text;
+            out.close();
+            gtp_printf(id, "");
+        }
+
+        return;
+    } else if (command.find("load_training") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, filename;
+
+        // tmp will eat "load_training"
+        cmdstream >> tmp >> filename;
+
+        Training::load_training(filename);
+
+        if (!cmdstream.fail()) {
+            gtp_printf(id, "");
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+
+        return;
+    } else if (command.find("save_training") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, filename;
+
+        // tmp will eat "save_training"
+        cmdstream >> tmp >>  filename;
+
+        Training::save_training(filename);
+
+        if (!cmdstream.fail()) {
+            gtp_printf(id, "");
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+
+        return;
+    } else if (command.find("dump_training") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, winner_color, filename;
+        int who_won;
+
+        // tmp will eat "dump_training"
+        cmdstream >> tmp >> winner_color >> filename;
+
+        if (winner_color == "w" || winner_color == "white") {
+            who_won = FullBoard::WHITE;
+        } else if (winner_color == "b" || winner_color == "black") {
+            who_won = FullBoard::BLACK;
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+            return;
+        }
+
+        Training::dump_training(who_won, filename);
+
+        if (!cmdstream.fail()) {
+            gtp_printf(id, "");
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+
+        return;
+    } else if (command.find("dump_debug") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, filename;
+
+        // tmp will eat "dump_debug"
+        cmdstream >> tmp >> filename;
+
+        Training::dump_debug(filename);
+
+        if (!cmdstream.fail()) {
+            gtp_printf(id, "");
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+
+        return;
+    } else if (command.find("dump_supervised") == 0) {
+        std::istringstream cmdstream(command);
+        std::string tmp, sgfname, outname;
+
+        // tmp will eat dump_supervised
+        cmdstream >> tmp >> sgfname >> outname;
+
+        Training::dump_supervised(sgfname, outname);
+
+        if (!cmdstream.fail()) {
+            gtp_printf(id, "");
+        } else {
+            gtp_fail_printf(id, "syntax not understood");
+        }
+        return;
+    } else if (command.find("lz-memory_report") == 0) {
+        auto base_memory = get_base_memory();
+        auto tree_size = add_overhead(UCTNodePointer::get_tree_size());
+        auto cache_size = add_overhead(s_network->get_estimated_cache_size());
+
+        auto total = base_memory + tree_size + cache_size;
+        gtp_printf(id,
+            "Estimated total memory consumption: %d MiB.\n"
+            "Network with overhead: %d MiB / Search tree: %d MiB / Network cache: %d\n",
+            total / MiB, base_memory / MiB, tree_size / MiB, cache_size / MiB);
+        return;
+    } else if (command.find("lz-setoption") == 0) {
+        return execute_setoption(*search.get(), id, command);
+    } else if (command.find("gomill-explain_last_move") == 0) {
+        gtp_printf(id, "%s\n", search->explain_last_think().c_str());
+        return;
+    }
+    gtp_fail_printf(id, "unknown command");
+    return;
+}
+
+std::pair<std::string, std::string> GTP::parse_option(std::istringstream& is) {
+    std::string token, name, value;
+
+    // Read option name (can contain spaces)
+    while (is >> token && token != "value")
+        name += std::string(" ", name.empty() ? 0 : 1) + token;
+
+    // Read option value (can contain spaces)
+    while (is >> token)
+        value += std::string(" ", value.empty() ? 0 : 1) + token;
+
+    return std::make_pair(name, value);
+}
+
+size_t GTP::get_base_memory() {
+    // At the moment of writing the memory consumption is
+    // roughly network size + 85 for one GPU and + 160 for two GPUs.
+#ifdef USE_OPENCL
+    auto gpus = std::max(cfg_gpus.size(), size_t{1});
+    return s_network->get_estimated_size() + 85 * MiB * gpus;
+#else
+    return s_network->get_estimated_size();
+#endif
+}
+
+std::pair<bool, std::string> GTP::set_max_memory(size_t max_memory,
+    int cache_size_ratio_percent) {
+    if (max_memory == 0) {
+        max_memory = UCTSearch::DEFAULT_MAX_MEMORY;
+    }
+
+    // Calculate amount of memory available for the search tree +
+    // NNCache by estimating a constant memory overhead first.
+    auto base_memory = get_base_memory();
+
+    if (max_memory < base_memory) {
+        return std::make_pair(false, "Not enough memory for network. " +
+            std::to_string(base_memory / MiB) + " MiB required.");
+    }
+
+    auto max_memory_for_search = max_memory - base_memory;
+
+    assert(cache_size_ratio_percent >= 1);
+    assert(cache_size_ratio_percent <= 99);
+    auto max_cache_size = max_memory_for_search *
+        cache_size_ratio_percent / 100;
+
+    auto max_cache_count =
+        (int)(remove_overhead(max_cache_size) / NNCache::ENTRY_SIZE);
+
+    // Verify if the setting would not result in too little cache.
+    if (max_cache_count < NNCache::MIN_CACHE_COUNT) {
+        return std::make_pair(false, "Not enough memory for cache.");
+    }
+    auto max_tree_size = max_memory_for_search - max_cache_size;
+
+    if (max_tree_size < UCTSearch::MIN_TREE_SPACE) {
+        return std::make_pair(false, "Not enough memory for search tree.");
+    }
+
+    // Only if settings are ok we store the values in config.
+    cfg_max_memory = max_memory;
+    cfg_max_cache_ratio_percent = cache_size_ratio_percent;
+    // Set max_tree_size.
+    cfg_max_tree_size = remove_overhead(max_tree_size);
+    // Resize cache.
+    s_network->nncache_resize(max_cache_count);
+
+    return std::make_pair(true, "Setting max tree size to " +
+        std::to_string(max_tree_size / MiB) + " MiB and cache size to " +
+        std::to_string(max_cache_size / MiB) +
+        " MiB.");
+}
+
+void GTP::execute_setoption(UCTSearch & search,
+                            int id, const std::string &command) {
+    std::istringstream cmdstream(command);
+    std::string tmp, name_token;
+
+    // Consume lz_setoption, name.
+    cmdstream >> tmp >> name_token;
+
+    // Print available options if called without an argument.
+    if (cmdstream.fail()) {
+        std::string options_out_tmp("");
+        for (int i = 0; s_options[i].size() > 0; i++) {
+            options_out_tmp = options_out_tmp + "\n" + s_options[i];
+        }
+        gtp_printf(id, options_out_tmp.c_str());
+        return;
+    }
+
+    if (name_token.find("name") != 0) {
+        gtp_fail_printf(id, "incorrect syntax for lz-setoption");
+        return;
+    }
+
+    std::string name, value;
+    std::tie(name, value) = parse_option(cmdstream);
+
+    if (name == "maximum memory use (mib)") {
+        std::istringstream valuestream(value);
+        int max_memory_in_mib;
+        valuestream >> max_memory_in_mib;
+        if (!valuestream.fail()) {
+            if (max_memory_in_mib < 128 || max_memory_in_mib > 131072) {
+                gtp_fail_printf(id, "incorrect value");
+                return;
+            }
+            bool result;
+            std::string reason;
+            std::tie(result, reason) = set_max_memory(max_memory_in_mib * MiB,
+                cfg_max_cache_ratio_percent);
+            if (result) {
+                gtp_printf(id, reason.c_str());
+            } else {
+                gtp_fail_printf(id, reason.c_str());
+            }
+            return;
+        } else {
+            gtp_fail_printf(id, "incorrect value");
+            return;
+        }
+    } else if (name == "percentage of memory for cache") {
+        std::istringstream valuestream(value);
+        int cache_size_ratio_percent;
+        valuestream >> cache_size_ratio_percent;
+        if (cache_size_ratio_percent < 1 || cache_size_ratio_percent > 99) {
+            gtp_fail_printf(id, "incorrect value");
+            return;
+        }
+        bool result;
+        std::string reason;
+        std::tie(result, reason) = set_max_memory(cfg_max_memory,
+            cache_size_ratio_percent);
+        if (result) {
+            gtp_printf(id, reason.c_str());
+        } else {
+            gtp_fail_printf(id, reason.c_str());
+        }
+        return;
+    } else if (name == "visits") {
+        std::istringstream valuestream(value);
+        int visits;
+        valuestream >> visits;
+        cfg_max_visits = visits;
+
+        // 0 may be specified to mean "no limit"
+        if (cfg_max_visits == 0) {
+            cfg_max_visits = UCTSearch::UNLIMITED_PLAYOUTS;
+        }
+        // Note that if the visits are changed but no
+        // explicit command to set memory usage is given,
+        // we will stick with the initial guess we made on startup.
+        search.set_visit_limit(cfg_max_visits);
+
+        gtp_printf(id, "");
+    } else if (name == "playouts") {
+        std::istringstream valuestream(value);
+        int playouts;
+        valuestream >> playouts;
+        cfg_max_playouts = playouts;
+
+        // 0 may be specified to mean "no limit"
+        if (cfg_max_playouts == 0) {
+            cfg_max_playouts = UCTSearch::UNLIMITED_PLAYOUTS;
+        } else if (cfg_allow_pondering) {
+            // Limiting playouts while pondering is still enabled
+            // makes no sense.
+            gtp_fail_printf(id, "incorrect value");
+            return;
+        }
+
+        // Note that if the playouts are changed but no
+        // explicit command to set memory usage is given,
+        // we will stick with the initial guess we made on startup.
+        search.set_playout_limit(cfg_max_playouts);
+
+        gtp_printf(id, "");
+    } else if (name == "lagbuffer") {
+        std::istringstream valuestream(value);
+        int lagbuffer;
+        valuestream >> lagbuffer;
+        cfg_lagbuffer_cs = lagbuffer;
+        gtp_printf(id, "");
+    } else if (name == "pondering") {
+        std::istringstream valuestream(value);
+        std::string toggle;
+        valuestream >> toggle;
+        if (toggle == "true") {
+            if (cfg_max_playouts != UCTSearch::UNLIMITED_PLAYOUTS) {
+                gtp_fail_printf(id, "incorrect value");
+                return;
+            }
+            cfg_allow_pondering = true;
+        } else if (toggle == "false") {
+            cfg_allow_pondering = false;
+        } else {
+            gtp_fail_printf(id, "incorrect value");
+            return;
+        }
+        gtp_printf(id, "");
+    } else if (name == "resign percentage") {
+        std::istringstream valuestream(value);
+        int resignpct;
+        valuestream >> resignpct;
+        cfg_resignpct = resignpct;
+        gtp_printf(id, "");
+    } else {
+        gtp_fail_printf(id, "Unknown option");
+    }
+    return;
+}
+#endif
