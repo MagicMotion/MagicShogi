@@ -752,3 +752,207 @@ OpenCL<net_t>::OpenCL(int gpu, bool silent) {
 
         std::vector<cl::Device> devices;
         try {
+            p.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        } catch (const cl::Error &e) {
+            myprintf("Error getting device(s): %s: %d\n", e.what(), e.err());
+            devices.clear();
+        }
+        for (auto& d : devices) {
+            if (!silent) {
+                myprintf("Device ID:     %d\n", id);
+                myprintf("Device name:   %s\n",
+                         trim(d.getInfo<CL_DEVICE_NAME>()).c_str());
+                myprintf("Device type:   %s\n",
+                         opencl_dev_type_to_string(
+                             d.getInfo<CL_DEVICE_TYPE>()).c_str());
+                myprintf("Device vendor: %s\n",
+                          d.getInfo<CL_DEVICE_VENDOR>().c_str());
+                myprintf("Device driver: %s\n",
+                          d.getInfo<CL_DRIVER_VERSION>().c_str());
+                myprintf("Device speed:  %u MHz\n",
+                          d.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>());
+                myprintf("Device cores:  %u CU\n",
+                          d.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
+            }
+
+            // assign score, try to find best device
+            int this_score = 0;
+            std::string this_vendor = d.getInfo<CL_DEVICE_VENDOR>();
+            this_score += 1000 * boost::icontains(this_vendor, "advanced micro devices");
+            this_score += 1000 * boost::icontains(this_vendor, "amd");
+            this_score += 1000 * boost::icontains(this_vendor, "nvidia");
+            this_score +=  500 * boost::icontains(this_vendor, "intel");
+            this_score +=  100 * (d.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_GPU);
+            this_score +=  opencl_version * 10;
+            if (!silent) {
+                myprintf("Device score:  %d\n", this_score);
+            }
+
+            bool preferred = (gpu == id);
+
+            if (((this_score > best_score)
+                 && (d.getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_CPU))
+                || preferred) {
+                best_version = opencl_version;
+                best_platform = p;
+                best_device = d;
+                best_vendor = this_vendor;
+                if (preferred) {
+                    best_score =
+                        std::numeric_limits<decltype(best_score)>::max();
+                } else {
+                    best_score = this_score;
+                }
+                found_device = true;
+            }
+            id++;
+        }
+    }
+
+    if (!found_device) {
+        throw std::runtime_error("No suitable OpenCL device found.");
+    }
+
+    myprintf("Selected platform: %s\n",
+        best_platform.getInfo<CL_PLATFORM_NAME>().c_str());
+    myprintf("Selected device: %s\n",
+        trim(best_device.getInfo<CL_DEVICE_NAME>()).c_str());
+    myprintf("with OpenCL %2.1f capability.\n", best_version);
+
+    cl::Context context;
+    try {
+        context = cl::Context(best_device);
+    } catch (const cl::Error &e) {
+        myprintf("Error creating OpenCL context: %s: %d", e.what(), e.err());
+        throw std::runtime_error("Error creating OpenCL context.");
+    }
+    m_context = context;
+    m_device = best_device;
+
+    m_cl_args = getClArgs<net_t>();
+
+    myprintf("Half precision compute support: ");
+    if (m_device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp16")
+        != std::string::npos) {
+        myprintf("Yes.\n");
+        m_fp16_compute = true;
+        m_cl_args += " -DFP16_SUPPORT";
+    } else {
+        myprintf("No.\n");
+    }
+
+    myprintf("Tensor Core support: ");
+    try {
+        myprintf("Forced to say No.(AobaZero)\n");
+/*
+        cl::Program(m_context, sourceCode_tensorcore_test).build(m_cl_args.c_str());
+        m_tensorcore = true;
+        myprintf("Yes.\n");
+*/
+    } catch (...) {
+        myprintf("No.\n");
+    }
+}
+
+template <typename net_t>
+void OpenCL<net_t>::initialize(const int channels, size_t batch_size) {
+    m_batch_size = batch_size;
+    // Make program of the source code in the context
+    try {
+        m_program = cl::Program(m_context,
+                                sourceCode_common
+                                + sourceCode_config
+                                + sourceCode_convolve1
+                                + sourceCode_convolve3
+                                + sourceCode_sgemm);
+    } catch (const cl::Error &e) {
+        myprintf("Error getting kernels: %s: %d", e.what(), e.err());
+        throw std::runtime_error("Error getting OpenCL kernels.");
+    }
+
+    auto t = Tuner<net_t>(*this, m_context, m_device);
+    if (m_tensorcore) {
+        t.enable_tensorcore();
+    }
+
+    auto sgemm_tuners =
+        t.load_sgemm_tuners(channels, batch_size * WINOGRAD_P, channels, WINOGRAD_TILE);
+
+    // Some NVIDIA drivers are buggy and will fail to compile the rest of the
+    // kernels after a tuning run.
+    if (cfg_tune_only) {
+        // Originally this was an exit() but this will make the tuner
+        // only tune the first GPU.  Return instead.  Exit will be called
+        // after all GPUs are created.
+        return;
+    }
+
+    // Build program for these specific devices
+    try {
+        std::string args = m_cl_args;
+        // Intel iGPUs need vector types for math for best performance
+        if (m_device.getInfo<CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT>() > 1) {
+            args += " -DWINOGRAD_SIMD";
+        }
+
+        args += sgemm_tuners;
+        m_program.build(args.c_str());
+    } catch (const cl::Error&) {
+        myprintf("Error building kernels: %s\n",
+                 m_program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_device).c_str());
+        throw std::runtime_error("Error building OpenCL kernels.");
+    }
+
+    OpenCLContext tdata;
+    ensure_context_initialized(tdata);
+
+    process_tuners(sgemm_tuners);
+
+    m_wavefront_size =
+        tdata.m_sgemm_kernel.getWorkGroupInfo<
+            CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(m_device);
+    myprintf("Wavefront/Warp size: %d\n", m_wavefront_size);
+
+    m_max_workgroup_size = m_device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+    m_max_workgroup_dims = m_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
+
+    myprintf("Max workgroup size: %d\n", m_max_workgroup_size);
+    myprintf("Max workgroup dimensions: ");
+    for (auto d : m_max_workgroup_dims) {
+        myprintf("%d ", d);
+    }
+    myprintf("\n");
+
+    m_init_ok = true;
+}
+
+template <typename net_t>
+bool OpenCL<net_t>::has_fp16_compute() {
+    return m_fp16_compute;
+}
+
+template <typename net_t>
+bool OpenCL<net_t>::has_tensor_cores() {
+    return m_tensorcore;
+}
+
+template <typename net_t>
+std::string OpenCL<net_t>::get_device_name() {
+    std::stringstream ss;
+
+    ss << "OpenCL: ";
+    ss << m_device.getInfo<CL_DEVICE_VENDOR>() << " ";
+    ss << m_device.getInfo<CL_DEVICE_NAME>() << " @ ";
+    ss << m_device.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>() << "MHz";
+
+    return ss.str();
+}
+
+template class OpenCL<float>;
+template class OpenCL_Network<float>;
+#ifdef USE_HALF
+template class OpenCL<half_float::half>;
+template class OpenCL_Network<half_float::half>;
+#endif
+
+#endif
