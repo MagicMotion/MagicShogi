@@ -75,4 +75,81 @@ private:
     cl::Buffer m_inBuffer;
     cl::Buffer m_inBuffer2;
     cl::Buffer m_VBuffer;
-    cl::Buffer m_MBuffer
+    cl::Buffer m_MBuffer;
+    cl::Buffer m_pinnedOutBuffer_pol;
+    cl::Buffer m_pinnedOutBuffer_val;
+    bool m_buffers_allocated{false};
+};
+
+template <typename net_t>
+class OpenCL_Network {
+public:
+    OpenCL_Network(OpenCL<net_t> & opencl) : m_opencl(opencl) {}
+    OpenCL<net_t> & getOpenCL() {
+        return m_opencl;
+    }
+
+    void push_input_convolution(unsigned int filter_size,
+                       unsigned int channels,
+                       unsigned int outputs,
+                       const std::vector<net_t>& weights,
+                       const std::vector<net_t>& means,
+                       const std::vector<net_t>& variances) {
+        size_t layer = get_layer_count();
+        push_weights(layer, weights);
+        push_weights(layer, means);
+        push_weights(layer, variances);
+        m_layers[layer].is_input_convolution = true;
+        m_layers[layer].outputs = outputs;
+        m_layers[layer].filter_size = filter_size;
+        m_layers[layer].channels = channels;
+    }
+
+    void push_residual(unsigned int filter_size,
+                       unsigned int channels,
+                       unsigned int outputs,
+                       const std::vector<net_t>& weights_1,
+                       const std::vector<net_t>& means_1,
+                       const std::vector<net_t>& variances_1,
+                       const std::vector<net_t>& weights_2,
+                       const std::vector<net_t>& means_2,
+                       const std::vector<net_t>& variances_2) {
+        size_t layer = get_layer_count();
+        push_weights(layer, weights_1);
+        push_weights(layer, means_1);
+        push_weights(layer, variances_1);
+        push_weights(layer, weights_2);
+        push_weights(layer, means_2);
+        push_weights(layer, variances_2);
+        m_layers[layer].is_residual_block = true;
+        m_layers[layer].outputs = outputs;
+        m_layers[layer].filter_size = filter_size;
+        m_layers[layer].channels = channels;
+    }
+
+    void push_convolve(unsigned int filter_size,
+                       unsigned int channels,
+                       unsigned int outputs,
+                       const std::vector<net_t>& weights) {
+        (void)filter_size;
+        assert(filter_size == 1);
+
+        size_t layer = get_layer_count();
+        push_weights(layer, weights);
+        m_layers[layer].is_convolve1 = true;
+        m_layers[layer].outputs = outputs;
+        m_layers[layer].channels = channels;
+    }
+
+    size_t get_layer_count() const {
+        return m_layers.size();
+    }
+
+    void forward(const std::vector<float>& input,
+            std::vector<float>& output_pol,
+            std::vector<float>& output_val,
+            OpenCLContext & opencl_context,
+            const int batch_size = 1);
+
+private:
+    using weight_slice_
