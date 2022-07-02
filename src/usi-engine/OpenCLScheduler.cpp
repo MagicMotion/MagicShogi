@@ -243,3 +243,207 @@ void OpenCLScheduler<net_t>::push_convolve(unsigned int filter_size,
                                   from_float(weights));
     }
 }
+
+template <typename net_t>
+void OpenCLScheduler<net_t>::push_weights(
+    unsigned int filter_size,
+    unsigned int channels,
+    unsigned int outputs,
+    std::shared_ptr<const ForwardPipeWeights> weights) {
+
+    auto weight_index = size_t{0};
+
+    // Winograd filter transformation changes filter size to 4x4
+    push_input_convolution(filter_size, channels, outputs,
+                           weights->m_conv_weights[weight_index],
+                           weights->m_batchnorm_means[weight_index],
+                           weights->m_batchnorm_stddevs[weight_index]);
+    weight_index++;
+
+    // residual blocks : except the first entry,
+    // the second ~ last entry is all on residual topwer
+    for (auto i = size_t{0}; i < weights->m_conv_weights.size()/2; i++) {
+        push_residual(filter_size, outputs, outputs,
+                      weights->m_conv_weights[weight_index],
+                      weights->m_batchnorm_means[weight_index],
+                      weights->m_batchnorm_stddevs[weight_index],
+                      weights->m_conv_weights[weight_index + 1],
+                      weights->m_batchnorm_means[weight_index + 1],
+                      weights->m_batchnorm_stddevs[weight_index + 1]);
+        weight_index += 2;
+    }
+
+    // Output head convolutions
+    push_convolve(1, outputs, Network::OUTPUTS_POLICY, weights->m_conv_pol_w);
+    push_convolve(1, outputs, Network::OUTPUTS_VALUE, weights->m_conv_val_w);
+}
+
+template <typename net_t>
+void OpenCLScheduler<net_t>::forward(const std::vector<float>& input,
+                                     std::vector<float>& output_pol,
+                                     std::vector<float>& output_val) {
+    auto entry = std::make_shared<ForwardQueueEntry>(input, output_pol, output_val);
+    std::unique_lock<std::mutex> lk(entry->mutex);
+    {
+        std::unique_lock<std::mutex> lk(m_mutex);
+        m_forward_queue.push_back(entry);
+
+        if (m_single_eval_in_progress.load()) {
+            m_waittime += 2;
+        }
+    }
+    m_cv.notify_one();
+    entry->cv.wait(lk);
+}
+
+#ifndef NDEBUG
+struct batch_stats_t batch_stats;
+#endif
+
+template <typename net_t>
+void OpenCLScheduler<net_t>::batch_worker(const size_t gnum) {
+    constexpr auto in_size = Network::INPUT_CHANNELS * BOARD_SIZE * BOARD_SIZE;
+    constexpr auto out_pol_size = Network::OUTPUTS_POLICY * BOARD_SIZE * BOARD_SIZE;
+    constexpr auto out_val_size = Network::OUTPUTS_VALUE * BOARD_SIZE * BOARD_SIZE;
+
+    OpenCLContext context;
+
+    // batch scheduling heuristic.
+    // Returns the batch picked up from the queue (m_forward_queue)
+    // 1) Wait for m_waittime milliseconds for full batch
+    // 2) if we don't have a full batch then just do a single eval
+    //
+    // The purpose of m_waittime is to prevent the system from deadlocking
+    // because we were waiting for a job too long, while the job is never
+    // going to come due to a control dependency (e.g., evals stuck on a
+    // critical path).  To do so:
+    //
+    // 1) if we couldn't form a batch after waiting m_waittime ms, it means
+    // that we hit the critical path and should do scalar evals.
+    // Wait 1ms shorter next time.
+    //
+    // 2) if we picked up a single eval, but were getting additional evals
+    // while that single eval was being processed, it means that we made
+    // the wrong decision.  Wait 2ms longer next time.
+
+    auto pickup_task = [this] () {
+        std::list<std::shared_ptr<ForwardQueueEntry>> inputs;
+        size_t count = 0;
+
+        std::unique_lock<std::mutex> lk(m_mutex);
+        while (true) {
+            if (!m_running) return inputs;
+
+            count = m_forward_queue.size();
+            if (count >= cfg_batch_size) {
+                count = cfg_batch_size;
+                break;
+            }
+
+            bool timeout = !m_cv.wait_for(
+                lk,
+                std::chrono::milliseconds(m_waittime),
+                [this] () {
+                    return !m_running || m_forward_queue.size() >= cfg_batch_size;
+                }
+            );
+
+            if (!m_forward_queue.empty()) {
+                if (timeout && m_single_eval_in_progress.exchange(true) == false) {
+                    // Waited long enough but couldn't form a batch.
+                    // Check if there is any other single eval in progress, and if not,
+                    // do one from this thread.
+                    if (m_waittime > 1) {
+                        m_waittime--;
+                    }
+                    count = 1;
+                    break;
+                }
+            }
+        }
+        // Move 'count' evals from shared queue to local list.
+        auto end = begin(m_forward_queue);
+        std::advance(end, count);
+        std::move(begin(m_forward_queue), end, std::back_inserter(inputs));
+        m_forward_queue.erase(begin(m_forward_queue), end);
+
+        return inputs;
+    };
+
+    auto batch_input = std::vector<float>();
+    auto batch_output_pol = std::vector<float>();
+    auto batch_output_val = std::vector<float>();
+
+    while (true) {
+        auto inputs = pickup_task();
+        auto count = inputs.size();
+//		myprintf("batch_worker loop. count=%d,in_size=%d,out_pol_size=%d,out_val_size=%d\n", count,in_size, out_pol_size, out_val_size);
+
+        if (!m_running) {
+            return;
+        }
+
+#ifndef NDEBUG
+        if (count == 1) {
+            batch_stats.single_evals++;
+        } else {
+            batch_stats.batch_evals++;
+        }
+#endif
+
+        // prepare input for forward() call
+        batch_input.resize(in_size * count);
+        batch_output_pol.resize(out_pol_size * count);
+        batch_output_val.resize(out_val_size * count);
+
+        auto index = size_t{0};
+        for (auto & x : inputs) {
+            std::unique_lock<std::mutex> lk(x->mutex);
+            std::copy(begin(x->in), end(x->in), begin(batch_input) + in_size * index);
+            index++;
+        }
+
+
+        steady_clock::time_point start;
+        if ( fCalcNetTime ) start = steady_clock::now();
+
+        // run the NN evaluation
+        m_networks[gnum]->forward(
+            batch_input, batch_output_pol, batch_output_val, context, count);
+
+		if ( fCalcNetTime ) {
+			steady_clock::time_point end = steady_clock::now();
+			double elapsed = static_cast<double>(duration_cast<microseconds>(end - start).count());
+			elapsed_sum += elapsed;
+			nelapsed    += 1U;
+			if ( 0 == nelapsed % 800 ) {
+				std::cout << std::endl;
+				std::cout << "network calc sum=" << elapsed_sum /(1000.0*1000.0) << "sec, count=" << nelapsed << ", ave mSec=" << (elapsed_sum / static_cast<double>(nelapsed)) / 1000.0 << std::endl;
+			}
+		}
+
+        // Get output and copy back
+        index = 0;
+        for (auto & x : inputs) {
+            std::copy(begin(batch_output_pol) + out_pol_size * index,
+                      begin(batch_output_pol) + out_pol_size * (index + 1),
+                      begin(x->out_p));
+            std::copy(begin(batch_output_val) + out_val_size * index,
+                      begin(batch_output_val) + out_val_size * (index + 1),
+                      begin(x->out_v));
+            x->cv.notify_all();
+            index++;
+        }
+
+        if (count == 1) {
+            m_single_eval_in_progress = false;
+        }
+    }
+}
+
+template class OpenCLScheduler<float>;
+#ifdef USE_HALF
+template class OpenCLScheduler<half_float::half>;
+#endif
+
+#endif
