@@ -152,4 +152,84 @@ public:
             const int batch_size = 1);
 
 private:
-    using weight_slice_
+    using weight_slice_t = std::vector<cl::Buffer>::const_iterator;
+
+    void push_weights(size_t layer, const std::vector<net_t>& weights) {
+        add_weights(layer, weights.size(), weights.data());
+    }
+    void add_weights(size_t layer, size_t size, const net_t* weights);
+
+    void convolve3(OpenCLContext & opencl_context,
+                    int channels, int outputs,
+                    cl::Buffer& bufferIn,
+                    cl::Buffer& bufferOut,
+                    cl::Buffer& bufferV,
+                    cl::Buffer& bufferM, weight_slice_t weights,
+                    cl::Buffer* bufferResidual,
+                    weight_slice_t bn_weights,
+                    bool skip_in_transform,
+                    bool fuse_in_transform, bool store_inout,
+                    int batch_size);
+
+    void convolve1(OpenCLContext & opencl_context,
+                  int channels, int outputs,
+                  cl::Buffer& bufferInput,
+                  cl::Buffer& bufferOutput,
+                  cl::Buffer& bufferMerge,
+                  weight_slice_t weights,
+                  int batch_size);
+
+    OpenCL<net_t> & m_opencl;
+
+    // this mutex is not required for correctness, but this exists simply
+    // because queue.finish() is a busy wait and having a lot of threads
+    // waiting here is counterproductive CPU-wise.  At least std::mutex
+    // isn't busy wait so it should be better.
+    std::mutex m_queue_finish_mutex;
+    std::vector<Layer> m_layers;
+};
+
+template <typename net_t>
+class OpenCL {
+    friend class OpenCL_Network<net_t>;
+    friend class Tuner<net_t>;
+public:
+    OpenCL(int gpu, bool silent = false);
+
+    void initialize(const int channels, size_t batch_size = 1);
+    void ensure_context_initialized(OpenCLContext & opencl_context);
+    std::string get_device_name();
+    bool has_fp16_compute();
+    bool has_tensor_cores();
+
+    std::vector<size_t> get_sgemm_tuners();
+
+    cl::Device m_device;
+    cl::Context m_context;
+private:
+    void process_tuners(std::string tuners);
+
+    size_t m_batch_size = 1;
+    cl::Program m_program;
+    std::string m_cl_args;
+
+    struct sgemm_tuners {
+        size_t mwg, nwg, kwg;
+        size_t vwm, vwn;
+        size_t mdima, ndimb;
+        size_t mdimc, ndimc;
+        size_t tce;
+    };
+    sgemm_tuners m_sgemm_tuners;
+    size_t m_wavefront_size{0};
+    size_t m_max_workgroup_size{0};
+    std::vector<size_t> m_max_workgroup_dims;
+    bool m_fp16_compute{false};
+    bool m_tensorcore{false};
+    bool m_init_ok{false};
+};
+
+extern const std::string sourceCode_sgemm;
+extern const std::string sourceCode_common;
+
+#endif
