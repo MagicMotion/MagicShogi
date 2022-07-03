@@ -1,3 +1,4 @@
+
 /*
     This file is part of Leela Zero.
     Copyright (C) 2017-2019 Gian-Carlo Pascutto and contributors
@@ -27,52 +28,39 @@
     work.
 */
 
-#include "SMP.h"
+#ifndef SMP_H_INCLUDED
+#define SMP_H_INCLUDED
 
-#include <cassert>
-#include <thread>
+#include "config.h"
 
-SMP::Mutex::Mutex() {
-    m_lock = false;
+#include <cstddef>
+#include <atomic>
+
+namespace SMP {
+    size_t get_num_cpus();
+
+    class Mutex {
+    public:
+        Mutex();
+        ~Mutex() = default;
+        friend class Lock;
+    private:
+        std::atomic<bool> m_lock;
+    };
+
+    class Lock {
+    public:
+        explicit Lock(Mutex & m);
+        ~Lock();
+        void lock();
+        void unlock();
+    private:
+        Mutex * m_mutex;
+        bool m_owns_lock{false};
+    };
 }
 
-SMP::Lock::Lock(Mutex & m) {
-    m_mutex = &m;
-    lock();
-}
+// Avoids accidentally creating a temporary
+#define LOCK(mutex, lock) SMP::Lock lock((mutex))
 
-void SMP::Lock::lock() {
-    assert(!m_owns_lock);
-    // Test and Test-and-Set reduces memory contention
-    // However, just trying to Test-and-Set first improves performance in almost
-    // all cases
-    while (m_mutex->m_lock.exchange(true, std::memory_order_acquire)) {
-      while (m_mutex->m_lock.load(std::memory_order_relaxed));
-    }
-    m_owns_lock = true;
-}
-
-void SMP::Lock::unlock() {
-    assert(m_owns_lock);
-    auto lock_held = m_mutex->m_lock.exchange(false, std::memory_order_release);
-
-    // If this fails it means we are unlocking an unlocked lock
-#ifdef NDEBUG
-    (void)lock_held;
-#else
-    assert(lock_held);
 #endif
-    m_owns_lock = false;
-}
-
-SMP::Lock::~Lock() {
-    // If we don't claim to hold the lock,
-    // don't bother trying to unlock in the destructor.
-    if (m_owns_lock) {
-        unlock();
-    }
-}
-
-size_t SMP::get_num_cpus() {
-    return std::thread::hardware_concurrency();
-}

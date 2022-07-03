@@ -27,52 +27,40 @@
     work.
 */
 
-#include "SMP.h"
+#ifndef TIMECONTROL_H_INCLUDED
+#define TIMECONTROL_H_INCLUDED
 
-#include <cassert>
-#include <thread>
+#include <array>
+#include <memory>
 
-SMP::Mutex::Mutex() {
-    m_lock = false;
-}
+#include "config.h"
+#include "Timing.h"
 
-SMP::Lock::Lock(Mutex & m) {
-    m_mutex = &m;
-    lock();
-}
+class TimeControl {
+public:
+    /*
+        Initialize time control. Timing info is per GTP and in centiseconds
+    */
+    TimeControl(int maintime = 60 * 60 * 100,
+                int byotime = 0, int byostones = 0,
+                int byoperiods = 0);
 
-void SMP::Lock::lock() {
-    assert(!m_owns_lock);
-    // Test and Test-and-Set reduces memory contention
-    // However, just trying to Test-and-Set first improves performance in almost
-    // all cases
-    while (m_mutex->m_lock.exchange(true, std::memory_order_acquire)) {
-      while (m_mutex->m_lock.load(std::memory_order_relaxed));
-    }
-    m_owns_lock = true;
-}
+    void start(int color);
+    void stop(int color);
+    int max_time_for_move(int boardsize, int color, size_t movenum) const;
+    void adjust_time(int color, int time, int stones);
+    void display_times();
+    void reset_clocks();
+    bool can_accumulate_time(int color) const;
+    size_t opening_moves(int boardsize) const;
+    std::string to_text_sgf() const;
+    static std::shared_ptr<TimeControl> make_from_text_sgf(
+        const std::string& maintime, const std::string& byoyomi,
+        const std::string& black_time_left, const std::string& white_time_left,
+        const std::string& black_moves_left, const std::string& white_moves_left);
+private:
+    std::string stones_left_to_text_sgf(const int color) const;
+    void display_color_time(int color);
+    int get_moves_expected(int boardsize, size_t movenum) const;
 
-void SMP::Lock::unlock() {
-    assert(m_owns_lock);
-    auto lock_held = m_mutex->m_lock.exchange(false, std::memory_order_release);
-
-    // If this fails it means we are unlocking an unlocked lock
-#ifdef NDEBUG
-    (void)lock_held;
-#else
-    assert(lock_held);
-#endif
-    m_owns_lock = false;
-}
-
-SMP::Lock::~Lock() {
-    // If we don't claim to hold the lock,
-    // don't bother trying to unlock in the destructor.
-    if (m_owns_lock) {
-        unlock();
-    }
-}
-
-size_t SMP::get_num_cpus() {
-    return std::thread::hardware_concurrency();
-}
+    in
