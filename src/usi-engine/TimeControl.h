@@ -63,4 +63,17 @@ private:
     void display_color_time(int color);
     int get_moves_expected(int boardsize, size_t movenum) const;
 
-    in
+    int m_maintime;
+    int m_byotime;
+    int m_byostones;
+    int m_byoperiods;
+
+    std::array<int,  2> m_remaining_time;    /* main time per player */
+    std::array<int,  2> m_stones_left;       /* stones to play in byo period */
+    std::array<int,  2> m_periods_left;      /* byo periods */
+    std::array<bool, 2> m_inbyo;             /* player is in byo yomi */
+
+    std::array<Time, 2> m_times;             /* storage for player times */
+};
+
+#endif
