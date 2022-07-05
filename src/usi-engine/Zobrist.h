@@ -44,4 +44,10 @@ public:
 
     static std::array<std::array<std::uint64_t, FastBoard::NUM_VERTICES>,     4> zobrist;
     static std::array<std::uint64_t, FastBoard::NUM_VERTICES>                    zobrist_ko;
-    static std::array<std::array<std::uint64_t, FastBoard::NUM_
+    static std::array<std::array<std::uint64_t, FastBoard::NUM_VERTICES * 2>, 2> zobrist_pris;
+    static std::array<std::uint64_t, 5>                                          zobrist_pass;
+
+    static void init_zobrist(Random& rng);
+};
+
+#endif
