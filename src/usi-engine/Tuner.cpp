@@ -676,3 +676,61 @@ std::string Tuner<net_t>::sgemm_tuners_from_line(std::string line,
     }
 
     if (s[7] != m_opencl.get_device_name()) {
+        return "";
+    }
+
+    return s[6];
+}
+
+template <typename net_t>
+std::string Tuner<net_t>::load_sgemm_tuners(const int m, const int n, const int k,
+                                     const int batch_size) {
+    auto tuner_file = leelaz_file(TUNER_FILE_LOCAL);
+    auto file = std::ifstream{tuner_file};
+
+    auto try_prior_tuning = file.good();
+
+    // If we want full tuning, don't reuse previously tuned results
+    // except if the tuning was created from this run from a different
+    // GPU instance with the same name.  This prevents the tuner running
+    // for multiple times if the system has multiple same GPUs.
+    if (try_prior_tuning && cfg_sgemm_exhaustive) {
+        auto dev = m_opencl.get_device_name();
+        try_prior_tuning = std::any_of(
+            begin(tuned_devices),
+            end(tuned_devices),
+            [&dev](const std::string & x) { return dev == x; }
+        );
+    }
+    tuned_devices.emplace_back(m_opencl.get_device_name());
+
+    if (try_prior_tuning) {
+        auto line = std::string{};
+        while (std::getline(file, line)) {
+            auto tuners = sgemm_tuners_from_line(line, m, n, k, batch_size);
+            if (tuners.size() != 0) {
+                myprintf("Loaded existing SGEMM tuning.\n");
+                return tuners;
+            }
+        }
+    }
+    auto tuners = tune_sgemm(m, n, k, batch_size);
+    store_sgemm_tuners(m, n, k, batch_size, tuners);
+    return tuners;
+}
+
+template <typename net_t>
+void Tuner<net_t>::enable_tensorcore() {}
+#ifdef USE_HALF
+template <>
+void Tuner<half_float::half>::enable_tensorcore() {
+    m_use_tensorcore = true;
+}
+#endif
+
+template class Tuner<float>;
+#ifdef USE_HALF
+template class Tuner<half_float::half>;
+#endif
+
+#endif
