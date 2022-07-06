@@ -228,4 +228,124 @@ is_move_check_b( const tree_t * restrict ptree, unsigned int move )
     if ( I2IsPromote(move) ) { ipiece_move += promote; }
     
     idirec = (int)adirec[SQ_WKING][from];
-    if ( idirec && idirec
+    if ( idirec && idirec != (int)adirec[SQ_WKING][to]
+	 && is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+  }
+  
+  switch ( ipiece_move )
+    {
+    case pawn:
+      return BOARD[to-nfile] == -king;
+
+    case lance:
+      AttackBLance( bb, to );
+      return BBContract( bb, BB_WKING );
+      
+    case knight:
+      return BBContract( abb_b_knight_attacks[to], BB_WKING );
+      
+    case silver:
+      return BBContract( abb_b_silver_attacks[to], BB_WKING );
+      
+    case bishop:
+      AttackBishop( bb, to );
+      return BBContract( bb, BB_WKING );
+      
+    case rook:
+      AttackRook( bb, to );
+      return BBContract( bb, BB_WKING );
+      
+    case king:
+      return 0;
+
+    case horse:
+      AttackHorse( bb, to );
+      return BBContract( bb, BB_WKING );
+      
+    case dragon:
+      assert( ipiece_move == dragon );
+      AttackDragon( bb, to );
+      return BBContract( bb, BB_WKING );
+    }
+  /*
+    case gold:	       case pro_pawn:
+    case pro_lance:    case pro_knight:
+    case pro_silver:
+  */
+  return BBContract( abb_b_gold_attacks[to], BB_WKING );
+}
+
+
+int CONV
+is_move_check_w( const tree_t * restrict ptree, unsigned int move )
+{
+  const int from = (int)I2From(move);
+  const int to   = (int)I2To(move);
+  int ipiece_move, idirec;
+  bitboard_t bb;
+
+  if ( from >= nsquare ) { ipiece_move = From2Drop(from); }
+  else {
+    ipiece_move = (int)I2PieceMove(move);
+    if ( I2IsPromote(move) ) { ipiece_move += promote; }
+    
+    idirec = (int)adirec[SQ_BKING][from];
+    if ( idirec && idirec != (int)adirec[SQ_BKING][to]
+	 && is_pinned_on_black_king( ptree, from, idirec ) ) { return 1; }
+  }
+  
+  switch ( ipiece_move )
+    {
+    case pawn:
+      return BOARD[to+nfile] == king;
+      
+    case lance:
+      AttackWLance( bb, to );
+      return BBContract( bb, BB_BKING );
+      
+    case knight:
+      return BBContract( abb_w_knight_attacks[to], BB_BKING );
+      
+    case silver:
+      return BBContract( abb_w_silver_attacks[to], BB_BKING );
+      
+    case bishop:
+      AttackBishop( bb, to );
+      return BBContract( bb, BB_BKING );
+      
+    case rook:
+      AttackRook( bb, to );
+      return BBContract( bb, BB_BKING );
+
+    case king:
+      return 0;
+
+    case horse:
+      AttackHorse( bb, to );
+      return BBContract( bb, BB_BKING );
+      
+    case dragon:
+      AttackDragon( bb, to );
+      return BBContract( bb, BB_BKING );
+    }
+
+  /*
+    case gold:        case pro_pawn:
+    case pro_lance:   case pro_knight:
+    case pro_silver:
+  */
+  return BBContract( abb_w_gold_attacks[to], BB_BKING );
+}
+
+
+bitboard_t CONV
+attacks_to_piece( const tree_t * restrict ptree, int sq )
+{
+  bitboard_t bb_ret, bb_attacks, bb;
+
+  BBIni( bb_ret );
+  if ( sq < rank9*nfile && BOARD[sq+nfile] == pawn )
+    {
+      bb_ret = abb_mask[sq+nfile];
+    }
+  if ( sq >= nfile && BOARD[sq
