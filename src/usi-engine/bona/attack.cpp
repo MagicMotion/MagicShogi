@@ -108,4 +108,124 @@ is_mate_b_pawn_drop( tree_t * restrict ptree, int sq_drop )
 
   BBAnd( bb_sum, BB_WKNIGHT, abb_b_knight_attacks[sq_drop] );
 
-  BBAndOr( bb_sum, BB_WSILVER, abb_b_silver_attacks[sq_d
+  BBAndOr( bb_sum, BB_WSILVER, abb_b_silver_attacks[sq_drop] );
+  BBAndOr( bb_sum, BB_WTGOLD, abb_b_gold_attacks[sq_drop] );
+
+  AttackBishop( bb, sq_drop );
+  BBAndOr( bb_sum, BB_W_BH, bb );
+
+  AttackRook( bb, sq_drop );
+  BBAndOr( bb_sum, BB_W_RD, bb );
+
+  BBOr( bb, BB_WHORSE, BB_WDRAGON );
+  BBAndOr( bb_sum, bb, abb_king_attacks[sq_drop] );
+
+  while ( BBTest( bb_sum ) )
+    {
+      ifrom  = FirstOne( bb_sum );
+      Xor( ifrom, bb_sum );
+
+      if ( IsDiscoverWK( ifrom, sq_drop ) ) { continue; }
+      return 0;
+    }
+
+  iwk  = SQ_WKING;
+  iret = 1;
+  Xor( sq_drop, BB_BOCCUPY );
+  XorFile( sq_drop, OCCUPIED_FILE );
+  XorDiag2( sq_drop, OCCUPIED_DIAG2 );
+  XorDiag1( sq_drop, OCCUPIED_DIAG1 );
+  
+  BBNotAnd( bb_move, abb_king_attacks[iwk], BB_WOCCUPY );
+  while ( BBTest( bb_move ) )
+    {
+      ito = FirstOne( bb_move );
+      if ( ! is_white_attacked( ptree, ito ) )
+	{
+	  iret = 0;
+	  break;
+	}
+      Xor( ito, bb_move );
+    }
+
+  Xor( sq_drop, BB_BOCCUPY );
+  XorFile( sq_drop, OCCUPIED_FILE );
+  XorDiag2( sq_drop, OCCUPIED_DIAG2 );
+  XorDiag1( sq_drop, OCCUPIED_DIAG1 );
+
+  return iret;
+}
+
+
+int CONV
+is_mate_w_pawn_drop( tree_t * restrict ptree, int sq_drop )
+{
+  bitboard_t bb, bb_sum, bb_move;
+  int ibk, ito, ifrom, iret, idirec;
+
+  BBAnd( bb_sum, BB_BKNIGHT, abb_w_knight_attacks[sq_drop] );
+
+  BBAndOr( bb_sum, BB_BSILVER, abb_w_silver_attacks[sq_drop] );
+  BBAndOr( bb_sum, BB_BTGOLD,  abb_w_gold_attacks[sq_drop] );
+
+  AttackBishop( bb, sq_drop );
+  BBAndOr( bb_sum, BB_B_BH, bb );
+
+  AttackRook( bb, sq_drop );
+  BBAndOr( bb_sum, BB_B_RD, bb );
+
+  BBOr( bb, BB_BHORSE, BB_BDRAGON );
+  BBAndOr( bb_sum, bb, abb_king_attacks[sq_drop] );
+
+  while ( BBTest( bb_sum ) )
+    {
+      ifrom  = FirstOne( bb_sum );
+      Xor( ifrom, bb_sum );
+
+      if ( IsDiscoverBK( ifrom, sq_drop ) ) { continue; }
+      return 0;
+    }
+
+  ibk  = SQ_BKING;
+  iret = 1;
+  Xor( sq_drop, BB_WOCCUPY );
+  XorFile( sq_drop, OCCUPIED_FILE );
+  XorDiag2( sq_drop, OCCUPIED_DIAG2 );
+  XorDiag1( sq_drop, OCCUPIED_DIAG1 );
+  
+  BBNotAnd( bb_move, abb_king_attacks[ibk], BB_BOCCUPY );
+  while ( BBTest( bb_move ) )
+    {
+      ito = FirstOne( bb_move );
+      if ( ! is_black_attacked( ptree, ito ) )
+	{
+	  iret = 0;
+	  break;
+	}
+      Xor( ito, bb_move );
+    }
+
+  Xor( sq_drop, BB_WOCCUPY );
+  XorFile( sq_drop, OCCUPIED_FILE );
+  XorDiag2( sq_drop, OCCUPIED_DIAG2 );
+  XorDiag1( sq_drop, OCCUPIED_DIAG1 );
+
+  return iret;
+}
+
+
+int CONV
+is_move_check_b( const tree_t * restrict ptree, unsigned int move )
+{
+  const int from = (int)I2From(move);
+  const int to   = (int)I2To(move);
+  int ipiece_move, idirec;
+  bitboard_t bb;
+
+  if ( from >= nsquare ) { ipiece_move = From2Drop(from); }
+  else {
+    ipiece_move = (int)I2PieceMove(move);
+    if ( I2IsPromote(move) ) { ipiece_move += promote; }
+    
+    idirec = (int)adirec[SQ_WKING][from];
+    if ( idirec && idirec
