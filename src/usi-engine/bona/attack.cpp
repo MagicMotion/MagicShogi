@@ -348,4 +348,106 @@ attacks_to_piece( const tree_t * restrict ptree, int sq )
     {
       bb_ret = abb_mask[sq+nfile];
     }
-  if ( sq >= nfile && BOARD[sq
+  if ( sq >= nfile && BOARD[sq-nfile] == -pawn )
+    {
+      BBOr( bb_ret, bb_ret, abb_mask[sq-nfile] );
+    }
+
+  BBAndOr( bb_ret, BB_BKNIGHT, abb_w_knight_attacks[sq] );
+  BBAndOr( bb_ret, BB_WKNIGHT, abb_b_knight_attacks[sq] );
+  BBAndOr( bb_ret, BB_BSILVER, abb_w_silver_attacks[sq] );
+  BBAndOr( bb_ret, BB_WSILVER, abb_b_silver_attacks[sq] );
+  BBAndOr( bb_ret, BB_BTGOLD,  abb_w_gold_attacks[sq] );
+  BBAndOr( bb_ret, BB_WTGOLD,  abb_b_gold_attacks[sq] );
+
+  BBOr( bb, BB_B_HDK, BB_W_HDK );
+  BBAndOr( bb_ret, bb, abb_king_attacks[sq] );
+
+  BBOr( bb, BB_B_BH, BB_W_BH );
+  AttackBishop( bb_attacks, sq );
+  BBAndOr( bb_ret, bb, bb_attacks );
+
+  BBOr( bb, BB_B_RD, BB_W_RD );
+  BBAndOr( bb_ret, bb, AttackRank( sq ) );
+  BBAndOr( bb, BB_BLANCE, abb_plus_rays[sq] );
+  BBAndOr( bb, BB_WLANCE, abb_minus_rays[sq] );
+  BBAndOr( bb_ret, bb, AttackFile( sq ) );
+  
+  return bb_ret;
+}
+
+
+bitboard_t CONV
+b_attacks_to_piece( const tree_t * restrict ptree, int sq )
+{
+  bitboard_t bb_ret, bb_attacks, bb;
+
+  BBIni( bb_ret );
+  if ( sq < rank9*nfile && BOARD[sq+nfile] == pawn )
+    {
+      bb_ret = abb_mask[sq+nfile];
+    }
+
+  BBAndOr( bb_ret, BB_BKNIGHT, abb_w_knight_attacks[sq] );
+  BBAndOr( bb_ret, BB_BSILVER, abb_w_silver_attacks[sq] );
+  BBAndOr( bb_ret, BB_BTGOLD,  abb_w_gold_attacks[sq] );
+  BBAndOr( bb_ret, BB_B_HDK,   abb_king_attacks[sq] );
+
+  AttackBishop( bb_attacks, sq );
+  BBAndOr( bb_ret, BB_B_BH, bb_attacks );
+
+  bb = BB_B_RD;
+  BBAndOr( bb_ret, bb, AttackRank(sq) );
+  BBAndOr( bb, BB_BLANCE, abb_plus_rays[sq] );
+  BBAndOr( bb_ret, bb, AttackFile(sq) );
+  
+  return bb_ret;
+}
+
+
+bitboard_t CONV
+w_attacks_to_piece( const tree_t * restrict ptree, int sq )
+{
+  bitboard_t bb_ret, bb_attacks, bb;
+
+  BBIni( bb_ret );
+  if ( nfile <= sq && BOARD[sq-nfile] == -pawn )
+    {
+      bb_ret = abb_mask[sq-nfile];
+    }
+
+  BBAndOr( bb_ret, BB_WKNIGHT, abb_b_knight_attacks[sq] );
+  BBAndOr( bb_ret, BB_WSILVER, abb_b_silver_attacks[sq] );
+  BBAndOr( bb_ret, BB_WTGOLD,  abb_b_gold_attacks[sq] );
+  BBAndOr( bb_ret, BB_W_HDK,   abb_king_attacks[sq] );
+
+  AttackBishop( bb_attacks, sq );
+  BBAndOr( bb_ret, BB_W_BH, bb_attacks );
+
+  bb = BB_W_RD;
+  BBAndOr( bb_ret, bb, AttackRank(sq) );
+  BBAndOr( bb, BB_WLANCE, abb_minus_rays[sq] );
+  BBAndOr( bb_ret, bb, AttackFile(sq) );
+  
+  return bb_ret;
+}
+
+
+unsigned int CONV
+is_white_attacked( const tree_t * restrict ptree, int sq )
+{
+  bitboard_t bb, bb1, bb_atk;
+
+  BBAnd  ( bb, BB_BPAWN_ATK, abb_mask[sq] );
+  BBAndOr( bb, BB_BKNIGHT,   abb_w_knight_attacks[sq] );
+  BBAndOr( bb, BB_BSILVER,   abb_w_silver_attacks[sq] );
+  BBAndOr( bb, BB_BTGOLD,    abb_w_gold_attacks[sq] );
+  BBAndOr( bb, BB_B_HDK,     abb_king_attacks[sq] );
+
+  AttackBishop( bb_atk, sq );
+  BBAndOr( bb, BB_B_BH, bb_atk );
+
+  bb1 = BB_B_RD;
+  BBAndOr( bb1, BB_BLANCE, abb_plus_rays[sq] );
+  BBAndOr( bb, bb1, AttackFile( sq ) );
+  BB
