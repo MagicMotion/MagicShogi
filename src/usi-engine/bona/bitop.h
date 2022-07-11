@@ -73,4 +73,47 @@ typedef union {
                             (b).p[2] = ~(b1).p[2]
 #define BBAnd(b,b1,b2)      (b).p[0] = (b1).p[0] & (b2).p[0],           \
                             (b).p[1] = (b1).p[1] & (b2).p[1],           \
-            
+                            (b).p[2] = (b1).p[2] & (b2).p[2]
+#define BBOr(b,b1,b2)       (b).p[0] = (b1).p[0] | (b2).p[0],           \
+                            (b).p[1] = (b1).p[1] | (b2).p[1],           \
+                            (b).p[2] = (b1).p[2] | (b2).p[2]
+#define BBXor(b,b1,b2)      (b).p[0] = (b1).p[0] ^ (b2).p[0],           \
+                            (b).p[1] = (b1).p[1] ^ (b2).p[1],           \
+                            (b).p[2] = (b1).p[2] ^ (b2).p[2]
+#define BBAndOr(b,b1,b2)    (b).p[0] |= (b1).p[0] & (b2).p[0],          \
+                            (b).p[1] |= (b1).p[1] & (b2).p[1],          \
+                            (b).p[2] |= (b1).p[2] & (b2).p[2]
+#define BBNotAnd(b,b1,b2)   (b).p[0] = (b1).p[0] & ~(b2).p[0],          \
+                            (b).p[1] = (b1).p[1] & ~(b2).p[1],          \
+                            (b).p[2] = (b1).p[2] & ~(b2).p[2]
+#define BBContract(b1,b2)   ( ( (b1).p[0] & (b2).p[0] )                 \
+                            | ( (b1).p[1] & (b2).p[1] )                 \
+                            | ( (b1).p[2] & (b2).p[2] ) )
+#define Xor(sq,b)           (b).p[0] ^= abb_mask[sq].p[0],              \
+                            (b).p[1] ^= abb_mask[sq].p[1],              \
+                            (b).p[2] ^= abb_mask[sq].p[2]
+#define XorFile(sq,b)       (b).p[0] ^= abb_mask_rl90[sq].p[0],         \
+                            (b).p[1] ^= abb_mask_rl90[sq].p[1],         \
+                            (b).p[2] ^= abb_mask_rl90[sq].p[2]
+#define XorDiag1(sq,b)      (b).p[0] ^= abb_mask_rr45[sq].p[0],         \
+                            (b).p[1] ^= abb_mask_rr45[sq].p[1],         \
+                            (b).p[2] ^= abb_mask_rr45[sq].p[2]
+#define XorDiag2(sq,b)      (b).p[0] ^= abb_mask_rl45[sq].p[0],         \
+                            (b).p[1] ^= abb_mask_rl45[sq].p[1],         \
+                            (b).p[2] ^= abb_mask_rl45[sq].p[2]
+#define SetClear(b)         (b).p[0] ^= (bb_set_clear.p[0]),            \
+                            (b).p[1] ^= (bb_set_clear.p[1]),            \
+                            (b).p[2] ^= (bb_set_clear.p[2])
+#define SetClearFile(sq1,sq2,b)                                         \
+    (b).p[0] ^= ( abb_mask_rl90[sq1].p[0] | abb_mask_rl90[sq2].p[0] ),  \
+    (b).p[1] ^= ( abb_mask_rl90[sq1].p[1] | abb_mask_rl90[sq2].p[1] ),  \
+    (b).p[2] ^= ( abb_mask_rl90[sq1].p[2] | abb_mask_rl90[sq2].p[2] )
+
+#define SetClearDiag1(sq1,sq2,b) \
+    (b).p[0] ^= ((abb_mask_rr45[sq1].p[0])|(abb_mask_rr45[sq2].p[0])), \
+    (b).p[1] ^= ((abb_mask_rr45[sq1].p[1])|(abb_mask_rr45[sq2].p[1])), \
+    (b).p[2] ^= ((abb_mask_rr45[sq1].p[2])|(abb_mask_rr45[sq2].p[2]))
+
+#define SetClearDiag2(sq1,sq2,b) \
+    (b).p[0] ^= ((abb_mask_rl45[sq1].p[0])|(abb_mask_rl45[sq2].p[0])), \
+    (b).p[1] ^= ((abb_mask_rl45[sq1]
