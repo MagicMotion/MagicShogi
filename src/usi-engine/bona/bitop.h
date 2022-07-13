@@ -116,4 +116,13 @@ typedef union {
 
 #define SetClearDiag2(sq1,sq2,b) \
     (b).p[0] ^= ((abb_mask_rl45[sq1].p[0])|(abb_mask_rl45[sq2].p[0])), \
-    (b).p[1] ^= ((abb_mask_rl45[sq1]
+    (b).p[1] ^= ((abb_mask_rl45[sq1].p[1])|(abb_mask_rl45[sq2].p[1])), \
+    (b).p[2] ^= ((abb_mask_rl45[sq1].p[2])|(abb_mask_rl45[sq2].p[2]))
+
+
+
+typedef struct { unsigned int p[3]; } bitboard_t;
+
+#endif /* HAVE_SSE2 */
+
+#endif /* BITOP_H */
