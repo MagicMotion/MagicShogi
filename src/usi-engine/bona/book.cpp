@@ -115,4 +115,119 @@ book_probe( tree_t * restrict ptree )
     drand = (double)rand64() / (double)UINT64_MAX;
 
     if ( game_status & flag_narrow_book )
+      {
+#if defined(BK_ULTRA_NARROW)
+	freq_lower_limit = abook_move[0].freq;
+#else
+	freq_lower_limit = abook_move[0].freq / 2U;
+#endif
+
+	for ( i = 1; i < moves; i++ )
+	  {
+	    if ( abook_move[i].freq < freq_lower_limit ) { break; }
+	  }
+	moves = i;
+	normalize_book_move( abook_move, moves );
+      }
+
+    for ( j = moves-1; j > 0; j-- )
+      {
+	dscore = (double)( abook_move[j].freq ) / (double)USHRT_MAX;
+	if ( drand <= dscore ) { break; }
+	drand -= dscore;
+      }
+    if ( ! abook_move[j].freq ) { j = 0; }
+  }
+
+  /* show results */
+  if ( ! ( game_status & ( flag_pondering | flag_puzzling ) ) )
+    {
+      Out( "    move     freq\n" );
+      OutCsaShogi( "info" );
+      for ( i = 0; i < moves; i++ )
+	{
+	  const char *str;
+	  
+	  dscore = (double)abook_move[i].freq / (double)USHRT_MAX;
+	  move = bm2move( ptree, (unsigned int)abook_move[i].smove, is_flip );
+	  str  = str_CSA_move( move );
+	  
+	  Out( "  %c %s  %5.1f\n", i == j ? '*' : ' ', str, dscore * 100.0 );
+	  OutCsaShogi( " %s(%.0f%%)", str, dscore * 100.0 );
+	}
+      OutCsaShogi( "\n" );
+    }
+
+  move = bm2move( ptree, (unsigned int)abook_move[j].smove, is_flip );
+  if ( ! is_move_valid( ptree, move, root_turn ) )
+    {
+      out_warning( "BAD BOOK MOVE!! " );
+      return 0;
+    }
+
+  ply = record_game.moves;
+  if ( game_status & flag_pondering ) { ply++; }
+
+  ptree->current_move[1] = move;
+
+  return 1;
+}
+
+
+static int CONV
+book_read( uint64_t key, book_move_t *pbook_move, unsigned int *pposition )
+{
+  uint64_t book_key;
+  const unsigned char *p;
+  unsigned int position, size_section, size, u;
+  int ibook_section, moves;
+  unsigned short s;
+
+  ibook_section = (int)( (unsigned int)key & (unsigned int)( NUM_SECTION-1 ) );
+
+  if ( fseek( pf_book, BK_SIZE_INDEX*ibook_section, SEEK_SET ) == EOF )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
   
+  if ( fread( &position, sizeof(int), 1, pf_book ) != 1 )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+  
+  if ( fread( &s, sizeof(unsigned short), 1, pf_book ) != 1 )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+  size_section = (unsigned int)s;
+  if ( size_section > MAX_SIZE_SECTION )
+    {
+      str_error = str_book_error;
+      return -2;
+    }
+
+  if ( fseek( pf_book, (long)position, SEEK_SET ) == EOF )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+  if ( fread( book_section, sizeof(unsigned char), (size_t)size_section,
+	      pf_book ) != (size_t)size_section )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+  
+  size       = 0;
+  p          = book_section;
+  *pposition = position;
+  while ( book_section + size_section > p )
+    {
+      size     = (unsigned int)p[0];
+      book_key = *(uint64_t *)( p + 1 );
+      if ( book_key == key ) { break; }
+      p          += size;
+      *ppositi
