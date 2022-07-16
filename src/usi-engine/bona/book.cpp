@@ -230,4 +230,108 @@ book_read( uint64_t key, book_move_t *pbook_move, unsigned int *pposition )
       book_key = *(uint64_t *)( p + 1 );
       if ( book_key == key ) { break; }
       p          += size;
-      *ppositi
+      *pposition += size;
+    }
+  if ( book_section + size_section <= p ) { return 0; }
+
+  for ( moves = 0, u = BK_SIZE_HEADER; u < size; moves++, u += BK_SIZE_MOVE )
+    {
+      pbook_move[moves].smove  = *(unsigned short *)(p+u+0);
+      pbook_move[moves].freq   = *(unsigned short *)(p+u+2);
+    }
+
+  return moves;
+}
+
+
+static ft_t CONV
+flip_ft( ft_t ft, int turn, int is_flip )
+{
+  int ito_rank, ito_file, ifrom_rank, ifrom_file;
+
+  ito_rank = airank[ft.to];
+  ito_file = aifile[ft.to];
+  if ( ft.from < nsquare )
+    {
+      ifrom_rank = airank[ft.from];
+      ifrom_file = aifile[ft.from];
+    }
+  else { ifrom_rank = ifrom_file = 0; }
+
+  if ( turn )
+    {
+      ito_rank = rank9 - ito_rank;
+      ito_file = file9 - ito_file;
+      if ( ft.from < nsquare )
+	{
+	  ifrom_rank = rank9 - ifrom_rank;
+	  ifrom_file = file9 - ifrom_file;
+	}
+    }
+
+  if ( is_flip )
+    {
+      ito_file = file9 - ito_file;
+      if ( ft.from < nsquare ) { ifrom_file = file9 - ifrom_file; }
+    }
+
+  ft.to = ito_rank * nfile + ito_file;
+  if ( ft.from < nsquare ) { ft.from = ifrom_rank * nfile + ifrom_file; }
+
+  return ft;
+}
+
+
+static unsigned int CONV
+bm2move( const tree_t * restrict ptree, unsigned int bmove, int is_flip )
+{
+  ft_t ft;
+  unsigned int move;
+  int is_promote;
+
+  ft.to      = I2To(bmove);
+  ft.from    = I2From(bmove);
+  ft         = flip_ft( ft, root_turn, is_flip );
+  is_promote = I2IsPromote(bmove);
+
+  move  = (unsigned int)( is_promote | From2Move(ft.from) | ft.to );
+  if ( ft.from >= nsquare ) { return move; }
+
+  if ( root_turn )
+    {
+      move |= Cap2Move(BOARD[ft.to]);
+      move |= Piece2Move(-BOARD[ft.from]);
+    }
+  else {
+    move |= Cap2Move(-BOARD[ft.to]);
+    move |= Piece2Move(BOARD[ft.from]);
+  }
+
+  return move;
+}
+
+
+static uint64_t CONV
+book_hash_func( const tree_t * restrict ptree, int *pis_flip )
+{
+  uint64_t key, key_flip;
+  unsigned int hand;
+  int i, iflip, irank, ifile, piece;
+
+  key = 0;
+  hand = root_turn ? HAND_W : HAND_B;
+  i = I2HandPawn(hand);    if ( i ) { key ^= b_hand_pawn_rand[i-1]; }
+  i = I2HandLance(hand);   if ( i ) { key ^= b_hand_lance_rand[i-1]; }
+  i = I2HandKnight(hand);  if ( i ) { key ^= b_hand_knight_rand[i-1]; }
+  i = I2HandSilver(hand);  if ( i ) { key ^= b_hand_silver_rand[i-1]; }
+  i = I2HandGold(hand);    if ( i ) { key ^= b_hand_gold_rand[i-1]; }
+  i = I2HandBishop(hand);  if ( i ) { key ^= b_hand_bishop_rand[i-1]; }
+  i = I2HandRook(hand);    if ( i ) { key ^= b_hand_rook_rand[i-1]; }
+
+  hand = root_turn ? HAND_B : HAND_W;
+  i = I2HandPawn(hand);    if ( i ) { key ^= w_hand_pawn_rand[i-1]; }
+  i = I2HandLance(hand);   if ( i ) { key ^= w_hand_lance_rand[i-1]; }
+  i = I2HandKnight(hand);  if ( i ) { key ^= w_hand_knight_rand[i-1]; }
+  i = I2HandSilver(hand);  if ( i ) { key ^= w_hand_silver_rand[i-1]; }
+  i = I2HandGold(hand);    if ( i ) { key ^= w_hand_gold_rand[i-1]; }
+  i = I2HandBishop(hand); 
