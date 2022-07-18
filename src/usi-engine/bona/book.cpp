@@ -334,4 +334,93 @@ book_hash_func( const tree_t * restrict ptree, int *pis_flip )
   i = I2HandKnight(hand);  if ( i ) { key ^= w_hand_knight_rand[i-1]; }
   i = I2HandSilver(hand);  if ( i ) { key ^= w_hand_silver_rand[i-1]; }
   i = I2HandGold(hand);    if ( i ) { key ^= w_hand_gold_rand[i-1]; }
-  i = I2HandBishop(hand); 
+  i = I2HandBishop(hand);  if ( i ) { key ^= w_hand_bishop_rand[i-1]; }
+  i = I2HandRook(hand);    if ( i ) { key ^= w_hand_rook_rand[i-1]; }
+
+  key_flip = key;
+
+  for ( irank = rank1; irank <= rank9; irank++ )
+    for ( ifile = file1; ifile <= file9; ifile++ )
+      {
+	if ( root_turn )
+	  {
+	    i     = ( rank9 - irank ) * nfile + file9 - ifile;
+	    iflip = ( rank9 - irank ) * nfile + ifile;
+	    piece = -(int)BOARD[nsquare-i-1];
+	  }
+	else {
+	  i     = irank * nfile + ifile;
+	  iflip = irank * nfile + file9 - ifile;
+	  piece = (int)BOARD[i];
+	}
+
+#define Foo(t_pc)  key      ^= (t_pc ## _rand)[i];     \
+                   key_flip ^= (t_pc ## _rand)[iflip];
+	switch ( piece )
+	  {
+	  case  pawn:        Foo( b_pawn );        break;
+	  case  lance:       Foo( b_lance );       break;
+	  case  knight:      Foo( b_knight );      break;
+	  case  silver:      Foo( b_silver );      break;
+	  case  gold:        Foo( b_gold );        break;
+	  case  bishop:      Foo( b_bishop );      break;
+	  case  rook:        Foo( b_rook );        break;
+	  case  king:        Foo( b_king );        break;
+	  case  pro_pawn:    Foo( b_pro_pawn );    break;
+	  case  pro_lance:   Foo( b_pro_lance );   break;
+	  case  pro_knight:  Foo( b_pro_knight );  break;
+	  case  pro_silver:  Foo( b_pro_silver );  break;
+	  case  horse:       Foo( b_horse );       break;
+	  case  dragon:      Foo( b_dragon );      break;
+	  case -pawn:        Foo( w_pawn );        break;
+	  case -lance:       Foo( w_lance );       break;
+	  case -knight:      Foo( w_knight );      break;
+	  case -silver:      Foo( w_silver );      break;
+	  case -gold:        Foo( w_gold );        break;
+	  case -bishop:      Foo( w_bishop );      break;
+	  case -rook:        Foo( w_rook );        break;
+	  case -king:        Foo( w_king );        break;
+	  case -pro_pawn:    Foo( w_pro_pawn );    break;
+	  case -pro_lance:   Foo( w_pro_lance );   break;
+	  case -pro_knight:  Foo( w_pro_knight );  break;
+	  case -pro_silver:  Foo( w_pro_silver );  break;
+	  case -horse:       Foo( w_horse );       break;
+	  case -dragon:      Foo( w_dragon );      break;
+	  }
+#undef Foo
+      }
+
+  if ( key > key_flip )
+    {
+      key       = key_flip;
+      *pis_flip = 1;
+    }
+  else { *pis_flip = 0; }
+
+  return key;
+}
+
+
+static int CONV
+normalize_book_move( book_move_t * restrict pbook_move, int moves )
+{
+  book_move_t swap;
+  double dscale;
+  unsigned int u, norm;
+  int i, j;
+
+  /* insertion sort by nwin */
+  pbook_move[moves].freq = 0;
+  for ( i = moves-2; i >= 0; i-- )
+    {
+      u    = pbook_move[i].freq;
+      swap = pbook_move[i];
+      for ( j = i+1; pbook_move[j].freq > u; j++ )
+	{
+	  pbook_move[j-1] = pbook_move[j];
+	}
+      pbook_move[j-1] = swap;
+    }
+      
+  /* normalization */
+  for ( norm = 0,
