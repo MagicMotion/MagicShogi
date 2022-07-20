@@ -423,4 +423,111 @@ normalize_book_move( book_move_t * restrict pbook_move, int moves )
     }
       
   /* normalization */
-  for ( norm = 0,
+  for ( norm = 0, i = 0; i < moves; i++ ) { norm += pbook_move[i].freq; }
+  dscale = (double)USHRT_MAX / (double)norm;
+  for ( norm = 0, i = 0; i < moves; i++ )
+    {
+      u = (unsigned int)( (double)pbook_move[i].freq * dscale );
+      if ( ! u )           { u = 1U; }
+      if ( u > USHRT_MAX ) { u = USHRT_MAX; }
+      
+      pbook_move[i].freq = (unsigned short)u;
+      norm              += u;
+    }
+  if ( norm > (unsigned int)pbook_move[0].freq + USHRT_MAX )
+    {
+      str_error = "normalization error";
+      return -2;
+    }
+
+  pbook_move[0].freq
+    = (unsigned short)( pbook_move[0].freq + USHRT_MAX - norm );
+  
+  return 1;
+}
+
+
+#if ! defined(MINIMUM)
+
+#define MaxNumCell      0x400000
+#if defined(BK_SMALL) || defined(BK_TINY)
+#  define MaxPlyBook    64
+#else
+#  define MaxPlyBook    128
+#endif
+
+typedef struct {
+  unsigned int nwin, ngame, nwin_bnz, ngame_bnz, move;
+} record_move_t;
+
+typedef struct {
+  uint64_t key;
+  unsigned short smove;
+  unsigned char result;
+} cell_t;
+
+static unsigned int CONV move2bm( unsigned int move, int turn, int is_flip );
+static int CONV find_min_cell( const cell_t *pcell, int ntemp );
+static int CONV read_a_cell( cell_t *pcell, FILE *pf );
+static int compare( const void * p1, const void *p2 );
+static int CONV dump_cell( cell_t *pcell, int ncell, int num_tmpfile );
+static int CONV examine_game( tree_t * restrict ptree, record_t *pr,
+			      int *presult, unsigned int *pmoves );
+static int CONV move_selection( const record_move_t *p, int ngame, int nwin );
+static int CONV make_cell_csa( tree_t * restrict ptree, record_t *pr,
+			       cell_t *pcell, int num_tmpfile );
+static int CONV merge_cell( record_move_t *precord_move, FILE **ppf,
+			    int num_tmpfile );
+static int CONV read_anti_book( tree_t * restrict ptree, record_t * pr );
+
+int CONV
+book_create( tree_t * restrict ptree )
+{
+  record_t record;
+  FILE *ppf[101];
+  char str_filename[SIZE_FILENAME];
+  record_move_t *precord_move;
+  cell_t *pcell;
+  int iret, num_tmpfile, i, j;
+
+
+  num_tmpfile = 0;
+
+  pcell = (cell_t*)memory_alloc( sizeof(cell_t) * MaxNumCell );
+  if ( pcell == NULL ) { return -2; }
+
+  Out("\n  [book.csa]\n");
+  
+  iret = record_open( &record, "book.csa", mode_read, NULL, NULL );
+  if ( iret < 0 ) { return iret; }
+
+  num_tmpfile = make_cell_csa( ptree, &record, pcell, num_tmpfile );
+  if ( num_tmpfile < 0 )
+    {
+      memory_free( pcell );
+      record_close( &record );
+      return num_tmpfile;
+    }
+
+  iret = record_close( &record );
+  if ( iret < 0 )
+    {
+      memory_free( pcell );
+      return iret;
+    }
+
+  memory_free( pcell );
+
+  if ( ! num_tmpfile )
+    {
+      str_error = "No book data";
+      return -2;
+    }
+
+  if ( num_tmpfile > 100 )
+    {
+      str_error = "Number of tmp??.bin files are too large.";
+      return -2;
+    }
+
+  iret = book_off();
