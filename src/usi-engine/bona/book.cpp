@@ -531,3 +531,117 @@ book_create( tree_t * restrict ptree )
     }
 
   iret = book_off();
+  if ( iret < 0 ) { return iret; }
+
+  pf_book = file_open( str_book, "wb" );
+  if ( pf_book == NULL ) { return -2; }
+
+  precord_move = (record_move_t*)memory_alloc( sizeof(record_move_t) * (MAX_LEGAL_MOVES+1) );
+  if ( precord_move == NULL ) { return -2; }
+  
+  for ( i = 0; i < num_tmpfile; i++ )
+    {
+      snprintf( str_filename, SIZE_FILENAME, "tmp%02d.bin", i );
+      ppf[i] = file_open( str_filename, "rb" );
+      if ( ppf[i] == NULL )
+	{
+	  memory_free( precord_move );
+	  file_close( pf_book );
+	  for ( j = 0; j < i; j++ ) { file_close( ppf[j] ); }
+	  return -2;
+	}
+    }
+
+  iret = merge_cell( precord_move, ppf, num_tmpfile );
+  if ( iret < 0 )
+    {
+      memory_free( precord_move );
+      file_close( pf_book );
+      for ( i = 0; i < num_tmpfile; i++ ) { file_close( ppf[i] ); }
+      return iret;
+    }
+
+  memory_free( precord_move );
+
+  iret = book_on();
+  if ( iret < 0 ) { return iret; }
+
+#if 1
+  iret = record_open( &record, "book_anti.csa", mode_read, NULL, NULL );
+  if ( iret < 0 ) { return iret; }
+
+  iret = read_anti_book( ptree, &record );
+  if ( iret < 0 )
+    {
+      record_close( &record );
+      return iret;
+    }
+#endif
+
+  return record_close( &record );
+}
+
+
+static int CONV
+read_anti_book( tree_t * restrict ptree, record_t * pr )
+{
+  uint64_t key;
+  book_move_t abook_move[ BK_MAX_MOVE+1 ];
+  size_t size;
+  unsigned int move, position, bm, umoves;
+  int iret, result, istatus, is_flip, i, moves;
+
+  do {
+
+    istatus = examine_game( ptree, pr, &result, &umoves );
+    if ( istatus < 0 ) { return istatus; }
+    if ( result == -2 )
+      {
+	str_error = "no result in book_anti.csa";
+	return -2;
+      }
+
+    while ( pr->moves < umoves-1U )
+      {
+	istatus = in_CSA( ptree, pr, NULL, 0 );
+	if ( istatus != record_misc )
+	  {
+	    str_error = "internal error at book.c";
+	    return -2;
+	  }
+      }
+
+    istatus = in_CSA( ptree, pr, &move, flag_nomake_move );
+    if ( istatus < 0 ) { return istatus; }
+
+    key = book_hash_func( ptree, &is_flip );
+    
+    moves = book_read( key, abook_move, &position );
+    if ( moves < 0 ) { return moves; }
+
+    bm = move2bm( move, root_turn, is_flip );
+    for ( i = 0; i < moves; i++ )
+      {
+	if ( bm == abook_move[i].smove ) { break; }
+      }
+
+    if ( i == moves )
+      {
+	out_board( ptree, stdout, 0, 0 );
+	printf( "%s is not found in the book\n\n", str_CSA_move(move) );
+      }
+    else {
+      abook_move[i].freq = 0;
+
+      iret = normalize_book_move( abook_move, moves );
+      if ( iret < 0 ) { return iret; }
+
+      for ( i = 0; i < moves; i++ )
+	{
+	  *(unsigned short *)( book_section + i*BK_SIZE_MOVE )
+	    = abook_move[i].smove;
+	  *(unsigned short *)( book_section + i*BK_SIZE_MOVE + 2 )
+	    = abook_move[i].freq;
+	}
+      size = (size_t)( moves * BK_SIZE_MOVE );
+      if ( fseek( pf_b
