@@ -644,4 +644,102 @@ read_anti_book( tree_t * restrict ptree, record_t * pr )
 	    = abook_move[i].freq;
 	}
       size = (size_t)( moves * BK_SIZE_MOVE );
-      if ( fseek( pf_b
+      if ( fseek( pf_book, (long)(position+BK_SIZE_HEADER), SEEK_SET ) == EOF
+	   || fwrite( book_section, sizeof(unsigned char),
+		      size, pf_book ) != size )
+	{
+	  str_error = str_io_error;
+	  return -2;
+	}
+      
+      out_board( ptree, stdout, 0, 0 );
+      printf( "%s is discarded\n\n", str_CSA_move(move) );
+    }
+
+    if ( istatus != record_eof && istatus != record_next )
+      {
+	istatus = record_wind( pr );
+	if ( istatus < 0 ) { return istatus; }
+      }
+  } while ( istatus != record_eof );
+
+  return 1;
+}
+
+
+static int CONV
+make_cell_csa( tree_t * restrict ptree, record_t *pr, cell_t *pcell,
+	       int num_tmpfile )
+{
+  struct {
+    uint64_t hash_key;
+    unsigned int hand, move;
+  } rep_tbl[MaxPlyBook+1];
+  uint64_t key;
+  unsigned int nwhite_win, nblack_win, ndraw, ninvalid, nbnz_black, nbnz_white;
+  unsigned int move, moves, uresult;
+  int icell, result, is_flip, iret, istatus, ply, i, black_bnz, white_bnz;
+
+  nwhite_win = nblack_win = ndraw = ninvalid = nbnz_white = nbnz_black = 0;
+  icell = black_bnz = white_bnz = 0;
+  istatus = record_next;
+
+  while ( istatus != record_eof ) {
+
+    istatus = examine_game( ptree, pr, &result, &moves );
+    if ( istatus < 0 ) { return istatus; }
+
+    if      ( result == -1 ) { nwhite_win++; }
+    else if ( result ==  1 ) { nblack_win++; }
+    else if ( result ==  0 ) { ndraw++; }
+    else {
+      ninvalid++;
+      continue;
+    }
+    
+    if ( moves > MaxPlyBook ) { moves = MaxPlyBook; }
+
+    for ( ply = 0;; ply++ ) {
+      istatus = in_CSA( ptree, pr, &move, flag_nomake_move );
+      if ( ! ply )
+	{
+	  black_bnz = strcmp( pr->str_name1, "Bonanza" ) ? 0 : 1;
+	  white_bnz = strcmp( pr->str_name2, "Bonanza" ) ? 0 : 1;
+	  if ( ! strcmp( pr->str_name1, "Bonanza" ) )
+	    {
+	      black_bnz   = 1;
+	      nbnz_black += 1;
+	    }
+	  else { black_bnz = 0; }
+	  if ( ! strcmp( pr->str_name2, "Bonanza" ) )
+	    {
+	      white_bnz   = 1;
+	      nbnz_white += 1;
+	    }
+	  else { white_bnz = 0; }
+	}
+      if ( istatus < 0 ) { return istatus; }
+      if ( istatus == record_resign && ! moves ) { break; }
+      if ( istatus != record_misc )
+	{
+	  str_error = "internal error at book.c";
+	  return -2;
+	}
+
+      rep_tbl[ply].hash_key = HASH_KEY;
+      rep_tbl[ply].hand     = HAND_B;
+      rep_tbl[ply].move     = move;
+      for ( i = ( ply & 1 ); i < ply; i += 2 )
+	{
+	  if ( rep_tbl[i].hash_key == HASH_KEY
+	       && rep_tbl[i].hand == HAND_B
+	       && rep_tbl[i].move == move ) { break; }
+	}
+
+      if ( i == ply ) {
+	key     = book_hash_func( ptree, &is_flip );
+	uresult = (unsigned int)( root_turn ? -1*result+1 : result+1 );
+	if ( ( root_turn == black && black_bnz )
+	     || ( root_turn == white && white_bnz ) ) { uresult |= 0x4U; }
+
+	pc
