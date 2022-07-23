@@ -742,4 +742,98 @@ make_cell_csa( tree_t * restrict ptree, record_t *pr, cell_t *pcell,
 	if ( ( root_turn == black && black_bnz )
 	     || ( root_turn == white && white_bnz ) ) { uresult |= 0x4U; }
 
-	pc
+	pcell[icell].key    = key;
+	pcell[icell].result = (unsigned char)uresult;
+	pcell[icell].smove  = (unsigned short)move2bm( move, root_turn,
+						       is_flip );
+	icell++;
+	if ( icell == MaxNumCell ) {
+	  iret = dump_cell( pcell, icell, num_tmpfile++ );
+	  if ( iret < 0 ) { return iret; }
+	  icell = 0;
+	}
+	if ( ! ( (icell-1) & 0x1ffff ) ) { Out( "." ); }
+      }
+      
+      if ( pr->moves >= moves ) { break; }
+
+      iret = make_move_root( ptree, move, 0 );
+      if ( iret < 0 ) {	return iret; }
+    }
+
+    if ( istatus != record_eof && istatus != record_next )
+      {
+	istatus = record_wind( pr );
+	if ( istatus < 0 ) { return istatus; }
+      }
+  }
+
+  iret  = dump_cell( pcell, icell, num_tmpfile++ );
+  if ( iret < 0 ) { return iret; }
+
+  Out( "\n"
+       "Total games:   %7u\n"
+       "  Discarded:   %7u\n"
+       "  Black wins:  %7u\n"
+       "  White wins:  %7u\n"
+       "  Drawn:       %7u\n"
+       "  Black Bnz:   %7u\n"
+       "  White Bnz:   %7u\n", nblack_win + nwhite_win + ndraw + ninvalid,
+       ninvalid, nblack_win, nwhite_win, ndraw, nbnz_black, nbnz_white );
+
+  return num_tmpfile;
+}
+
+
+static int CONV
+merge_cell( record_move_t *precord_move, FILE **ppf, int num_tmpfile )
+{
+  double dscale;
+  record_move_t swap;
+  cell_t acell[101];
+  uint64_t key;
+  unsigned int book_moves, book_positions, move, size_data, size_section;
+  unsigned int max_size_section, nwin, nwin_bnz, ngame, ngame_bnz, position;
+  unsigned int u, norm;
+  int i, j, iret, ibook_section, imin, nmove;
+  unsigned short s;
+
+  for ( i = 0; i < num_tmpfile; i++ )
+    {
+      iret = read_a_cell( acell + i, ppf[i] );
+      if ( iret < 0 ) { return iret; }
+    }
+  
+  imin             = find_min_cell( acell, num_tmpfile );
+  position         = BK_SIZE_INDEX * NUM_SECTION;
+  max_size_section = book_moves = book_positions = 0;
+  for ( ibook_section = 0; ibook_section < NUM_SECTION; ibook_section++ ) {
+    size_section = 0;
+    for (;;) {
+      key  = acell[imin].key;
+      i    = (int)( (unsigned int)key & (unsigned int)(NUM_SECTION-1) );
+      if ( i != ibook_section || key == UINT64_MAX ) { break; }
+      
+      nwin = nmove = nwin_bnz = ngame = ngame_bnz = precord_move[0].move = 0;
+      do {
+	move = (unsigned int)acell[imin].smove;
+	for ( i = 0; precord_move[i].move && precord_move[i].move != move;
+	      i++ );
+	if ( ! precord_move[i].move )
+	  {
+	    precord_move[i].nwin     = precord_move[i].ngame     = 0;
+	    precord_move[i].nwin_bnz = precord_move[i].ngame_bnz = 0;
+	    precord_move[i].move     = move;
+	    precord_move[i+1].move   = 0;
+	    nmove++;
+	  }
+
+	if ( acell[imin].result & b0010 )
+	  {
+	    if ( acell[imin].result & b0100 )
+	      {
+		precord_move[i].nwin_bnz += 1;
+		nwin_bnz                 += 1;
+	      }
+	    precord_move[i].nwin     += 1;
+	    nw
