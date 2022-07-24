@@ -836,4 +836,113 @@ merge_cell( record_move_t *precord_move, FILE **ppf, int num_tmpfile )
 		nwin_bnz                 += 1;
 	      }
 	    precord_move[i].nwin     += 1;
-	    nw
+	    nwin                     += 1;
+	  }
+
+	if ( acell[imin].result & b0100 )
+	  {
+	    precord_move[i].ngame_bnz += 1;
+	    ngame_bnz                 += 1;
+	  }
+	precord_move[i].ngame += 1;
+	ngame                 += 1;
+
+	iret = read_a_cell( acell + imin, ppf[imin] );
+	if ( iret < 0 ) { return iret; }
+	
+	imin = find_min_cell( acell, num_tmpfile );
+      } while ( key == acell[imin].key );
+
+#if defined(BK_COM)
+      while ( nmove > 1 && ngame_bnz >= 128 )
+	{
+	  double max_rate, rate;
+
+	  max_rate = 0.0;
+	  for ( i = 0; i < nmove; i++ )
+	    {
+	      rate = ( (double)precord_move[i].nwin_bnz
+		       / (double)( precord_move[i].ngame_bnz + 7 ) );
+	      if ( rate > max_rate ) { max_rate = rate; }
+	    }
+	  if ( max_rate < 0.1 ) { break; }
+
+	  max_rate *= 0.85;
+	  i = 0;
+	  do {
+	    rate = ( (double)precord_move[i].nwin_bnz
+		     / (double)( precord_move[i].ngame_bnz + 7 ) );
+	    
+	    if ( rate > max_rate ) { i++; }
+	    else {
+	      precord_move[i] = precord_move[nmove-1];
+	      nmove -= 1;
+	    }
+	  } while ( i < nmove );
+
+	  break;
+	}
+#endif
+      if ( ! nmove ) { continue; }
+      
+      i = 0;
+      do {
+	if ( move_selection( precord_move + i, ngame, nwin ) ) { i++; }
+	else {
+	  precord_move[i] = precord_move[nmove-1];
+	  nmove -= 1;
+	}
+      } while ( i < nmove );
+
+      if ( ! nmove ) { continue; }
+
+      size_data = BK_SIZE_HEADER + BK_SIZE_MOVE * nmove;
+      if ( size_section + size_data > MAX_SIZE_SECTION
+	   || size_data > UCHAR_MAX )
+	{
+	  str_error = "book_section buffer overflow";
+	  return -2;
+	}
+      if ( nmove > BK_MAX_MOVE )
+	{
+	  str_error = "BK_MAX_MOVE is too small";
+	  return -2;
+	}
+
+      /* insertion sort by nwin */
+      precord_move[nmove].nwin = 0;
+      for ( i = nmove-2; i >= 0; i-- )
+	{
+	  u    = precord_move[i].nwin;
+	  swap = precord_move[i];
+	  for ( j = i+1; precord_move[j].nwin > u; j++ )
+	    {
+	      precord_move[j-1] = precord_move[j];
+	    }
+	  precord_move[j-1] = swap;
+	}
+
+      /* normalize nwin */
+      for ( norm = 0, i = 0; i < nmove; i++ ) { norm += precord_move[i].nwin; }
+      dscale = (double)USHRT_MAX / (double)norm;
+      for ( norm = 0, i = 0; i < nmove; i++ )
+	{
+	  u = (unsigned int)( (double)precord_move[i].nwin * dscale );
+	  if ( ! u )           { u = 1U; }
+	  if ( u > USHRT_MAX ) { u = USHRT_MAX; }
+	  
+	  precord_move[i].nwin = u;
+	  norm                += u;
+	}
+      if ( norm > precord_move[0].nwin + USHRT_MAX )
+	{
+	  str_error = "normalization error\n";
+	  return -2;
+	}
+      precord_move[0].nwin += USHRT_MAX - norm;
+
+      book_section[size_section+0] = (unsigned char)size_data;
+      *(uint64_t *)(book_section+size_section+1) = key;
+
+      for ( u = size_section+BK_SIZE_HEADER, i = 0; i < nmove;
+	    u += BK_SIZE_MOVE, i++ )
