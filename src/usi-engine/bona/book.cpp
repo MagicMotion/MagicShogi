@@ -946,3 +946,132 @@ merge_cell( record_move_t *precord_move, FILE **ppf, int num_tmpfile )
 
       for ( u = size_section+BK_SIZE_HEADER, i = 0; i < nmove;
 	    u += BK_SIZE_MOVE, i++ )
+	{
+	  *(unsigned short *)(book_section+u)
+	    = (unsigned short)precord_move[i].move;
+	  *(unsigned short *)(book_section+u+2)
+	    = (unsigned short)precord_move[i].nwin;
+	}
+      book_positions += 1;
+      book_moves     += nmove;
+      size_section   += size_data;
+    }
+    if ( fseek( pf_book, BK_SIZE_INDEX * ibook_section, SEEK_SET ) == EOF )
+      {
+	str_error = str_io_error;
+	return -2;
+      }
+    if ( fwrite( &position, sizeof(unsigned int), 1, pf_book ) != 1 )
+      {
+	str_error = str_io_error;
+	return -2;
+      }
+    s = (unsigned short)size_section;
+    if ( fwrite( &s, sizeof(unsigned short), 1, pf_book ) != 1 )
+      {
+	str_error = str_io_error;
+	return -2;
+      }
+    if ( fseek( pf_book, position, SEEK_SET ) == EOF )
+      {
+	str_error = str_io_error;
+	return -2;
+      }
+    if ( fwrite( &book_section, sizeof(unsigned char), (size_t)size_section,
+		 pf_book ) != (size_t)size_section )
+      {
+	str_error = str_io_error;
+	return -2;
+      }
+
+    if ( size_section > max_size_section ) { max_size_section = size_section; }
+    position += size_section;
+  }
+  
+  Out( "Positions in the book:  %u\n", book_positions );
+  Out( "Moves in the book:      %u\n", book_moves );
+  Out( "Max. size of a section: %d\n", max_size_section );
+  
+  return 1;
+}
+
+
+static int CONV
+move_selection( const record_move_t *p, int ngame, int nwin )
+{
+  double total_win_norm, win_norm, win, game, win_move, game_move;
+
+#if defined(BK_TINY)
+  if ( p->nwin < 15 ) { return 0; }
+#elif defined(BK_SMALL)
+  if ( p->nwin < 3 ) { return 0; }
+#else
+  if ( ! p->nwin || p->ngame < 2 ) { return 0; }
+#endif
+
+  win       = (double)nwin;
+  game      = (double)ngame;
+  win_move  = (double)p->nwin;
+  game_move = (double)p->ngame;
+
+  total_win_norm = win      * game_move;
+  win_norm       = win_move * game;
+  if ( win_norm < total_win_norm * 0.85 ) { return 0; }
+
+  return 1;
+}
+
+
+static int CONV
+find_min_cell( const cell_t *pcell, int num_tmpfile )
+{
+  int imin, i;
+
+  imin = 0;
+  for ( i = 1; i < num_tmpfile; i++ )
+    {
+      if ( compare( pcell+imin, pcell+i ) == 1 ) { imin = i; }
+    }
+  return imin;
+}
+
+
+static int CONV
+read_a_cell( cell_t *pcell, FILE *pf )
+{
+  if ( fread( &pcell->key, sizeof(uint64_t), 1, pf ) != 1 )
+    {
+      if ( feof( pf ) )
+	{
+	  pcell->key = UINT64_MAX;
+	  return 1;
+	}
+      str_error = str_io_error;
+      return -2;
+    }
+  if ( fread( &pcell->smove, sizeof(unsigned short), 1, pf ) != 1 )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+  if ( fread( &pcell->result, sizeof(unsigned char), 1, pf ) != 1 )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+
+  return 1;
+}
+
+
+static int CONV
+examine_game( tree_t * restrict ptree, record_t *pr, int *presult,
+	      unsigned int *pmoves )
+{
+  rpos_t rpos;
+  int iret, istatus, is_lost, is_win;
+  unsigned int moves;
+
+  *presult = -2;
+
+  iret = record_getpos( pr, &rpos );
