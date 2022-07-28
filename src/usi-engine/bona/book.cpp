@@ -1075,3 +1075,122 @@ examine_game( tree_t * restrict ptree, record_t *pr, int *presult,
   *presult = -2;
 
   iret = record_getpos( pr, &rpos );
+  if ( iret < 0 ) { return iret; }
+
+  is_lost = is_win = 0;
+  moves = 0;
+  do {
+    istatus = in_CSA( ptree, pr, NULL, flag_detect_hang );
+    if ( istatus < 0 )
+      {
+	/* the game is end, however the record is invalid */
+	if ( strstr( str_error, str_bad_record ) != NULL
+	     && ( game_status & mask_game_end ) )
+	  {
+	    break;
+	  }
+
+	/* a hang-king and a double-pawn are counted as a lost game */
+	if ( strstr( str_error, str_king_hang ) != NULL
+	     || strstr( str_error, str_double_pawn )  != NULL
+	     || strstr( str_error, str_mate_drppawn ) != NULL )
+	  {
+	    is_lost = 1;
+	    break;
+	  }
+
+	return istatus;
+      }
+    /* previous move had an error, count as a won game */
+    else if ( istatus == record_error )
+      {
+	is_win = 1;
+	break;
+      }
+    else if ( istatus == record_misc ) { moves++; }
+  } while ( istatus != record_next && istatus != record_eof );
+
+  if ( istatus != record_next && istatus != record_eof )
+    {
+      istatus = record_wind( pr );
+      if ( istatus < 0 ) { return istatus; }
+    }
+
+  if ( ! ( is_lost || is_win || ( game_status & mask_game_end ) ) )
+    {
+      return istatus;
+    }
+
+  if      ( is_win ) { *presult = root_turn ? -1 : 1; }
+  else if ( is_lost || ( game_status & ( flag_mated | flag_resigned ) ) )
+    {
+      *presult = root_turn ? 1 : -1;
+    }
+  else { *presult = 0; }
+
+  *pmoves = moves;
+
+  iret = record_setpos( pr, &rpos );
+  if ( iret < 0 ) { return iret; }
+
+  return istatus;
+}
+
+
+static int CONV
+dump_cell( cell_t *pcell, int ncell, int num_tmpfile )
+{
+  char str_filename[SIZE_FILENAME];
+  FILE *pf;
+  int i, iret;
+
+  Out( " sort" );
+  qsort( pcell, ncell, sizeof(cell_t), compare );
+
+  Out( " dump", str_filename );
+  snprintf( str_filename, SIZE_FILENAME, "tmp%02d.bin", num_tmpfile );
+  pf = file_open( str_filename, "wb" );
+  if ( pf == NULL ) { return -2; }
+
+  for ( i = 0; i < ncell; i++ )
+    {
+      if ( fwrite( &pcell[i].key, sizeof(uint64_t), 1, pf ) != 1 )
+	{
+	  file_close( pf );
+	  str_error = str_io_error;
+	  return -2;
+	}
+      if ( fwrite( &pcell[i].smove, sizeof(unsigned short), 1, pf ) != 1 )
+	{
+	  file_close( pf );
+	  str_error = str_io_error;
+	  return -2;
+	}
+      if ( fwrite( &pcell[i].result, sizeof(unsigned char), 1, pf ) != 1 )
+	{
+	  file_close( pf );
+	  str_error = str_io_error;
+	  return -2;
+	}
+    }
+
+  iret = file_close( pf );
+  if ( iret < 0 ) { return iret; }
+
+  Out( " done (%s)\n", str_filename );
+
+  return 1;
+}
+
+
+static int compare( const void * p1, const void * p2 )
+{
+  const cell_t * pcell1 = (cell_t*)p1;
+  const cell_t * pcell2 = (cell_t*)p2;
+  unsigned int u1, u2;
+
+  u1 = (unsigned int)pcell1->key & (unsigned int)(NUM_SECTION-1);
+  u2 = (unsigned int)pcell2->key & (unsigned int)(NUM_SECTION-1);
+
+  if ( u1 < u2 ) { return -1; }
+  if ( u1 > u2 ) { re
