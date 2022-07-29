@@ -1193,4 +1193,31 @@ static int compare( const void * p1, const void * p2 )
   u2 = (unsigned int)pcell2->key & (unsigned int)(NUM_SECTION-1);
 
   if ( u1 < u2 ) { return -1; }
-  if ( u1 > u2 ) { re
+  if ( u1 > u2 ) { return  1; }
+  if ( pcell1->key < pcell2->key ) { return -1; }
+  if ( pcell1->key > pcell2->key ) { return  1; }
+
+  return 0;
+}
+
+
+static unsigned int CONV
+move2bm( unsigned int move, int turn, int is_flip )
+{
+  ft_t ft;
+  unsigned int bmove;
+  int is_promote;
+
+  ft.to      = I2To(move);
+  ft.from    = I2From(move);
+  is_promote = I2IsPromote(move);
+
+  ft = flip_ft( ft, turn, is_flip );
+
+  bmove = (unsigned int)( is_promote | From2Move(ft.from) | ft.to );
+
+  return bmove;
+}
+
+
+#endif /* no MINIMUM */
