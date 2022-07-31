@@ -238,4 +238,126 @@ in_CSA( tree_t * restrict ptree, record_t *pr, unsigned int *pmove, int flag )
 	game_status |= flag_resigned;
 	return record_resign;
       }
-    if ( ! strcmp( str_line, str_repet
+    if ( ! strcmp( str_line, str_repetition )
+	 || ! strcmp( str_line, str_jishogi ) )
+      {
+	game_status |= flag_drawn;
+	return record_drawn;
+      }
+    if ( ! strcmp( str_line, str_record_error ) )
+      {
+	return record_error;
+      }
+  } while ( str_line[0] == 'T' || str_line[0] == '%' );
+
+  if ( ! strcmp( str_line, "/" ) )
+    {
+      pr->games++;
+      pr->moves = 0;
+      return record_next;
+    }
+
+  if ( game_status & mask_game_end )
+    {
+      snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		pr->lines, str_bad_record );
+      str_error = str_message;
+      return -2;
+    }
+
+  iret = interpret_CSA_move( ptree, &move, str_line+1 );
+  if ( iret < 0 )
+    {
+      snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		pr->lines, str_error );
+      str_error = str_message;
+      return -2;
+    }
+  if ( pmove != NULL ) { *pmove = move; }
+
+  /* do time */
+  if ( flag & flag_time )
+    {
+      iret = read_CSA_line( pr, str_line );
+      if ( iret < 0 ) { return iret; }
+      if ( ! iret )
+	{
+	  snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		    pr->lines, str_unexpect_eof );
+	  str_error = str_message;
+	  return -2;
+	}
+      if ( str_line[0] != 'T' )
+	{
+	  snprintf( str_message, SIZE_MESSAGE, str_fmt_line, pr->lines,
+		   "Time spent is not available." );
+	  str_error = str_message;
+	  return -2;
+	}
+      l = strtol( str_line+1, &ptr, 0 );
+      if ( ptr == str_line+1 || l == LONG_MAX || l < 0 )
+	{
+	  snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		    pr->lines, str_bad_record );
+	  str_error = str_message;
+	  return -2;
+	}
+    }
+  else { l = 0; }
+  sec_elapsed = (unsigned int)l;
+  if ( root_turn ) { sec_w_total += (unsigned int)l; }
+  else             { sec_b_total += (unsigned int)l; }
+
+  iret = make_move_root( ptree, move, flag & ~flag_time );
+  if ( iret < 0 )
+    {
+      snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		pr->lines, str_error );
+      str_error = str_message;
+      return iret;
+    }
+
+  pr->moves++;
+
+  return record_misc;
+}
+
+
+int
+interpret_CSA_move( tree_t * restrict ptree, unsigned int *pmove,
+		    const char *str )
+{
+  int ifrom_file, ifrom_rank, ito_file, ito_rank, ipiece;
+  int ifrom, ito;
+  unsigned int move;
+  unsigned int *pmove_last;
+  unsigned int *p;
+
+  ifrom_file = str[0]-'0';
+  ifrom_rank = str[1]-'0';
+  ito_file   = str[2]-'0';
+  ito_rank   = str[3]-'0';
+
+  ito_file   = 9 - ito_file;
+  ito_rank   = ito_rank - 1;
+  ito        = ito_rank * 9 + ito_file;
+  ipiece     = str2piece( str+4 );
+  if ( ipiece < 0 )
+    {
+      str_error = str_illegal_move;
+      return -2;
+    }
+
+  if ( ! ifrom_file && ! ifrom_rank )
+    {
+      move  = To2Move(ito) | Drop2Move(ipiece);
+      ifrom = nsquare;
+    }
+  else {
+    ifrom_file = 9 - ifrom_file;
+    ifrom_rank = ifrom_rank - 1;
+    ifrom      = ifrom_rank * 9 + ifrom_file;
+    if ( abs(BOARD[ifrom]) + promote == ipiece )
+      {
+	ipiece -= promote;
+	move    = FLA
