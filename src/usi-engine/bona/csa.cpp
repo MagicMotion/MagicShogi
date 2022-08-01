@@ -360,4 +360,129 @@ interpret_CSA_move( tree_t * restrict ptree, unsigned int *pmove,
     if ( abs(BOARD[ifrom]) + promote == ipiece )
       {
 	ipiece -= promote;
-	move    = FLA
+	move    = FLAG_PROMO;
+      }
+    else { move = 0; }
+
+    move |= ( To2Move(ito) | From2Move(ifrom) | Cap2Move(abs(BOARD[ito]))
+	      | Piece2Move(ipiece) );
+  }
+
+  *pmove = 0;
+  pmove_last = ptree->amove;
+  pmove_last = GenCaptures(root_turn, pmove_last );
+  pmove_last = GenNoCaptures(root_turn, pmove_last );
+  pmove_last = GenCapNoProEx2(root_turn, pmove_last );
+  pmove_last = GenNoCapNoProEx2(root_turn, pmove_last );
+  pmove_last = GenDrop( root_turn, pmove_last );
+  for ( p = ptree->amove; p < pmove_last; p++ )
+    {
+      if ( *p == move )
+	{
+	  *pmove = move;
+	  break;
+	}
+    }
+    
+  if ( ! *pmove )
+    {
+      str_error = str_illegal_move;
+      if ( ipiece == pawn
+	   && ifrom == nsquare
+	   && ! BOARD[ito]
+	   && ( root_turn ? IsHandPawn(HAND_W) : IsHandPawn(HAND_B) ) )
+	{
+	  unsigned int u;
+
+	  if ( root_turn )
+	    {
+	      u = BBToU( BB_WPAWN_ATK );
+	      if ( u & (mask_file1>>ito_file) )
+		{
+		  str_error = str_double_pawn;
+		}
+	      else if ( BOARD[ito+nfile] == king )
+		{
+		  str_error = str_mate_drppawn;
+		}
+	    }
+	  else {
+	    u = BBToU( BB_BPAWN_ATK );
+	    if ( u & (mask_file1>>ito_file) ) { str_error = str_double_pawn; }
+	    else if ( BOARD[ito-nfile] == -king )
+	      {
+		str_error = str_mate_drppawn;
+	      }
+	  }
+	}
+      return -2;
+    }
+  
+  return 1;
+}
+
+
+const char *
+str_CSA_move( unsigned int move )
+{
+  static char str[7];
+  std::string csa_str = string_CSA_move( move );
+  if ( csa_str.size() >= 7 ) { printf("str_CSA_move() err.\n"); exit(0); }
+  strncpy(str, csa_str.c_str(), 7);
+  str[7-1] = 0;
+  return str;
+}
+
+std::string string_CSA_move( unsigned int move ) {
+  const int size = 7+8;	// +8 is "-Wformat-truncation" prevention
+  char str[size];
+  int ifrom, ito, ipiece_move, is_promote;
+
+  is_promote  = (int)I2IsPromote(move);
+  ipiece_move = (int)I2PieceMove(move);
+  ifrom       = (int)I2From(move);
+  ito         = (int)I2To(move);
+
+  if ( is_promote )
+    {
+      snprintf( str, size, "%d%d%d%d%s",
+		9-aifile[ifrom], airank[ifrom]+1,
+		9-aifile[ito],   airank[ito]  +1,
+		astr_table_piece[ ipiece_move + promote ] );
+    }
+  else if ( ifrom < nsquare )
+    {
+      snprintf( str, size, "%d%d%d%d%s",
+		9-aifile[ifrom], airank[ifrom]+1,
+		9-aifile[ito],   airank[ito]  +1,
+		astr_table_piece[ ipiece_move ] );
+    }
+  else {
+    snprintf( str, size, "00%d%d%s",
+	      9-aifile[ito], airank[ito]+1,
+	      astr_table_piece[ From2Drop(ifrom) ] );
+  }
+
+  std::string csa_str = str;
+  return csa_str;
+}
+
+int
+read_board_rep1( const char *str_line, min_posi_t *pmin_posi )
+{
+  const char *p;
+  char str_piece[3];
+  int piece, ifile, irank, isquare;
+  signed char board[nsquare];
+
+  memcpy( board, &min_posi_no_handicap.asquare, nsquare );
+
+  for ( p = str_line + 2; p[0] != '\0'; p += 4 )
+    {
+      if ( p[1] == '\0' || p[2] == '\0' || p[3] == '\0' )
+	{
+	  str_error = str_bad_board;
+	  return -2;
+	}
+      str_piece[0] = p[2];
+      str_piece[1
