@@ -592,4 +592,121 @@ csa2usi( const tree_t * restrict ptree, const char *str_csa, char *str_usi )
        && 'A' <= str_csa[4] && str_csa[4] <= 'Z'
        && 'A' <= str_csa[5] && str_csa[5] <= 'Z' )
     {
-      switch ( str2piece( s
+      switch ( str2piece( str_csa + 4 ) )
+	{
+	case pawn:    str_usi[0] = 'P';  break;
+	case lance:   str_usi[0] = 'L';  break;
+	case knight:  str_usi[0] = 'N';  break;
+	case silver:  str_usi[0] = 'S';  break;
+	case gold:    str_usi[0] = 'G';  break;
+	case bishop:  str_usi[0] = 'B';  break;
+	case rook:    str_usi[0] = 'R';  break;
+	default:  return -1;  break;
+	}
+
+      str_usi[1] = '*';
+      str_usi[2] = str_csa[2];
+      str_usi[3] = (char)( str_csa[3] + 'a' - '1' );
+      str_usi[4] = '\0';
+
+      return 1;
+    }
+
+
+  if ( '1' <= str_csa[0] && str_csa[0] <= '9'
+       && '1' <= str_csa[1] && str_csa[1] <= '9'
+       && '1' <= str_csa[2] && str_csa[2] <= '9'
+       && '1' <= str_csa[3] && str_csa[3] <= '9'
+       && 'A' <= str_csa[4] && str_csa[4] <= 'Z'
+       && 'A' <= str_csa[5] && str_csa[5] <= 'Z' )
+    {
+      int sq_file, sq_rank, sq, pc;
+
+
+      str_usi[0] = str_csa[0];
+      str_usi[1] = (char)( str_csa[1] + 'a' - '1' );
+      str_usi[2] = str_csa[2];
+      str_usi[3] = (char)( str_csa[3] + 'a' - '1' );
+
+      sq_file = str_csa[0]-'0';
+      sq_file = 9 - sq_file;
+
+      sq_rank = str_csa[1]-'0';
+      sq_rank = sq_rank - 1;
+      sq      = sq_rank * 9 + sq_file;
+      pc      = abs(BOARD[sq]);
+
+      if ( pc + promote == str2piece( str_csa + 4 ) )
+	{
+	  str_usi[4] = '+';
+	  str_usi[5] = '\0';
+	}
+      else { str_usi[4] = '\0'; }
+
+
+      return 1;
+    }
+
+  str_usi[0] = '*';
+  str_usi[1] = '\0';
+  return 1;
+}
+#endif
+
+
+static void
+out_CSA_header( const tree_t * restrict ptree, record_t *pr )
+{
+  time_t t;
+
+  fprintf( pr->pf, "'" BNZ_NAME " version " BNZ_VER "\n" );
+
+  if ( pr->str_name1[0] != '\0' )
+    {
+      fprintf( pr->pf, "N+%s\n", pr->str_name1 );
+    }
+
+  if ( pr->str_name2[0] != '\0' )
+    {
+      fprintf( pr->pf, "N-%s\n", pr->str_name2 );
+    }
+
+  t = time( NULL );
+  if ( t == (time_t)-1 ) { out_warning( "%s time() faild." ); }
+  else {
+#if defined(_MSC_VER)
+    struct tm tm;
+    localtime_s( &tm, &t );
+    fprintf( pr->pf, "$START_TIME:%4d/%02d/%02d %02d:%02d:%02d\n",
+	     tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+	     tm.tm_hour, tm.tm_min, tm.tm_sec );
+#else
+    struct tm *ptm;
+    ptm = localtime( &t );
+    fprintf( pr->pf, "$START_TIME:%4d/%02d/%02d %02d:%02d:%02d\n",
+	     ptm->tm_year+1900, ptm->tm_mon+1, ptm->tm_mday,
+	     ptm->tm_hour, ptm->tm_min, ptm->tm_sec );
+#endif
+  }
+
+  if ( ! memcmp( BOARD, min_posi_no_handicap.asquare, nsquare )
+       && min_posi_no_handicap.turn_to_move == root_turn
+       && min_posi_no_handicap.hand_black   == HAND_B
+       && min_posi_no_handicap.hand_white   == HAND_W )
+    {
+      fprintf( pr->pf, "PI\n" );
+      pr->lines++;
+    }
+  else {
+    out_board( ptree, pr->pf, 0, 1 );
+    pr->lines += 10;
+  }
+  
+  if ( root_turn ) { fprintf( pr->pf, "-\n" ); }
+  else             { fprintf( pr->pf, "+\n" ); }
+  pr->lines++;
+}
+
+
+static int
+in_CSA_header( tree_t * restrict
