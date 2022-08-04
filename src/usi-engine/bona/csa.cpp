@@ -485,4 +485,111 @@ read_board_rep1( const char *str_line, min_posi_t *pmin_posi )
 	  return -2;
 	}
       str_piece[0] = p[2];
-      str_piece[1
+      str_piece[1] = p[3];
+      str_piece[2] = '\0';
+      piece        = str2piece( str_piece );
+      ifile        = p[0]-'0';
+      irank        = p[1]-'0';
+      ifile        = 9 - ifile;
+      irank        = irank - 1;
+      isquare      = irank * nfile + ifile;
+      if ( piece == -2 || ifile < file1 || ifile > file9 || irank < rank1
+	   || irank > rank9 || abs(board[isquare]) != piece )
+	{
+	  str_error = str_bad_board;
+	  return -2;
+	}
+      board[isquare] = empty;
+    }
+  
+  for ( isquare = 0; isquare < nsquare; isquare++ ) if ( board[isquare] )
+    {
+      if ( pmin_posi->asquare[isquare] )
+	{
+	  str_error = str_bad_board;
+	  return -2;
+	}
+      pmin_posi->asquare[isquare] = board[isquare];
+    }
+  
+  return 1;
+}
+
+
+#if defined(USI)
+int CONV
+usi2csa( const tree_t * restrict ptree, const char *str_usi, char *str_csa )
+{
+  int sq_file, sq_rank, sq, pc;
+
+  if ( '1' <= str_usi[0] && str_usi[0] <= '9'
+       && 'a' <= str_usi[1] && str_usi[1] <= 'i'
+       && '1' <= str_usi[2] && str_usi[2] <= '9'
+       && 'a' <= str_usi[3] && str_usi[3] <= 'i' )
+    {
+      str_csa[0] = str_usi[0];
+      str_csa[1] = (char)( str_usi[1] + '1' - 'a' );
+      str_csa[2] = str_usi[2];
+      str_csa[3] = (char)( str_usi[3] + '1' - 'a' );
+
+      sq_file = str_csa[0]-'0';
+      sq_file = 9 - sq_file;
+      sq_rank = str_csa[1]-'0';
+      sq_rank = sq_rank - 1;
+      sq      = sq_rank * 9 + sq_file;
+      pc      = abs(BOARD[sq]);
+      if ( str_usi[4] == '+' ) { pc += promote; }
+
+      str_csa[4] = astr_table_piece[pc][0];
+      str_csa[5] = astr_table_piece[pc][1];
+      str_csa[6] = '\0';
+
+      return 1;
+    }
+
+  if ( isascii( (int)str_usi[0] )
+       && isalpha( (int)str_usi[0] )
+       && str_usi[1] == '*'
+       && '1' <= str_usi[2] && str_usi[2] <= '9'
+       && 'a' <= str_usi[3] && str_usi[3] <= 'i' )
+    {
+      str_csa[0] = '0';
+      str_csa[1] = '0';
+      str_csa[2] = str_usi[2];
+      str_csa[3] = (char)( str_usi[3] - 'a' + '1' );
+      
+      switch ( str_usi[0] )
+	{
+	case 'P':  pc = pawn;    break;
+	case 'L':  pc = lance;   break;
+	case 'N':  pc = knight;  break;
+	case 'S':  pc = silver;  break;
+	case 'G':  pc = gold;    break;
+	case 'B':  pc = bishop;  break;
+	case 'R':  pc = rook;    break;
+	default:   return -1;
+	}
+
+      str_csa[4] = astr_table_piece[pc][0];
+      str_csa[5] = astr_table_piece[pc][1];
+      str_csa[6] = '\0';
+
+      return 1;
+    }
+
+  snprintf( str_message, SIZE_MESSAGE, "%s: %s", str_illegal_move, str_usi );
+  str_error = str_message;
+  return -1;
+}
+
+
+int CONV
+csa2usi( const tree_t * restrict ptree, const char *str_csa, char *str_usi )
+{
+  if ( str_csa[0] == '0' && str_csa[1] == '0'
+       && '1' <= str_csa[2] && str_csa[2] <= '9'
+       && '1' <= str_csa[3] && str_csa[3] <= '9'
+       && 'A' <= str_csa[4] && str_csa[4] <= 'Z'
+       && 'A' <= str_csa[5] && str_csa[5] <= 'Z' )
+    {
+      switch ( str2piece( s
