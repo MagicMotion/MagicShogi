@@ -709,4 +709,110 @@ out_CSA_header( const tree_t * restrict ptree, record_t *pr )
 
 
 static int
-in_CSA_header( tree_t * restrict
+in_CSA_header( tree_t * restrict ptree, record_t *pr, int flag )
+{
+  min_posi_t min_posi;
+  const char *str_name1, *str_name2;
+  char str_line[ SIZE_CSALINE ];
+  int iret, is_rep1_done, is_rep2_done, is_all_done, i, j;
+
+  for ( i = 0; i < MAX_ANSWER; i++ ) { pr->info.str_move[i][0] = '\0'; }
+  str_name1 = str_name2 = NULL;
+
+  /* version and info */
+  for ( ;; )
+    {
+      iret = read_CSA_line( pr, str_line );
+      if ( iret < 0 ) { return iret; }
+
+      if ( str_line[0] != 'N'
+	   && str_line[0] != 'V'
+	   && str_line[0] != '$' ) { break; }
+
+      if ( ! memcmp( str_line, "$ANSWER:", 8 ) )
+	{
+	  for ( i = 0; i < MAX_ANSWER; i++ )
+	    {
+	      for ( j = 0; j < 8; j++ )
+		{
+		  pr->info.str_move[i][j] = str_line[8+i*8+j];
+		}
+	      pr->info.str_move[i][7] = '\0';
+	      if ( str_line[8+i*8+7] == '\0' ) { break; }
+	    }
+	  if ( i == MAX_ANSWER )
+	    {
+	      snprintf( str_message, SIZE_MESSAGE, str_fmt_line, pr->lines,
+		       "The number of answers reached MAX_ANSWER." );
+	      str_error = str_message;
+	      return -2;
+	    }
+	}
+      else if ( ! memcmp( str_line, "N+", 2 ) )
+	{
+	  strncpy( pr->str_name1, str_line+2, SIZE_PLAYERNAME-1 );
+	  pr->str_name1[SIZE_PLAYERNAME-1] = '\0';
+	  str_name1 = pr->str_name1;
+	}
+      else if ( ! memcmp( str_line, "N-", 2 ) )
+	{
+	  strncpy( pr->str_name2, str_line+2, SIZE_PLAYERNAME-1 );
+	  pr->str_name2[SIZE_PLAYERNAME-1] = '\0';
+	  str_name2 = pr->str_name2;
+	}
+    }
+  if ( ! iret )
+    {
+      snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		pr->lines, str_unexpect_eof );
+      str_error = str_message;
+      return -2;
+    }
+
+  /* board representation */
+  memset( &min_posi.asquare, empty, nsquare );
+  min_posi.hand_black = min_posi.hand_white = 0;
+  is_rep1_done = is_rep2_done = is_all_done = 0;
+  while ( str_line[0] == 'P' )
+    {
+      if ( str_line[1] == 'I' && ! is_rep2_done && ! is_all_done )
+	{
+	  is_rep1_done = 1;
+	  iret = read_board_rep1( str_line, &min_posi );
+	}
+      else if ( isdigit( (int)str_line[1] ) && str_line[1] != '0'
+		&& ! is_rep1_done && ! is_all_done )
+	{
+	  is_rep2_done = 1;
+	  iret = read_board_rep2( str_line, &min_posi );
+	}
+      else if ( str_line[1] == '+' || str_line[1] == '-' )
+	{
+	  is_all_done = iret = read_board_rep3( str_line, &min_posi );
+	}
+      else { break; }
+      if ( iret < 0 )
+	{
+	  snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		    pr->lines, str_error );
+	  str_error = str_message;
+	  return iret;
+	}
+
+      iret = read_CSA_line( pr, str_line );
+      if ( iret < 0 ) { return iret; }
+      if ( ! iret )
+	{
+	  snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		    pr->lines, str_unexpect_eof );
+	  str_error = str_message;
+	  return -2;
+	}
+    }
+  
+  /* turn to move */
+  if ( strcmp( str_line, "+" ) && strcmp( str_line, "-" ) )
+    {
+      snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		pr->lines, str_bad_record );
+      s
