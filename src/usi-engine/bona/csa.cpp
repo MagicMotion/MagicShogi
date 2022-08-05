@@ -815,4 +815,74 @@ in_CSA_header( tree_t * restrict ptree, record_t *pr, int flag )
     {
       snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
 		pr->lines, str_bad_record );
-      s
+      str_error = str_message;
+      return -2;
+    }
+  min_posi.turn_to_move = (char)( ( str_line[0] == '+' ) ? black : white );
+
+  return ini_game( ptree, &min_posi, flag, str_name1, str_name2 );
+}
+
+
+static int
+read_board_rep3( const char *str_line, min_posi_t *pmin_posi )
+{
+  int is_all_done, irank, ifile, isquare, piece, n, color;
+  int npawn, nlance, nknight, nsilver, ngold, nbishop, nrook;
+  unsigned int handv, hand_white, hand_black;
+  char str_piece[3];
+
+  is_all_done = 0;
+  str_piece[2] = '\0';
+
+  color = str_line[1] == '+' ? black : white;
+  for ( n = 2; str_line[n] != '\0'; n += 4 ) {
+    if ( str_line[n+1] == '\0' || str_line[n+2] == '\0'
+	 || str_line[n+3] == '\0' || is_all_done )
+      {
+	str_error = str_bad_board;
+	return -2;
+      }
+    if ( str_line[n] == '0' && str_line[n+1] == '0'
+	 && str_line[n+2] == 'A' && str_line[n+3] == 'L' ) {
+      hand_black = pmin_posi->hand_black;
+      hand_white = pmin_posi->hand_white;
+      npawn   = (int)(I2HandPawn(hand_black)   + I2HandPawn(hand_white));
+      nlance  = (int)(I2HandLance(hand_black)  + I2HandLance(hand_white));
+      nknight = (int)(I2HandKnight(hand_black) + I2HandKnight(hand_white));
+      nsilver = (int)(I2HandSilver(hand_black) + I2HandSilver(hand_white));
+      ngold   = (int)(I2HandGold(hand_black)   + I2HandGold(hand_white));
+      nbishop = (int)(I2HandBishop(hand_black) + I2HandBishop(hand_white));
+      nrook   = (int)(I2HandRook(hand_black)   + I2HandRook(hand_white));
+      for ( isquare = 0; isquare < nsquare; isquare++ )
+	switch ( abs( pmin_posi->asquare[isquare] ) )
+	  {
+	  case pawn:    case pro_pawn:    npawn++;    break;
+	  case lance:   case pro_lance:   nlance++;   break;
+	  case knight:  case pro_knight:  nknight++;  break;
+	  case silver:  case pro_silver:  nsilver++;  break;
+	  case gold:                      ngold++;    break;
+	  case bishop:  case horse:       nbishop++;  break;
+	  case rook:    case dragon:      nrook++;    break;
+	  default:
+	    assert( pmin_posi->asquare[isquare] == empty );
+	    break;
+	  }
+      handv  = flag_hand_pawn   * ( npawn_max   -npawn );
+      handv += flag_hand_lance  * ( nlance_max  -nlance );
+      handv += flag_hand_knight * ( nknight_max -nknight );
+      handv += flag_hand_silver * ( nsilver_max -nsilver );
+      handv += flag_hand_gold   * ( ngold_max   -ngold );
+      handv += flag_hand_bishop * ( nbishop_max -nbishop );
+      handv += flag_hand_rook   * ( nrook_max   -nrook );
+      if ( color ) { pmin_posi->hand_white += handv; }
+      else         { pmin_posi->hand_black += handv; }
+      is_all_done = 1;
+      continue;
+    }
+    
+    ifile        = str_line[n+0]-'0';
+    irank        = str_line[n+1]-'0';
+    str_piece[0] = str_line[n+2];
+    str_piece[1] = str_line[n+3];
+    piece        = s
