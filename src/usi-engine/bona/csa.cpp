@@ -885,4 +885,124 @@ read_board_rep3( const char *str_line, min_posi_t *pmin_posi )
     irank        = str_line[n+1]-'0';
     str_piece[0] = str_line[n+2];
     str_piece[1] = str_line[n+3];
-    piece        = s
+    piece        = str2piece( str_piece );
+    
+    /* hand */
+    if ( ifile == 0 && ifile == 0 )
+      {
+	switch ( piece )
+	  {
+	  case pawn:    handv = flag_hand_pawn;    break;
+	  case lance:   handv = flag_hand_lance;   break;
+	  case knight:  handv = flag_hand_knight;  break;
+	  case silver:  handv = flag_hand_silver;  break;
+	  case gold:    handv = flag_hand_gold;    break;
+	  case bishop:  handv = flag_hand_bishop;  break;
+	  case rook:    handv = flag_hand_rook;    break;
+	  default:
+	    str_error = str_bad_board;
+	    return -2;
+	  }
+	if ( color ) { pmin_posi->hand_white += handv; }
+	else         { pmin_posi->hand_black += handv; }
+      }
+    /* board */
+    else {
+      ifile   = 9 - ifile;
+      irank   = irank - 1;
+      isquare = irank * nfile + ifile;
+      if ( piece == -2 || ifile < file1 || ifile > file9
+	   || irank < rank1 || irank > rank9 || pmin_posi->asquare[isquare] )
+	{
+	  str_error = str_bad_board;
+	  return -2;
+	}
+      pmin_posi->asquare[isquare] = (signed char)( color ? -piece : piece );
+    }
+  }
+  
+  return is_all_done;
+}
+
+
+static int
+read_board_rep2( const char * str_line, min_posi_t *pmin_posi )
+{
+  int irank, ifile, piece;
+  char str_piece[3];
+
+  str_piece[2] = '\0';
+  
+  irank = str_line[1] - '1';
+
+  for ( ifile = 0; ifile < nfile; ifile++ )
+    if ( str_line[2+ifile*3] == '+' || str_line[2+ifile*3] == '-' )
+      {
+	str_piece[0] = str_line[2+ifile*3+1];
+	str_piece[1] = str_line[2+ifile*3+2];
+	piece = str2piece( str_piece );
+	if ( piece < 0 || pmin_posi->asquare[ irank*nfile + ifile ] )
+	  {
+	    str_error = str_bad_board;
+	    return -2;
+	  }
+	pmin_posi->asquare[ irank*nfile + ifile ]
+	  = (signed char)( str_line[ 2 + ifile*3 ] == '-' ? -piece : piece );
+      }
+    else { pmin_posi->asquare[ irank*nfile + ifile ] = empty; }
+
+  return 1;
+}
+
+
+static int
+str2piece( const char *str )
+{
+  int i;
+
+  for ( i = 0; i < 16; i++ )
+    {
+      if ( ! strcmp( astr_table_piece[i], str ) ) { break; }
+    }
+  if ( i == 0 || i == piece_null || i == 16 ) { i = -2; }
+
+  return i;
+}
+
+
+/* reads a csa line in str, trancates trailing spases.
+ * return value:
+ *   0  EOF, no line is read.
+ *   1  a csa line is read in str
+ *  -2  buffer overflow
+ */
+static int
+read_CSA_line( record_t *pr, char *str )
+{
+  int i, c, do_comma;
+
+  for ( ;; )
+    {
+      c = skip_comment( pr );
+      if ( isgraph( c ) || c == EOF ) { break; }
+    }
+  if ( c == EOF ) { return 0; }
+  
+  do_comma = ( c == 'N' || c == '$' ) ? 0 : 1;
+
+  for ( i = 0; i < SIZE_CSALINE-1; i++ )
+    {
+      if ( c == EOF || c == '\n' || ( do_comma && c == ',' ) ) { break; }
+      str[i] = (char)c;
+      c = read_char( pr );
+    }
+
+  if ( i == SIZE_CSALINE-1 )
+    {
+      snprintf( str_message, SIZE_MESSAGE, str_fmt_line,
+		pr->lines, str_ovrflw_line );
+      return -2;
+    }
+
+  i--;
+  while ( isascii( (int)str[i] ) && isspace( (int)
