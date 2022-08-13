@@ -1005,4 +1005,40 @@ read_CSA_line( record_t *pr, char *str )
     }
 
   i--;
-  while ( isascii( (int)str[i] ) && isspace( (int)
+  while ( isascii( (int)str[i] ) && isspace( (int)str[i] ) ) { i--; }
+  str[i+1] = '\0';
+
+  return 1;
+}
+
+
+static int
+skip_comment( record_t *pr )
+{
+  int c;
+
+  c = read_char( pr );
+  for ( ;; )
+    {
+      if ( c != '\'' ) { break; }
+      for ( ;; )
+	{
+	  c = read_char( pr );
+	  if ( c == EOF || c == '\n' ) { break; }
+	}
+    }
+  
+  return c;
+}
+
+
+static int
+read_char( record_t *pr )
+{
+  int c;
+
+  c = fgetc( pr->pf );
+  if ( c == '\n' ) { pr->lines++; }
+
+  return c;
+}
