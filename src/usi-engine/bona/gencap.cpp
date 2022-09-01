@@ -82,4 +82,120 @@ b_gen_captures( const tree_t * restrict ptree, unsigned int * restrict pmove )
       Xor( ifrom, bb_piece );
 
       AttackBishop( bb_desti, ifrom );
- 
+      bb_desti.p[0] &= bb_movable.p[0];
+      if ( ifrom < A6 )
+	{
+	  bb_desti.p[1] &= bb_movable.p[1];
+	  bb_desti.p[2] &= bb_movable.p[2];
+	}
+      else {
+	bb_desti.p[1] &= bb_capture.p[1];
+	bb_desti.p[2] &= bb_capture.p[2];
+      }
+
+      while ( BBTest( bb_desti ) )
+	{
+	  ito = LastOne( bb_desti );
+	  Xor( ito, bb_desti );
+
+	  utemp = ( To2Move(ito) | From2Move(ifrom)
+		    | Cap2Move(-BOARD[ito]) | Piece2Move(bishop) );
+	  if ( ito < A6 || ifrom < A6 ) { utemp |= FLAG_PROMO; }
+	  *pmove++ = utemp;
+	}
+    }
+
+  bb_piece = BB_BROOK;
+  while ( BBTest( bb_piece ) )
+    {
+      ifrom = LastOne( bb_piece );
+      Xor( ifrom, bb_piece );
+
+      AttackRook( bb_desti, ifrom );
+      bb_desti.p[0] &= bb_movable.p[0];
+      if ( ifrom < A6 )
+	{
+	  bb_desti.p[1] &= bb_movable.p[1];
+	  bb_desti.p[2] &= bb_movable.p[2];
+	}
+      else {
+	bb_desti.p[1] &= bb_capture.p[1];
+	bb_desti.p[2] &= bb_capture.p[2];
+      }
+
+      while ( BBTest( bb_desti ) )
+	{
+	  ito = LastOne( bb_desti );
+	  Xor( ito, bb_desti );
+
+	  utemp = ( To2Move(ito) | From2Move(ifrom)
+		    | Cap2Move(-BOARD[ito]) | Piece2Move(rook) );
+	  if ( ito < A6 || ifrom < A6 ) { utemp |= FLAG_PROMO; }
+	  *pmove++ = utemp;
+	}
+    }
+
+  bb_piece = BB_BHORSE;
+  while ( BBTest( bb_piece ) )
+    {
+      ifrom = LastOne( bb_piece );
+      Xor( ifrom, bb_piece );
+
+      AttackHorse( bb_desti, ifrom );
+      BBAnd( bb_desti, bb_desti, bb_capture );
+      while ( BBTest( bb_desti ) )
+	{
+	  ito = LastOne( bb_desti );
+	  Xor( ito, bb_desti );
+
+	  *pmove++ = ( To2Move(ito) | From2Move(ifrom)
+		       | Cap2Move(-BOARD[ito]) | Piece2Move(horse) );
+	}
+    }
+
+  bb_piece = BB_BDRAGON;
+  while ( BBTest( bb_piece ) )
+    {
+      ifrom = LastOne( bb_piece );
+      Xor( ifrom, bb_piece );
+
+      AttackDragon( bb_desti, ifrom );
+      BBAnd( bb_desti, bb_desti, bb_capture );
+      while ( BBTest( bb_desti ) )
+	{
+	  ito = LastOne( bb_desti );
+	  Xor( ito, bb_desti );
+
+	  *pmove++ = ( To2Move(ito) | From2Move(ifrom)
+		       | Cap2Move(-BOARD[ito]) | Piece2Move(dragon) );
+	}
+    }
+
+  bb_piece = BB_BLANCE;
+  while( BBTest( bb_piece ) )
+    {
+      ifrom = LastOne( bb_piece );
+      Xor( ifrom, bb_piece );
+
+      bb_desti = AttackFile( ifrom );
+      BBAnd( bb_desti, bb_desti, abb_minus_rays[ifrom] );
+      bb_desti.p[0] &= bb_movable.p[0];
+      bb_desti.p[1] &= bb_capture.p[1];
+      bb_desti.p[2] &= bb_capture.p[2];
+
+      while ( BBTest( bb_desti ) )
+	{
+	  ito = LastOne( bb_desti );
+	  Xor( ito, bb_desti );
+
+	  utemp = ( To2Move(ito) | From2Move(ifrom)
+		    | Cap2Move(-BOARD[ito]) | Piece2Move(lance) );
+	  if      ( ito < A7 ) { *pmove++ = utemp | FLAG_PROMO; }
+	  else if ( ito < A6 )
+	    {
+	      *pmove++ = utemp | FLAG_PROMO;
+	      if ( UToCap(utemp) ) { *pmove++ = utemp; }
+	    }
+	  else { *pmove++ = utemp; }
+	}
+   
