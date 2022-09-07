@@ -424,4 +424,39 @@ w_gen_captures( const tree_t * restrict ptree, unsigned int * restrict pmove )
 	  else if ( ito > I4 )
 	    {
 	      *pmove++ = utemp | FLAG_PROMO;
-	      if ( UToCap(utemp) ) { *pmove++ =
+	      if ( UToCap(utemp) ) { *pmove++ = utemp; }
+	    }
+	  else { *pmove++ = utemp; }
+	}
+    }
+
+  bb_piece = BB_WKNIGHT;
+  while( BBTest( bb_piece ) )
+    {
+      ifrom = FirstOne( bb_piece );
+      Xor( ifrom, bb_piece );
+
+      bb_desti = abb_w_knight_attacks[ifrom];
+      bb_desti.p[2] &= bb_movable.p[2];
+      bb_desti.p[1] &= bb_capture.p[1];
+      bb_desti.p[0] &= bb_capture.p[0];
+
+      while ( BBTest( bb_desti ) )
+	{
+	  ito = FirstOne( bb_desti );
+	  Xor( ito, bb_desti );
+
+	  utemp = ( To2Move(ito) | From2Move(ifrom)
+		    | Cap2Move(BOARD[ito]) | Piece2Move(knight) );
+	  if      ( ito > I3 ) { *pmove++ = utemp | FLAG_PROMO; }
+	  else if ( ito > I4 )
+	    {
+	      *pmove++ = utemp | FLAG_PROMO;
+	      if ( UToCap(utemp) ) { *pmove++ = utemp; }
+	    }
+	  else { *pmove++ = utemp; }
+	}
+    }
+
+  return pmove;
+}
