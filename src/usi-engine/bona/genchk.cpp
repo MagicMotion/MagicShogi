@@ -292,4 +292,112 @@ b_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
 	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(silver)
 	    | Cap2Move(-BOARD[to]) | FLAG_PROMO;
 	}
-   
+    }
+  
+
+  u1 = BB_BSILVER.p[1] & 0x7fc0000U;
+  while( u1 )
+    {
+      from = last_one1( u1 );
+      u1   ^= abb_mask[from].p[1];
+      
+      bb_chk.p[0] = abb_w_gold_attacks[sq_wk].p[0];
+      bb_chk.p[1] = bb_chk.p[2] = 0;
+      
+      idirec = (int)adirec[sq_wk][from];
+      if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_wk );
+	}
+
+      bb_chk.p[0] &= bb_move_to.p[0] & abb_b_silver_attacks[from].p[0];
+      while ( bb_chk.p[0] )
+	{
+	  to          = last_one0( bb_chk.p[0] );
+	  bb_chk.p[0] ^= abb_mask[to].p[0];
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(silver)
+	    | Cap2Move(-BOARD[to]) | FLAG_PROMO;
+	}
+    }
+  
+
+  bb_piece = BB_BSILVER;
+  while( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      bb_chk = abb_w_silver_attacks[sq_wk];
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_wk );
+	}
+
+      BBAnd( bb_chk, bb_chk, abb_b_silver_attacks[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      while( BBTest( bb_chk ) )
+	{
+	  to = LastOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(silver)
+	    | Cap2Move(-BOARD[to]);
+	}
+    }
+  
+
+  u0 = BB_BKNIGHT.p[0];
+  u1 = BB_BKNIGHT.p[1] & 0x7fffe00U;
+  while( u0 | u1 )
+    {
+      from = last_one01( u0, u1 );
+      u0   ^= abb_mask[from].p[0];
+      u1   ^= abb_mask[from].p[1];
+
+      bb_chk.p[0] = abb_w_gold_attacks[sq_wk].p[0];
+      bb_chk.p[1] = bb_chk.p[2] = 0;
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_wk );
+	}
+
+      bb_chk.p[0] &= abb_b_knight_attacks[from].p[0] & bb_move_to.p[0];
+
+      while( bb_chk.p[0] )
+	{
+	  to          = last_one0( bb_chk.p[0] );
+	  bb_chk.p[0] ^= abb_mask[to].p[0];
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(knight)
+		       | Cap2Move(-BOARD[to]) | FLAG_PROMO;
+	}
+    }
+  
+
+  u2 = BB_BKNIGHT.p[2];
+  u1 = BB_BKNIGHT.p[1] & 0x3ffffU;
+  while( u2 | u1 )
+    {
+      from = last_one12( u1, u2 );
+      u2   ^= abb_mask[from].p[2];
+      u1   ^= abb_mask[from].p[1];
+
+      bb_chk = abb_w_knight_attacks[sq_wk];
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_wk );
+	}
+
+      BBAnd( bb_chk, bb_chk, abb_b_knight_attacks[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      while( BBTest( bb_chk ) )
+	{
+	  to = LastOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | From2Move(from)
