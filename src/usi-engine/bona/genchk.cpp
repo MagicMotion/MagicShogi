@@ -508,4 +508,125 @@ b_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
 
 	  *pmove = To2Move(to) | From2Move(from)
 	    | Piece2Move(pawn) | Cap2Move(-BOARD[to]);
-	  if ( from < A5 ) { *pm
+	  if ( from < A5 ) { *pmove |= FLAG_PROMO; }
+	  pmove += 1;
+	}
+    }
+
+  BBAnd( bb_piece, bb_rank_chk, BB_BPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from - nfile;
+      if ( BOARD[to] > 0 ) { continue; }
+
+      bb_desti = AttackRank( from );
+      if ( BBContract( bb_desti, BB_B_RD ) )
+	{
+	  BBNotAnd( bb_chk, bb_chk, abb_mask[to] );
+
+	  *pmove = To2Move(to) | From2Move(from)
+	    | Piece2Move(pawn) | Cap2Move(-BOARD[to]);
+	  if ( from < A5 ) { *pmove |= FLAG_PROMO; }
+	  pmove += 1;
+	}
+    }
+
+  while ( BBTest(bb_chk) )
+    {
+      to = LastOne( bb_chk );
+      Xor( to, bb_chk );
+
+      from = to + nfile;
+      *pmove = To2Move(to) | From2Move(from)
+	| Piece2Move(pawn) | Cap2Move(-BOARD[to]);
+      if ( from < A5 ) { *pmove |= FLAG_PROMO; }
+      pmove += 1;
+    }
+
+
+  if ( IsHandGold(HAND_B) )
+    {
+      BBAnd( bb_chk, bb_drop_to, abb_w_gold_attacks[sq_wk] );
+      while( BBTest( bb_chk ) )
+	{
+	  to = LastOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | Drop2Move(gold);
+	}
+    }
+  
+
+  if ( IsHandSilver(HAND_B) )
+    {
+      BBAnd( bb_chk, bb_drop_to, abb_w_silver_attacks[sq_wk] );
+      while( BBTest( bb_chk ) )
+	{
+	  to = LastOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | Drop2Move(silver);
+	}
+    }
+  
+
+  if ( IsHandKnight(HAND_B) && sq_wk < A2 )
+    {
+      to = sq_wk + 2*nfile - 1;
+      if ( aifile[sq_wk] != file1 && BOARD[to] == empty )
+	{
+	  *pmove++ = To2Move(to) | Drop2Move(knight);
+	}
+
+      to = sq_wk + 2*nfile + 1;
+      if ( aifile[sq_wk] != file9 && BOARD[to] == empty )
+	{
+	  *pmove++ = To2Move(to) | Drop2Move(knight);
+	}
+    }
+
+
+  if ( IsHandPawn(HAND_B)
+       && sq_wk < A1
+       && ! ( BBToU(BB_BPAWN) & ( mask_file1 >> aifile[sq_wk] ) ) )
+    {
+      to = sq_wk + nfile;
+      if ( BOARD[to] == empty && ! is_mate_b_pawn_drop( __ptree__, to ) )
+	{
+	  *pmove++ = To2Move(to) | Drop2Move(pawn);
+	}
+    }
+
+
+  if ( IsHandLance(HAND_B) )
+    {
+      unsigned int move;
+      int dist, min_dist;
+
+      if ( (int)aifile[sq_wk] == file1
+	   || (int)aifile[sq_wk] == file9 ) { min_dist = 2; }
+      else                                  { min_dist = 3; }
+
+      for ( to = sq_wk+nfile, dist = 1; to < nsquare && BOARD[to] == empty;
+	    to += nfile, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(lance);
+	  if      ( dist == 1 )       { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+    }
+
+
+  if ( IsHandRook(HAND_B) )
+    {
+      unsigned int move;
+      int file, dist, min_dist;
+
+      if ( (int)aifile[sq_wk] == file1
+	   || (int)aifile[sq_wk] == file9 ) { min_dist = 2; }
+      else                                  { min_dist = 3; }
+
+      for ( to = sq_wk+nfile, dist = 1; to < nsquare && BOARD[to] == empty;
+	    to += nfile, di
