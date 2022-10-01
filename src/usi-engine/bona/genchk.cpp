@@ -629,4 +629,95 @@ b_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
       else                                  { min_dist = 3; }
 
       for ( to = sq_wk+nfile, dist = 1; to < nsquare && BOARD[to] == empty;
-	    to += nfile, di
+	    to += nfile, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(rook);
+	  if      ( dist == 1 )       { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      for ( file = (int)aifile[sq_wk]-1, to = sq_wk-1, dist = 1;
+	    file >= file1 && BOARD[to] == empty;
+	    file -= 1, to -= 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(rook);
+	  if      ( dist == 1 ) { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      if ( sq_wk < A8 || I2 < sq_wk ) { min_dist = 2; }
+      else                            { min_dist = 3; }
+
+      for ( file = (int)aifile[sq_wk]+1, to = sq_wk+1, dist = 1;
+	    file <= file9 && BOARD[to] == empty;
+	    file += 1, to += 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(rook);
+	  if      ( dist == 1 )       { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      for ( to = sq_wk-nfile, dist = 1; to >= 0 && BOARD[to] == empty;
+	    to -= nfile, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(rook);
+	  if ( (int)airank[to] == rank3 ) { move |= MOVE_CHK_CLEAR; }
+	  if      ( dist == 1 )           { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist )     { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+    }
+
+
+  if ( IsHandBishop(HAND_B) )
+    {
+      unsigned int move;
+      int file, rank, dist;
+
+      to   = sq_wk;
+      file = (int)aifile[sq_wk];
+      rank = (int)airank[sq_wk];
+      for ( to -= 10, file -= 1, rank -= 1, dist = 1;
+	    file >= 0 && rank >= 0 && BOARD[to] == empty;
+	    to -= 10, file -= 1, rank -= 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(bishop);
+	  if ( rank == rank3 ) { move |= MOVE_CHK_CLEAR; }
+	  if ( dist == 1 )     { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > 2 ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      to   = sq_wk;
+      file = (int)aifile[sq_wk];
+      rank = (int)airank[sq_wk];
+      for ( to -= 8, file += 1, rank -= 1, dist = 1;
+	    file <= file9 && rank >= 0 && BOARD[to] == empty;
+	    to -= 8, file += 1, rank -= 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(bishop);
+	  if ( rank == rank3 ) { move |= MOVE_CHK_CLEAR; }
+	  if ( dist == 1 )     { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > 2 ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      to   = sq_wk;
+      file = (int)aifile[sq_wk];
+      rank = (int)airank[sq_wk];
+      for ( to += 8, file -= 1, rank += 1, dist = 1;
+	    file >= 0 && rank <= rank9 && BOARD[to] == empty;
+	    to += 8, file -= 1, rank += 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(bishop);
+	  if ( dist == 1 )     { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > 2 ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      to   = sq_wk;
+      file = (int)aifile[sq_wk];
+      rank = (int)airank
