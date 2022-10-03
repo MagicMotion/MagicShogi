@@ -825,4 +825,113 @@ w_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
 
       while( BBTest( bb_chk ) )
 	{
-	  to = FirstOne( bb_chk 
+	  to = FirstOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(horse)
+	    | Cap2Move(BOARD[to]);
+	}
+    }
+
+  u0 = BB_WROOK.p[0];
+  u1 = BB_WROOK.p[1];
+  while( u0 | u1 )
+    {
+      from = first_one01( u0, u1 );
+      u0   ^= abb_mask[from].p[0];
+      u1   ^= abb_mask[from].p[1];
+
+      AttackRook( bb_desti, from );
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  BBAnd( bb_chk, bb_desti, bb_move_to );
+	}
+      else {
+	bb_chk       = bb_rook_chk;
+	bb_chk.p[2] |= abb_king_attacks[sq_bk].p[2];
+	BBAnd( bb_chk, bb_chk, bb_desti );
+	BBAnd( bb_chk, bb_chk, bb_move_to );
+      }
+
+      while ( bb_chk.p[2] )
+	{
+	  to          = first_one2( bb_chk.p[2] );
+	  bb_chk.p[2] ^= abb_mask[to].p[2];
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(rook)
+	    | Cap2Move(BOARD[to]) | FLAG_PROMO;
+	}
+
+      while( bb_chk.p[0] | bb_chk.p[1] )
+	{
+	  to          = first_one01( bb_chk.p[0], bb_chk.p[1] );
+	  bb_chk.p[0] ^= abb_mask[to].p[0];
+	  bb_chk.p[1] ^= abb_mask[to].p[1];
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(rook)
+	    | Cap2Move(BOARD[to]);
+	}
+    }
+
+  u2 = BB_WROOK.p[2];
+  while( u2 )
+    {
+      from = first_one2( u2 );
+      u2   ^= abb_mask[from].p[2];
+      
+      AttackRook( bb_desti, from );
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  BBAnd( bb_chk, bb_desti, bb_move_to );
+	}
+      else {
+	BBOr( bb_chk, bb_rook_chk, abb_king_attacks[sq_bk] );
+	BBAnd( bb_chk, bb_chk, bb_desti );
+	BBAnd( bb_chk, bb_chk, bb_move_to );
+      }
+
+      while( BBTest( bb_chk ) )
+	{
+	  to = FirstOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(rook)
+	    | Cap2Move(BOARD[to]) | FLAG_PROMO;
+	}
+    }
+
+  u0 = BB_WBISHOP.p[0];
+  u1 = BB_WBISHOP.p[1];
+  while( u0 | u1 )
+    {
+      from = first_one01( u0, u1 );
+      u0   ^= abb_mask[from].p[0];
+      u1   ^= abb_mask[from].p[1];
+
+      AttackBishop( bb_desti, from );
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  BBAnd( bb_chk, bb_desti, bb_move_to );
+	}
+      else {
+	bb_chk       = bb_bishop_chk;
+	bb_chk.p[2] |= abb_king_attacks[sq_bk].p[2];
+	BBAnd( bb_chk, bb_chk, bb_desti );
+	BBAnd( bb_chk, bb_chk, bb_move_to );
+      }
+
+      while ( bb_chk.p[2] )
+	{
+	  to          = first_one2( bb_chk.p[2] );
+	  bb_chk.p[2] ^= abb_mask[to].p[2];
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(bishop)
+	    | Cap2Move(BOARD[to]) | FLAG_PROMO;
+	}
+
+      while( bb_chk.p[0] | bb_chk.p[1] )
+	{
+	  to          = first_one01( bb_chk.p[0], bb_chk.p[1] );
+	  bb_chk.p[0] ^= abb_mask[to].p[0];
+	  bb_chk.p[1] 
