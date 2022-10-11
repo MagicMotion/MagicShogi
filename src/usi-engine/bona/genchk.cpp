@@ -1045,4 +1045,113 @@ w_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
       bb_chk.p[2] &= bb_move_to.p[2] & abb_w_silver_attacks[from].p[2];
       while ( bb_chk.p[2] )
 	{
-	  to       
+	  to          = first_one2( bb_chk.p[2] );
+	  bb_chk.p[2] ^= abb_mask[to].p[2];
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(silver)
+	    | Cap2Move(BOARD[to]) | FLAG_PROMO;
+	}
+    }
+  
+
+  bb_piece = BB_WSILVER;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      bb_chk = abb_b_silver_attacks[sq_bk];
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_bk );
+	}
+
+      BBAnd( bb_chk, bb_chk, abb_w_silver_attacks[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      while( BBTest( bb_chk ) )
+	{
+	  to = FirstOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(silver)
+	    | Cap2Move(BOARD[to]);
+	}
+    }
+
+  
+  u2 = BB_WKNIGHT.p[2];
+  u1 = BB_WKNIGHT.p[1] & 0x3ffffU;
+  while( u2 | u1 )
+    {
+      from = first_one12( u1, u2 );
+      u2   ^= abb_mask[from].p[2];
+      u1   ^= abb_mask[from].p[1];
+
+      bb_chk.p[2] = abb_b_gold_attacks[sq_bk].p[2];
+      bb_chk.p[1] = bb_chk.p[0] = 0;
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_bk );
+	}
+
+      bb_chk.p[2] &= abb_w_knight_attacks[from].p[2] & bb_move_to.p[2];
+
+      while( bb_chk.p[2] )
+	{
+	  to          = first_one2( bb_chk.p[2] );
+	  bb_chk.p[2] ^= abb_mask[to].p[2];
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(knight)
+		       | Cap2Move(BOARD[to]) | FLAG_PROMO;
+	}
+    }
+  
+
+  u0 = BB_WKNIGHT.p[0];
+  u1 = BB_WKNIGHT.p[1] & 0x7fffe00U;
+  while( u0 | u1 )
+    {
+      from = first_one01( u0, u1 );
+      u0   ^= abb_mask[from].p[0];
+      u1   ^= abb_mask[from].p[1];
+
+      bb_chk = abb_b_knight_attacks[sq_bk];
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_bk );
+	}
+
+      BBAnd( bb_chk, bb_chk, abb_w_knight_attacks[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      while( BBTest( bb_chk ) )
+	{
+	  to = FirstOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(knight)
+	    | Cap2Move(BOARD[to]);
+	}
+    }
+
+
+  bb_piece = BB_WLANCE;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      bb_chk.p[2] = abb_b_gold_attacks[sq_bk].p[2];
+      bb_chk.p[1] = bb_chk.p[0] = 0;
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_bk );
+	}
+
+      BBAnd( bb_chk, bb_chk, AttackFile( from ) );
+      BBAnd( bb_chk, bb_
