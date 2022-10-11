@@ -1154,4 +1154,110 @@ w_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
 	}
 
       BBAnd( bb_chk, bb_chk, AttackFile( from ) );
-      BBAnd( bb_chk, bb_
+      BBAnd( bb_chk, bb_chk, abb_plus_rays[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      while( BBTest( bb_chk ) )
+	{
+	  to = FirstOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(lance)
+	    | Cap2Move(BOARD[to]) | FLAG_PROMO;
+	}
+    }
+  
+
+  u0 = BB_WLANCE.p[0];
+  u1 = BB_WLANCE.p[1];
+  while( u0 | u1 )
+    {
+      from = first_one01( u0, u1 );
+      u0   ^= abb_mask[from].p[0];
+      u1   ^= abb_mask[from].p[1];
+
+      bb_chk = bb_file_chk;
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_bk );
+	  BBAnd( bb_chk, bb_chk, abb_plus_rays[from] );
+	}
+      else { BBAnd( bb_chk, bb_file_chk, abb_minus_rays[sq_bk] ); }
+
+      BBAnd( bb_chk, bb_chk, AttackFile( from ) );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+      bb_chk.p[2] = bb_chk.p[2] & 0x7fc0000U;
+
+      while( BBTest( bb_chk ) )
+	{
+	  to = FirstOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | From2Move(from) | Piece2Move(lance)
+	    | Cap2Move(BOARD[to]);
+	}
+    }
+
+  BBIni( bb_chk );
+  bb_chk.p[2] = abb_b_gold_attacks[sq_bk].p[2];
+  if ( sq_bk > I8 ) { BBOr( bb_chk, bb_chk, abb_mask[sq_bk-nfile] ); }
+  BBAnd( bb_chk, bb_chk, bb_move_to );
+  BBAnd( bb_chk, bb_chk, BB_WPAWN_ATK );
+
+  BBAnd( bb_piece, bb_diag1_chk, BB_WPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from + nfile;
+      if ( BOARD[to] < 0 ) { continue; }
+
+      bb_desti = AttackDiag1( from );
+      if ( BBContract( bb_desti, BB_W_BH ) )
+	{
+	  BBNotAnd( bb_chk, bb_chk, abb_mask[to] );
+
+	  *pmove = To2Move(to) | From2Move(from)
+	    | Piece2Move(pawn) | Cap2Move(BOARD[to]);
+	  if ( from > I5 ) { *pmove |= FLAG_PROMO; }
+	  pmove += 1;
+	}
+    }
+
+  BBAnd( bb_piece, bb_diag2_chk, BB_WPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from + nfile;
+      if ( BOARD[to] < 0 ) { continue; }
+
+      bb_desti = AttackDiag2( from );
+      if ( BBContract( bb_desti, BB_W_BH ) )
+	{
+	  BBNotAnd( bb_chk, bb_chk, abb_mask[to] );
+
+	  *pmove = To2Move(to) | From2Move(from)
+	    | Piece2Move(pawn) | Cap2Move(BOARD[to]);
+	  if ( from > I5 ) { *pmove |= FLAG_PROMO; }
+	  pmove += 1;
+	}
+    }
+
+  BBAnd( bb_piece, bb_rank_chk, BB_WPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from + nfile;
+      if ( BOARD[to] < 0 ) { continue; }
+
+      bb_desti = AttackRank( from );
+      if ( BBContract( bb_desti, BB_W_RD ) )
+	{
+	  BBNotAnd( bb_chk, bb_chk, abb_mask[to] );
+
+	  *pmove = To2Move(to) | From2Move(from)
+	    | Piece2Move(pawn) | Cap2Move(BOARD
