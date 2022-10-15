@@ -1260,4 +1260,118 @@ w_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
 	  BBNotAnd( bb_chk, bb_chk, abb_mask[to] );
 
 	  *pmove = To2Move(to) | From2Move(from)
-	    | Piece2Move(pawn) | Cap2Move(BOARD
+	    | Piece2Move(pawn) | Cap2Move(BOARD[to]);
+	  if ( from > I5 ) { *pmove |= FLAG_PROMO; }
+	  pmove += 1;
+	}
+    }
+
+  while ( BBTest(bb_chk) )
+    {
+      to = FirstOne( bb_chk );
+      Xor( to, bb_chk );
+
+      from = to - nfile;
+      *pmove = To2Move(to) | From2Move(from) | Piece2Move(pawn)
+	| Cap2Move(BOARD[to]);
+      if ( from > I5 ) { *pmove |= FLAG_PROMO; }
+      pmove += 1;
+    }
+
+
+  if ( IsHandGold(HAND_W) )
+    {
+      BBAnd( bb_chk, bb_drop_to, abb_b_gold_attacks[sq_bk] );
+      while( BBTest( bb_chk ) )
+	{
+	  to = FirstOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | Drop2Move(gold);
+	}
+    }
+  
+
+  if ( IsHandSilver(HAND_W) )
+    {
+      BBAnd( bb_chk, bb_drop_to, abb_b_silver_attacks[sq_bk] );
+      while( BBTest( bb_chk ) )
+	{
+	  to = FirstOne( bb_chk );
+	  Xor( to, bb_chk );
+	  *pmove++ = To2Move(to) | Drop2Move(silver);
+	}
+    }
+  
+
+  if ( IsHandKnight(HAND_W) && sq_bk > I8 )
+    {
+      to = sq_bk - 2*nfile - 1;
+      if ( aifile[sq_bk] != file1 && BOARD[to] == empty )
+	{
+	  *pmove++ = To2Move(to) | Drop2Move(knight);
+	}
+
+      to = sq_bk - 2*nfile + 1;
+      if ( aifile[sq_bk] != file9 && BOARD[to] == empty )
+	{
+	  *pmove++ = To2Move(to) | Drop2Move(knight);
+	}
+    }
+
+
+  if ( IsHandPawn(HAND_W)
+       && sq_bk > I9
+       && ! ( BBToU(BB_WPAWN) & ( mask_file1 >> aifile[sq_bk] ) ) )
+    {
+      to = sq_bk - nfile;
+      if ( BOARD[to] == empty && ! is_mate_w_pawn_drop( __ptree__, to ) )
+	{
+	  *pmove++ = To2Move(to) | Drop2Move(pawn);
+	}
+    }
+
+
+  if ( IsHandLance(HAND_W) )
+    {
+      unsigned int move;
+      int dist, min_dist;
+
+      if ( (int)aifile[sq_bk] == file1
+	   || (int)aifile[sq_bk] == file9 ) { min_dist = 2; }
+      else                                  { min_dist = 3; }
+
+      for ( to = sq_bk-nfile, dist = 1; to >= 0 && BOARD[to] == empty;
+	    to -= nfile, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(lance);
+	  if      ( dist == 1 )       { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+    }
+
+
+  if ( IsHandRook(HAND_W) )
+    {
+      unsigned int move;
+      int file, dist, min_dist;
+
+      if ( (int)aifile[sq_bk] == file1
+	   || (int)aifile[sq_bk] == file9 ) { min_dist = 2; }
+      else                                  { min_dist = 3; }
+
+      for ( to = sq_bk-nfile, dist = 1; to >= 0 && BOARD[to] == empty;
+	    to -= nfile, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(rook);
+	  if      ( dist == 1 )        { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist )  { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      for ( to = sq_bk+nfile, dist = 1; to < nsquare && BOARD[to] == empty;
+	    to += nfile, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(rook);
+	  if ( (int)airank[to] == rank7 ) { move |= MOVE_CHK_CLEAR; }
+	  if      ( dist == 1 )           { move |= MOVE_CHK_
