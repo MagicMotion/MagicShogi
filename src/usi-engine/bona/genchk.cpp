@@ -1374,4 +1374,102 @@ w_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
 	{
 	  move = To2Move(to) | Drop2Move(rook);
 	  if ( (int)airank[to] == rank7 ) { move |= MOVE_CHK_CLEAR; }
-	  if      ( dist == 1 )           { move |= MOVE_CHK_
+	  if      ( dist == 1 )           { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist )     { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+
+      if ( sq_bk < A8 || I2 < sq_bk ) { min_dist = 2; }
+      else                            { min_dist = 3; }
+
+      for ( file = (int)aifile[sq_bk]+1, to = sq_bk+1, dist = 1;
+	    file <= file9 && BOARD[to] == empty;
+	    file += 1, to += 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(rook);
+	  if      ( dist == 1 )       { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      for ( file = (int)aifile[sq_bk]-1, to = sq_bk-1, dist = 1;
+	    file >= file1 && BOARD[to] == empty;
+	    file -= 1, to -= 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(rook);
+	  if      ( dist == 1 )           { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > min_dist )     { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+    }
+
+
+  if ( IsHandBishop(HAND_W) )
+    {
+      unsigned int move;
+      int file, rank, dist;
+
+      to   = sq_bk;
+      file = (int)aifile[sq_bk];
+      rank = (int)airank[sq_bk];
+      for ( to += 10, file += 1, rank += 1, dist = 1;
+	    file <= file9 && rank <= rank9 && BOARD[to] == empty;
+	    to += 10, file += 1, rank += 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(bishop);
+	  if ( rank == rank7 ) { move |= MOVE_CHK_CLEAR; }
+	  if ( dist == 1 )     { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > 2 ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      to   = sq_bk;
+      file = (int)aifile[sq_bk];
+      rank = (int)airank[sq_bk];
+      for ( to += 8, file -= 1, rank += 1, dist = 1;
+	    file >= 0 && rank <= rank9 && BOARD[to] == empty;
+	    to += 8, file -= 1, rank += 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(bishop);
+	  if ( rank == rank7 ) { move |= MOVE_CHK_CLEAR; }
+	  if ( dist == 1 )     { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > 2 ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      to   = sq_bk;
+      file = (int)aifile[sq_bk];
+      rank = (int)airank[sq_bk];
+      for ( to -= 8, file += 1, rank -= 1, dist = 1;
+	    file <= file9 && rank >= 0 && BOARD[to] == empty;
+	    to -= 8, file += 1, rank -= 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(bishop);
+	  if ( dist == 1 )     { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > 2 ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+
+      to   = sq_bk;
+      file = (int)aifile[sq_bk];
+      rank = (int)airank[sq_bk];
+      for ( to -= 10, file -= 1, rank -= 1, dist = 1;
+	    file >= 0 && rank >= 0 && BOARD[to] == empty;
+	    to -= 10, file -= 1, rank -= 1, dist += 1 )
+	{
+	  move = To2Move(to) | Drop2Move(bishop);
+	  if ( dist == 1 )     { move |= MOVE_CHK_CLEAR; }
+	  else if ( dist > 2 ) { move |= MOVE_CHK_SET; }
+	  *pmove++ = move;
+	}
+    }
+
+
+  return pmove;
+}
+
+
+int CONV b_have_checks( tree_t * restrict __ptree__ )
+{
+  bitboard_t bb_piece, bb_rook_chk, bb_bis
