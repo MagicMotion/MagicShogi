@@ -1472,4 +1472,102 @@ w_gen_checks( tree_t * restrict __ptree__, unsigned int * restrict pmove )
 
 int CONV b_have_checks( tree_t * restrict __ptree__ )
 {
-  bitboard_t bb_piece, bb_rook_chk, bb_bis
+  bitboard_t bb_piece, bb_rook_chk, bb_bishop_chk, bb_chk, bb_move_to;
+  bitboard_t bb_diag1_chk, bb_diag2_chk, bb_file_chk, bb_drop_to, bb_desti;
+  bitboard_t bb_rank_chk;
+  const tree_t * restrict ptree = __ptree__;
+  unsigned int u0, u1, u2;
+  int from, to, sq_wk, idirec;
+
+  sq_wk = SQ_WKING;
+  BBOr( bb_drop_to, BB_BOCCUPY, BB_WOCCUPY );
+  BBNot( bb_drop_to, bb_drop_to );
+
+  if ( IsHandGold(HAND_B) )
+    {
+      BBAnd( bb_chk, bb_drop_to, abb_w_gold_attacks[sq_wk] );
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  if ( IsHandSilver(HAND_B) )
+    {
+      BBAnd( bb_chk, bb_drop_to, abb_w_silver_attacks[sq_wk] );
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  if ( IsHandKnight(HAND_B) && sq_wk < A2 )
+    {
+      if ( aifile[sq_wk] != file1
+	   && BOARD[sq_wk + 2*nfile - 1] == empty ) { return 1; }
+
+      if ( aifile[sq_wk] != file9
+	   && BOARD[sq_wk + 2*nfile + 1] == empty ) { return 1;	}
+    }
+
+  if ( IsHandLance(HAND_B)
+       && sq_wk + nfile < nsquare
+       && BOARD[sq_wk + nfile] == empty ) { return 1; }
+
+  if ( IsHandRook(HAND_B) )
+    {
+      if ( sq_wk + nfile < nsquare
+	   && BOARD[sq_wk + nfile] == empty ) { return 1; }
+
+      if ( file1 < (int)aifile[sq_wk]
+	   && BOARD[sq_wk - 1] == empty ) { return 1; }
+
+      if ( (int)aifile[sq_wk] < file9
+	   && BOARD[sq_wk + 1] == empty ) { return 1; }
+
+      if ( 0 <= sq_wk - nfile
+	   && BOARD[sq_wk - nfile] == empty ) { return 1; }
+    }
+
+  if ( IsHandBishop(HAND_B) )
+    {
+      if ( 0 < (int)aifile[sq_wk]
+	   && 0 < (int)airank[sq_wk]
+	   && BOARD[sq_wk - 10] == empty ) { return 1; }
+
+      if ( (int)aifile[sq_wk] < file9
+	   && 0 < (int)airank[sq_wk]
+	   && BOARD[sq_wk - 8] == empty ) { return 1; }
+
+      if ( 0 < (int)aifile[sq_wk]
+	   && (int)airank[sq_wk] < rank9
+	   && BOARD[sq_wk + 8] == empty ) { return 1; }
+
+      if ( (int)aifile[sq_wk] < file9
+	   && (int)airank[sq_wk] < rank9
+	   && BOARD[sq_wk + 10] == empty ) { return 1; }
+    }
+
+  if ( IsHandPawn(HAND_B)
+       && sq_wk < A1
+       && BOARD[sq_wk+nfile] == empty
+       && ! ( BBToU(BB_BPAWN) & ( mask_file1 >> aifile[sq_wk] ) )
+       && ! is_mate_b_pawn_drop( __ptree__, sq_wk+nfile ) )
+    {
+      return 1;
+    }
+  
+  
+  bb_file_chk = AttackFile( sq_wk );
+  bb_rank_chk = AttackRank( sq_wk );
+  BBOr( bb_rook_chk, bb_file_chk, bb_rank_chk );
+
+  bb_diag1_chk = AttackDiag1( sq_wk );
+  bb_diag2_chk = AttackDiag2( sq_wk );
+  BBOr( bb_bishop_chk, bb_diag1_chk, bb_diag2_chk );
+  BBNot( bb_move_to, BB_BOCCUPY );
+
+  from  = SQ_BKING;
+  idirec = (int)adirec[sq_wk][from];
+  if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+    {
+      BBIni( bb_chk );
+      add_behind_attacks( &bb_chk, idirec, sq_wk );
+      BBAnd( bb_chk, bb_chk, abb_king_attacks[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      if ( BBTest( bb_chk ) ) { r
