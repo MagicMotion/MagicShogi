@@ -1796,4 +1796,108 @@ int CONV b_have_checks( tree_t * restrict __ptree__ )
   
 
   u0 = BB_BKNIGHT.p[0];
-  u1 = BB_BKNIGHT.p[1] & 0x7fffe00
+  u1 = BB_BKNIGHT.p[1] & 0x7fffe00U;
+  while( u0 | u1 )
+    {
+      from = last_one01( u0, u1 );
+      u0   ^= abb_mask[from].p[0];
+      u1   ^= abb_mask[from].p[1];
+
+      bb_chk.p[0] = abb_w_gold_attacks[sq_wk].p[0];
+      bb_chk.p[1] = bb_chk.p[2] = 0;
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_wk );
+	}
+
+      bb_chk.p[0] &= abb_b_knight_attacks[from].p[0] & bb_move_to.p[0];
+
+      if ( bb_chk.p[0] ) { return 1; }
+    }
+  
+
+  u2 = BB_BKNIGHT.p[2];
+  u1 = BB_BKNIGHT.p[1] & 0x3ffffU;
+  while( u2 | u1 )
+    {
+      from = last_one12( u1, u2 );
+      u2   ^= abb_mask[from].p[2];
+      u1   ^= abb_mask[from].p[1];
+
+      bb_chk = abb_w_knight_attacks[sq_wk];
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_wk );
+	}
+
+      BBAnd( bb_chk, bb_chk, abb_b_knight_attacks[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+
+  bb_piece = BB_BLANCE;
+  while( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      bb_chk.p[0] = abb_w_gold_attacks[sq_wk].p[0];
+      bb_chk.p[1] = bb_chk.p[2] = 0;
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_wk );
+	}
+
+      BBAnd( bb_chk, bb_chk, AttackFile( from ) );
+      BBAnd( bb_chk, bb_chk, abb_minus_rays[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+  
+
+  u1 = BB_BLANCE.p[1];
+  u2 = BB_BLANCE.p[2];
+  while( u1| u2 )
+    {
+      from = last_one12( u1, u2 );
+      u1   ^= abb_mask[from].p[1];
+      u2   ^= abb_mask[from].p[2];
+
+      bb_chk = bb_file_chk;
+      idirec = (int)adirec[sq_wk][from];
+      if ( idirec && is_pinned_on_white_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_wk );
+	  BBAnd( bb_chk, bb_chk, abb_minus_rays[from] );
+	}
+      else { BBAnd( bb_chk, bb_file_chk, abb_plus_rays[sq_wk] );}
+
+      BBAnd( bb_chk, bb_chk, AttackFile( from ) );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+      bb_chk.p[0] = bb_chk.p[0] & 0x1ffU;
+
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  BBIni( bb_chk );
+  bb_chk.p[0] = abb_w_gold_attacks[sq_wk].p[0];
+  if ( sq_wk < A2 ) { BBOr( bb_chk, bb_chk, abb_mask[sq_wk+nfile] ); };
+  BBAnd( bb_chk, bb_chk, bb_move_to );
+  BBAnd( bb_chk, bb_chk, BB_BPAWN_ATK );
+  if ( BBTest(bb_chk) ) { return 1; }
+
+  BBAnd( bb_piece, bb_diag1_chk, BB_BPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+    
