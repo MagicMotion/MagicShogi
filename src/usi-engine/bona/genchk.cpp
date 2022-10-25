@@ -1900,4 +1900,111 @@ int CONV b_have_checks( tree_t * restrict __ptree__ )
     {
       from = LastOne( bb_piece );
       Xor( from, bb_piece );
-    
+      
+      to = from - nfile;
+      if ( BOARD[to] > 0 ) { continue; }
+
+      bb_desti = AttackDiag1( from );
+
+      if ( BBContract( bb_desti, BB_B_BH ) ) { return 1; }
+    }
+
+  BBAnd( bb_piece, bb_diag2_chk, BB_BPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from - nfile;
+      if ( BOARD[to] > 0 ) { continue; }
+
+      bb_desti = AttackDiag2( from );
+
+      if ( BBContract( bb_desti, BB_B_BH ) ) { return 1; }
+    }
+  
+  BBAnd( bb_piece, bb_rank_chk, BB_BPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from - nfile;
+      if ( BOARD[to] > 0 ) { continue; }
+      
+      bb_desti = AttackRank( from );
+      if ( BBContract( bb_desti, BB_B_RD ) ) { return 1; }
+    }
+
+  return 0;
+}
+
+
+int CONV w_have_checks( tree_t * restrict __ptree__ )
+{
+  bitboard_t bb_piece, bb_rook_chk, bb_bishop_chk, bb_chk, bb_move_to;
+  bitboard_t bb_diag1_chk, bb_diag2_chk, bb_file_chk, bb_drop_to, bb_desti;
+  bitboard_t bb_rank_chk;
+  const tree_t * restrict ptree = __ptree__;
+  unsigned int u0, u1, u2;
+  int from, to, sq_bk, idirec;
+
+  sq_bk = SQ_BKING;
+  BBOr( bb_drop_to, BB_BOCCUPY, BB_WOCCUPY );
+  BBNot( bb_drop_to, bb_drop_to );
+
+  if ( IsHandGold(HAND_W) )
+    {
+      BBAnd( bb_chk, bb_drop_to, abb_b_gold_attacks[sq_bk] );
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  if ( IsHandSilver(HAND_W) )
+    {
+      BBAnd( bb_chk, bb_drop_to, abb_b_silver_attacks[sq_bk] );
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  if ( IsHandKnight(HAND_W) && sq_bk > I8 )
+    {
+      if ( aifile[sq_bk] != file1
+	   && BOARD[sq_bk - 2*nfile - 1] == empty ) { return 1; }
+
+      if ( aifile[sq_bk] != file9
+	   && BOARD[sq_bk - 2*nfile + 1] == empty ) { return 1;	}
+    }
+
+  if ( IsHandLance(HAND_W)
+       && 0 <= sq_bk - nfile
+       && BOARD[sq_bk - nfile] == empty ) { return 1; }
+
+  if ( IsHandRook(HAND_W) )
+    {
+      if ( sq_bk + nfile < nsquare
+	   && BOARD[sq_bk + nfile] == empty ) { return 1; }
+
+      if ( file1 < (int)aifile[sq_bk]
+	   && BOARD[sq_bk - 1] == empty ) { return 1; }
+
+      if ( (int)aifile[sq_bk] < file9
+	   && BOARD[sq_bk + 1] == empty ) { return 1; }
+
+      if ( 0 <= sq_bk - nfile
+	   && BOARD[sq_bk - nfile] == empty ) { return 1; }
+    }
+
+  if ( IsHandBishop(HAND_W) )
+    {
+      if ( 0 < (int)aifile[sq_bk]
+	   && 0 < (int)airank[sq_bk]
+	   && BOARD[sq_bk - 10] == empty ) { return 1; }
+
+      if ( (int)aifile[sq_bk] < file9
+	   && 0 < (int)airank[sq_bk]
+	   && BOARD[sq_bk - 8] == empty ) { return 1; }
+
+      if ( 0 < (int)aifile[sq_bk]
+	   && (int)airank[sq_bk] < rank9
+	   && BOARD[sq_bk + 8] == empty ) { return 1; }
+
+      if ( (int)aifile[sq_bk] < 
