@@ -2122,4 +2122,117 @@ int CONV w_have_checks( tree_t * restrict __ptree__ )
       idirec = (int)adirec[sq_bk][from];
       if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
 	{
-	 
+	  BBAnd( bb_chk, bb_desti, bb_move_to );
+	}
+      else {
+	BBOr( bb_chk, bb_rook_chk, abb_king_attacks[sq_bk] );
+	BBAnd( bb_chk, bb_chk, bb_desti );
+	BBAnd( bb_chk, bb_chk, bb_move_to );
+      }
+
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  u0 = BB_WBISHOP.p[0];
+  u1 = BB_WBISHOP.p[1];
+  while( u0 | u1 )
+    {
+      from = first_one01( u0, u1 );
+      u0   ^= abb_mask[from].p[0];
+      u1   ^= abb_mask[from].p[1];
+
+      AttackBishop( bb_desti, from );
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  BBAnd( bb_chk, bb_desti, bb_move_to );
+	}
+      else {
+	bb_chk       = bb_bishop_chk;
+	bb_chk.p[2] |= abb_king_attacks[sq_bk].p[2];
+	BBAnd( bb_chk, bb_chk, bb_desti );
+	BBAnd( bb_chk, bb_chk, bb_move_to );
+      }
+
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  u2 = BB_WBISHOP.p[2];
+  while( u2 )
+    {
+      from = first_one2( u2 );
+      u2   ^= abb_mask[from].p[2];
+      
+      AttackBishop( bb_desti, from );
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  BBAnd( bb_chk, bb_desti, bb_move_to );
+	}
+      else {
+	BBOr( bb_chk, bb_bishop_chk, abb_king_attacks[sq_bk] );
+	BBAnd( bb_chk, bb_chk, bb_desti );
+	BBAnd( bb_chk, bb_chk, bb_move_to );
+      }
+
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+
+  bb_piece = BB_WTGOLD;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      bb_chk = abb_b_gold_attacks[sq_bk];
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_bk );
+	}
+
+      BBAnd( bb_chk, bb_chk, abb_w_gold_attacks[from] );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  
+  u2 = BB_WSILVER.p[2];
+  while( u2 )
+    {
+      from = first_one2( u2 );
+      u2   ^= abb_mask[from].p[2];
+
+      bb_chk.p[2] = abb_b_gold_attacks[sq_bk].p[2];
+      bb_chk.p[1] = abb_b_gold_attacks[sq_bk].p[1];
+      bb_chk.p[0] = 0;
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
+	{
+	  add_behind_attacks( &bb_chk, idirec, sq_bk );
+	}
+
+      bb_chk.p[2] &= bb_move_to.p[2] & abb_w_silver_attacks[from].p[2];
+      bb_chk.p[1] &= bb_move_to.p[1] & abb_w_silver_attacks[from].p[1];
+
+      if ( bb_chk.p[2] | bb_chk.p[1] ) { return 1; }
+    }
+  
+
+  u1 = BB_WSILVER.p[1] & 0x1ffU;
+  while( u1 )
+    {
+      from = first_one1( u1 );
+      u1   ^= abb_mask[from].p[1];
+      
+      bb_chk.p[2] = abb_b_gold_attacks[sq_bk].p[2];
+      bb_chk.p[1] = bb_chk.p[0] = 0;
+      
+      idirec = (int)adirec[sq_bk][from];
+      if ( idirec && is_pinned_on_black_king( ptree, from, idirec ) )
