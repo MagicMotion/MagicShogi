@@ -2350,3 +2350,89 @@ int CONV w_have_checks( tree_t * restrict __ptree__ )
 	{
 	  add_behind_attacks( &bb_chk, idirec, sq_bk );
 	  BBAnd( bb_chk, bb_chk, abb_plus_rays[from] );
+	}
+      else { BBAnd( bb_chk, bb_file_chk, abb_minus_rays[sq_bk] ); }
+
+      BBAnd( bb_chk, bb_chk, AttackFile( from ) );
+      BBAnd( bb_chk, bb_chk, bb_move_to );
+      bb_chk.p[2] = bb_chk.p[2] & 0x7fc0000U;
+
+      if ( BBTest( bb_chk ) ) { return 1; }
+    }
+
+  BBIni( bb_chk );
+  bb_chk.p[2] = abb_b_gold_attacks[sq_bk].p[2];
+  if ( sq_bk > I8 ) { BBOr( bb_chk, bb_chk, abb_mask[sq_bk-nfile] ); };
+  BBAnd( bb_chk, bb_chk, bb_move_to );
+  BBAnd( bb_chk, bb_chk, BB_WPAWN_ATK );
+  if ( BBTest( bb_chk ) ) { return 1; }
+
+  BBAnd( bb_piece, bb_diag1_chk, BB_WPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from + nfile;
+      if ( BOARD[to] < 0 ) { continue; }
+
+      bb_desti = AttackDiag1( from );
+
+      if ( BBContract( bb_desti, BB_W_BH ) ) { return 1; }
+    }
+
+  BBAnd( bb_piece, bb_diag2_chk, BB_WPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from + nfile;
+      if ( BOARD[to] < 0 ) { continue; }
+
+      bb_desti = AttackDiag2( from );
+
+      if ( BBContract( bb_desti, BB_W_BH ) ) { return 1; }
+    }
+
+  BBAnd( bb_piece, bb_rank_chk, BB_WPAWN );
+  while ( BBTest(bb_piece) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      to = from + nfile;
+      if ( BOARD[to] < 0 ) { continue; }
+
+      bb_desti = AttackRank( from );
+      if ( BBContract( bb_desti, BB_W_RD ) ) { return 1; }
+    }
+
+  return 0;
+}
+
+
+static void CONV
+add_behind_attacks( bitboard_t * restrict pbb, int idirec, int ik )
+{
+  bitboard_t bb_tmp;
+
+  if ( idirec == direc_diag1 )
+    {
+      bb_tmp = abb_bishop_attacks_rr45[ik][0];
+    }
+  else if ( idirec == direc_diag2 )
+    {
+      bb_tmp = abb_bishop_attacks_rl45[ik][0];
+    }
+  else if ( idirec == direc_file )
+    {
+      bb_tmp = abb_file_attacks[ik][0];
+    }
+  else {
+    assert( idirec == direc_rank );
+    bb_tmp = abb_rank_attacks[ik][0];
+  }
+  BBNot( bb_tmp, bb_tmp );
+  BBOr( *pbb, *pbb, bb_tmp );
+}
