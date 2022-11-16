@@ -123,4 +123,95 @@ b_gen_evasion( tree_t * restrict ptree, unsigned int * restrict pmove )
       if ( ! BBTest( bb_desti ) ) { continue; }
 
       idirec = (int)adirec[sq_bk][from];
-      if ( ! idirec || ! is
+      if ( ! idirec || ! is_pinned_on_black_king( ptree, from, idirec ) )
+	do {
+	  to = LastOne( bb_desti );
+	  Xor( to, bb_desti );
+	  utemp = ( To2Move(to) | From2Move(from) | Piece2Move(silver)
+		    | Cap2Move(-BOARD[to]) );
+	  if ( from < A6 || to < A6 ) { *pmove++ = utemp | FLAG_PROMO; }
+	  *pmove++ = utemp;
+	} while ( BBTest( bb_desti ) );
+    }
+
+  bb_piece = BB_BTGOLD;
+  while( BBTest( bb_piece ) )
+    {
+      from  = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      BBAnd( bb_desti, bb_target, abb_b_gold_attacks[from] );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec || ! is_pinned_on_black_king( ptree, from, idirec ) )
+	do {
+	  to = LastOne( bb_desti );
+	  Xor( to, bb_desti );
+	  *pmove++ = ( To2Move(to) | From2Move(from)
+		       | Piece2Move(BOARD[from])
+		       | Cap2Move(-BOARD[to]) );
+	} while( BBTest( bb_desti ) );
+    }
+
+  bb_piece = BB_BBISHOP;
+  while ( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackBishop( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec || ! is_pinned_on_black_king( ptree, from, idirec ) )
+	do {
+	  to = LastOne( bb_desti );
+	  Xor( to, bb_desti );
+
+	  utemp = ( To2Move(to) | From2Move(from) | Piece2Move(bishop)
+		    | Cap2Move(-BOARD[to]) );
+	  if ( from < A6 || to < A6 ) { utemp |= FLAG_PROMO; }
+	  *pmove++ = utemp;
+	} while ( BBTest( bb_desti ) );
+    }
+
+  bb_piece = BB_BROOK;
+  while ( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackRook( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec || ! is_pinned_on_black_king( ptree, from, idirec ) )
+	do {
+	  to = LastOne( bb_desti );
+	  Xor( to, bb_desti );
+
+	  utemp = ( To2Move(to) | From2Move(from) | Piece2Move(rook)
+		    | Cap2Move(-BOARD[to]) );
+	  if ( from < A6 || to < A6 ) { utemp |= FLAG_PROMO; }
+	  *pmove++ = utemp;
+	} while ( BBTest( bb_desti ) );
+    }
+
+  bb_piece = BB_BHORSE;
+  while( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackHorse( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec || ! is_pinned_on_black_king( ptree, from, idirec ) )
+	do {
+	  to = LastOne( bb_desti );
+	  Xor( to, bb_desti);
+	  *pmove++ = ( To2Move(to) | From2Move(from) | Piece2Move(horse)
+		       | Cap2Move(-BOARD[to]) );
