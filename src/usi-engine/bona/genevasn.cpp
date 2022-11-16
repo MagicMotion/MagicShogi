@@ -215,3 +215,85 @@ b_gen_evasion( tree_t * restrict ptree, unsigned int * restrict pmove )
 	  Xor( to, bb_desti);
 	  *pmove++ = ( To2Move(to) | From2Move(from) | Piece2Move(horse)
 		       | Cap2Move(-BOARD[to]) );
+	} while ( BBTest( bb_desti ) );
+    }
+  
+  bb_piece = BB_BDRAGON;
+  while( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackDragon( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec || ! is_pinned_on_black_king( ptree, from, idirec ) )
+	do {
+	  to = LastOne( bb_desti );
+	  Xor( to, bb_desti );
+	  *pmove++ = ( To2Move(to) | From2Move(from) | Piece2Move(dragon)
+		       | Cap2Move(-BOARD[to]) );
+	} while ( BBTest( bb_desti ) );
+    }
+
+  if ( ! HAND_B )          { return pmove; }
+  if ( ! BBTest(bb_inter) ) { return pmove; }
+
+  /* drops */
+  bb_target = bb_inter;
+  ubb_target0a = bb_target.p[0] & 0x7fc0000U;
+  ubb_target0b = bb_target.p[0] & 0x003fe00U;
+  bb_target.p[0] &= 0x00001ffU;
+  bb_target.p[1] &= 0x7ffffffU;
+  bb_target.p[2] &= 0x7ffffffU;
+
+  hand = HAND_B;
+  nhand = 0;
+  if ( IsHandKnight( hand ) ) { ahand[ nhand++ ] = Drop2Move(knight); }
+  noknight = nhand;
+  if ( IsHandLance( hand ) )  { ahand[ nhand++ ] = Drop2Move(lance); }
+  nolance  = nhand;
+  if ( IsHandSilver( hand ) ) { ahand[ nhand++ ] = Drop2Move(silver); }
+  if ( IsHandGold( hand ) )   { ahand[ nhand++ ] = Drop2Move(gold); }
+  if ( IsHandBishop( hand ) ) { ahand[ nhand++ ] = Drop2Move(bishop); }
+  if ( IsHandRook( hand ) )   { ahand[ nhand++ ] = Drop2Move(rook); }
+
+  if ( IsHandPawn( hand ) )
+    {
+      ubb_pawn_cmp= BBToU( BB_BPAWN_ATK );
+      ais_pawn[0] = ubb_pawn_cmp & ( mask_file1 >> 0 );
+      ais_pawn[1] = ubb_pawn_cmp & ( mask_file1 >> 1 );
+      ais_pawn[2] = ubb_pawn_cmp & ( mask_file1 >> 2 );
+      ais_pawn[3] = ubb_pawn_cmp & ( mask_file1 >> 3 );
+      ais_pawn[4] = ubb_pawn_cmp & ( mask_file1 >> 4 );
+      ais_pawn[5] = ubb_pawn_cmp & ( mask_file1 >> 5 );
+      ais_pawn[6] = ubb_pawn_cmp & ( mask_file1 >> 6 );
+      ais_pawn[7] = ubb_pawn_cmp & ( mask_file1 >> 7 );
+      ais_pawn[8] = ubb_pawn_cmp & ( mask_file1 >> 8 );
+ 
+      while ( BBTest( bb_target ) )
+	{
+	  to = LastOne( bb_target );
+	  utemp = To2Move(to);
+	  if ( ! ais_pawn[aifile[to]] && ! IsMateBPawnDrop( ptree, to ) )
+	    {
+	      *pmove++ = utemp | Drop2Move(pawn);
+	    }
+	  for ( i = 0; i < nhand; i++ ) { *pmove++ = utemp|ahand[i]; }
+	  Xor( to, bb_target );
+	}
+
+      while ( ubb_target0b )
+	{
+	  to = last_one0( ubb_target0b );
+	  utemp = To2Move(to);
+	  if ( ! ais_pawn[aifile[to]] && ! IsMateBPawnDrop( ptree, to ) )
+	    {
+	      *pmove++ = utemp | Drop2Move(pawn);
+	    }
+	  for ( i = noknight; i < nhand; i++ ) { *pmove++ = utemp|ahand[i]; }
+	  ubb_target0b ^= abb_mask[ to ].p[0];
+	}
+ 
