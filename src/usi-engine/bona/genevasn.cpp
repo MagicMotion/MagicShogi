@@ -497,3 +497,93 @@ w_gen_evasion( tree_t * restrict ptree, unsigned int * restrict pmove )
 	  *pmove++ = utemp;
 	} while ( BBTest( bb_desti ) );
     }
+
+  bb_piece = BB_WROOK;
+  while ( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackRook( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec || ! is_pinned_on_white_king( ptree, from, idirec ) )
+	do {
+	  to = FirstOne( bb_desti );
+	  Xor( to, bb_desti );
+
+	  utemp = ( To2Move(to) | From2Move(from) | Piece2Move(rook)
+		    | Cap2Move(BOARD[to]) );
+	  if ( from > I4 || to > I4 ) { utemp |= FLAG_PROMO; }
+	  *pmove++ = utemp;
+	} while ( BBTest( bb_desti ) );
+    }
+
+  bb_piece = BB_WHORSE;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackHorse( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec || ! is_pinned_on_white_king( ptree, from, idirec ) )
+	do {
+	  to = FirstOne( bb_desti );
+	  Xor( to, bb_desti);
+	  *pmove++ = ( To2Move(to) | From2Move(from) | Piece2Move(horse)
+		       | Cap2Move(BOARD[to]) );
+	} while ( BBTest( bb_desti ) );
+    }
+  
+  bb_piece = BB_WDRAGON;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackDragon( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec || ! is_pinned_on_white_king( ptree, from, idirec ) )
+	do {
+	  to = FirstOne( bb_desti );
+	  Xor( to, bb_desti );
+	  *pmove++ = ( To2Move(to) | From2Move(from) | Piece2Move(dragon)
+		       | Cap2Move(BOARD[to]) );
+	} while ( BBTest( bb_desti ) );
+    }
+
+  if ( ! HAND_W )          { return pmove; }
+  if ( ! BBTest(bb_inter) ) { return pmove; }
+
+  /* drop */
+  bb_target = bb_inter;
+  ubb_target2a = bb_target.p[2] & 0x00001ffU;
+  ubb_target2b = bb_target.p[2] & 0x003fe00U;
+  bb_target.p[0] &= 0x7ffffffU;
+  bb_target.p[1] &= 0x7ffffffU;
+  bb_target.p[2] &= 0x7fc0000U;
+
+  hand = HAND_W;
+  nhand = 0;
+  if ( IsHandKnight( hand ) ) { ahand[ nhand++ ] = Drop2Move(knight); }
+  noknight = nhand;
+  if ( IsHandLance( hand ) )  { ahand[ nhand++ ] = Drop2Move(lance); }
+  nolance  = nhand;
+  if ( IsHandSilver( hand ) ) { ahand[ nhand++ ] = Drop2Move(silver); }
+  if ( IsHandGold( hand ) )   { ahand[ nhand++ ] = Drop2Move(gold); }
+  if ( IsHandBishop( hand ) ) { ahand[ nhand++ ] = Drop2Move(bishop); }
+  if ( IsHandRook( hand ) )   { ahand[ nhand++ ] = Drop2Move(rook); }
+
+  if ( IsHandPawn( hand ) )
+    {
+      ubb_pawn_cmp= BBToU( BB_WPAWN_ATK );
+      ais_pawn[0] = ubb_pawn_cmp & ( mask_file1 >> 0 );
+      ais_pawn[1] = ubb_pawn_cmp & ( mask_f
