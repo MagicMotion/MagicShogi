@@ -586,4 +586,110 @@ w_gen_evasion( tree_t * restrict ptree, unsigned int * restrict pmove )
     {
       ubb_pawn_cmp= BBToU( BB_WPAWN_ATK );
       ais_pawn[0] = ubb_pawn_cmp & ( mask_file1 >> 0 );
-      ais_pawn[1] = ubb_pawn_cmp & ( mask_f
+      ais_pawn[1] = ubb_pawn_cmp & ( mask_file1 >> 1 );
+      ais_pawn[2] = ubb_pawn_cmp & ( mask_file1 >> 2 );
+      ais_pawn[3] = ubb_pawn_cmp & ( mask_file1 >> 3 );
+      ais_pawn[4] = ubb_pawn_cmp & ( mask_file1 >> 4 );
+      ais_pawn[5] = ubb_pawn_cmp & ( mask_file1 >> 5 );
+      ais_pawn[6] = ubb_pawn_cmp & ( mask_file1 >> 6 );
+      ais_pawn[7] = ubb_pawn_cmp & ( mask_file1 >> 7 );
+      ais_pawn[8] = ubb_pawn_cmp & ( mask_file1 >> 8 );
+ 
+      while ( BBTest( bb_target ) )
+	{
+	  to = FirstOne( bb_target );
+	  utemp = To2Move(to);
+	  if ( ! ais_pawn[aifile[to]] && ! IsMateWPawnDrop( ptree, to ) )
+	    {
+	      *pmove++ = utemp | Drop2Move(pawn);
+	    }
+	  for ( i = 0; i < nhand; i++ ) { *pmove++ = utemp|ahand[i]; }
+	  Xor( to, bb_target );
+	}
+
+      while ( ubb_target2b )
+	{
+	  to = first_one2( ubb_target2b );
+	  utemp = To2Move(to);
+	  if ( ! ais_pawn[aifile[to]] && ! IsMateWPawnDrop( ptree, to ) )
+	    {
+	      *pmove++ = utemp | Drop2Move(pawn);
+	    }
+	  for ( i = noknight; i < nhand; i++ ) { *pmove++ = utemp|ahand[i]; }
+	  ubb_target2b ^= abb_mask[ to ].p[2];
+	}
+    }
+  else {
+    while ( BBTest( bb_target ) )
+      {
+	to = FirstOne( bb_target );
+	utemp = To2Move(to);
+	for ( i = 0; i < nhand; i++ ) { *pmove++ = utemp|ahand[i]; }
+	Xor( to, bb_target );
+      }
+
+    while ( ubb_target2b )
+      {
+	to = first_one2( ubb_target2b );
+	utemp = To2Move(to);
+	for ( i = noknight; i < nhand; i++ ) { *pmove++ = utemp|ahand[i]; }
+	ubb_target2b ^= abb_mask[ to ].p[2];
+      }
+  }
+
+  while ( ubb_target2a )
+    {
+      to = first_one2( ubb_target2a );
+      utemp = To2Move(to);
+      for ( i = nolance; i < nhand; i++ ) { *pmove++ = utemp|ahand[i]; }
+      ubb_target2a ^= abb_mask[ to ].p[2];
+    }
+
+  return pmove;
+}
+
+
+int CONV b_have_evasion( tree_t * restrict ptree )
+{
+  bitboard_t bb_desti, bb_checker, bb_inter, bb_target, bb_piece;
+  unsigned int ubb_pawn_cmp;
+  unsigned int ais_pawn[nfile];
+  int nchecker, sq_bk, to, sq_check, idirec, flag, from;
+  
+  /* move the king */
+  flag  = 0;
+  sq_bk = SQ_BKING;
+  
+  Xor( sq_bk, BB_BOCCUPY );
+  XorFile( sq_bk, OCCUPIED_FILE );
+  XorDiag2( sq_bk, OCCUPIED_DIAG2 );
+  XorDiag1( sq_bk, OCCUPIED_DIAG1 );
+
+  BBNotAnd( bb_desti, abb_king_attacks[sq_bk], BB_BOCCUPY );
+
+  while ( BBTest( bb_desti ) )
+    {
+      to = LastOne( bb_desti );
+      Xor( to, bb_desti );
+
+      if ( ! is_black_attacked( ptree, to ) )
+	{
+	  flag = 1;
+	  break;
+	}
+    }
+
+  Xor( sq_bk, BB_BOCCUPY );
+  XorFile( sq_bk, OCCUPIED_FILE );
+  XorDiag2( sq_bk, OCCUPIED_DIAG2 );
+  XorDiag1( sq_bk, OCCUPIED_DIAG1 );
+  
+  if ( flag ) { return 1; }
+
+
+  bb_checker = w_attacks_to_piece( ptree, sq_bk );
+  nchecker   = PopuCount( bb_checker );
+  if ( nchecker == 2 ) { return 0; }
+  
+  sq_check = LastOne( bb_checker );
+  bb_inter = abb_obstac
