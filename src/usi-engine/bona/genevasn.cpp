@@ -692,4 +692,106 @@ int CONV b_have_evasion( tree_t * restrict ptree )
   if ( nchecker == 2 ) { return 0; }
   
   sq_check = LastOne( bb_checker );
-  bb_inter = abb_obstac
+  bb_inter = abb_obstacle[sq_bk][sq_check];
+
+  /* move other pieces */
+  BBOr( bb_target, bb_inter, bb_checker );
+  
+  BBAnd( bb_desti, bb_target, BB_BPAWN_ATK );
+  while ( BBTest( bb_desti ) )
+    {
+      to = LastOne( bb_desti );
+      Xor( to, bb_desti );
+
+      from = to + 9;
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_black_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_BLANCE;
+  while ( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      bb_desti = AttackFile( from );
+      BBAnd( bb_desti, bb_desti, abb_minus_rays[from] );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_black_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_BKNIGHT;
+  while ( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      BBAnd( bb_desti, bb_target, abb_b_knight_attacks[from] );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_black_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_BSILVER;
+  while ( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      BBAnd( bb_desti, bb_target, abb_b_silver_attacks[from] );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_black_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_BTGOLD;
+  while( BBTest( bb_piece ) )
+    {
+      from  = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      BBAnd( bb_desti, bb_target, abb_b_gold_attacks[from] );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_black_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_BBISHOP;
+  while ( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackBishop( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_black_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_BROOK;
+  while ( BBTest( bb_piece ) )
+    {
+      from = LastOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackRook( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_bk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_blac
