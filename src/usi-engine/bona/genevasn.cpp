@@ -906,4 +906,110 @@ int CONV w_have_evasion( tree_t * restrict ptree )
   XorDiag2( sq_wk, OCCUPIED_DIAG2 );
   XorDiag1( sq_wk, OCCUPIED_DIAG1 );
 
-  if 
+  if ( flag ) { return 1; }
+
+
+  bb_checker = b_attacks_to_piece( ptree, sq_wk );
+  nchecker   = PopuCount( bb_checker );
+  if ( nchecker == 2 ) { return 0; }
+
+  sq_check = FirstOne( bb_checker );
+  bb_inter = abb_obstacle[sq_wk][sq_check];
+
+  /* move other pieces */
+  BBOr( bb_target, bb_inter, bb_checker );
+
+  BBAnd( bb_desti, bb_target, BB_WPAWN_ATK );
+  while ( BBTest( bb_desti ) )
+    {
+      to = FirstOne( bb_desti );
+      Xor( to, bb_desti );
+
+      from = to - 9;
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_WLANCE;
+  while ( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      bb_desti = AttackFile( from );
+      BBAnd( bb_desti, bb_desti, abb_plus_rays[from] );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_WKNIGHT;
+  while ( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      BBAnd( bb_desti, bb_target, abb_w_knight_attacks[from] );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_WSILVER;
+  while ( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      BBAnd( bb_desti, bb_target, abb_w_silver_attacks[from] );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_WTGOLD;
+  while( BBTest( bb_piece ) )
+    {
+      from  = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      BBAnd( bb_desti, bb_target, abb_w_gold_attacks[from] );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_WBISHOP;
+  while ( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackBishop( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_WROOK;
+  while ( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackRook( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest( bb_desti ) ) { cont
