@@ -1012,4 +1012,83 @@ int CONV w_have_evasion( tree_t * restrict ptree )
 
       AttackRook( bb_desti, from );
       BBAnd( bb_desti, bb_desti, bb_target );
-      if ( ! BBTest( bb_desti ) ) { cont
+      if ( ! BBTest( bb_desti ) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  bb_piece = BB_WHORSE;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackHorse( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+  
+  bb_piece = BB_WDRAGON;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      AttackDragon( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_target );
+      if ( ! BBTest(bb_desti) ) { continue; }
+
+      idirec = (int)adirec[sq_wk][from];
+      if ( ! idirec
+	   || ! is_pinned_on_white_king( ptree, from, idirec ) ) { return 1; }
+    }
+
+  /* drop */
+  if ( ! BBTest(bb_inter) ) { return 0; }
+
+  if ( IsHandSGBR(HAND_W) ) { return 1; }
+
+  bb_inter.p[2] &= 0x7fffe00U;
+  if ( ! BBTest(bb_inter) ) { return 0; }
+
+  if ( IsHandLance(HAND_W) ) { return 1; }
+
+  if ( IsHandKnight(HAND_W) )
+    {
+      bb_target       = bb_inter;
+      bb_target.p[2] &= 0x7fc0000U;
+      if ( BBTest(bb_target) ) { return 1; }
+    }
+
+  if ( IsHandPawn(HAND_W) )
+    {
+      bb_target = bb_inter;
+      ubb_pawn_cmp= BBToU( BB_WPAWN_ATK );
+      ais_pawn[0] = ubb_pawn_cmp & ( mask_file1 >> 0 );
+      ais_pawn[1] = ubb_pawn_cmp & ( mask_file1 >> 1 );
+      ais_pawn[2] = ubb_pawn_cmp & ( mask_file1 >> 2 );
+      ais_pawn[3] = ubb_pawn_cmp & ( mask_file1 >> 3 );
+      ais_pawn[4] = ubb_pawn_cmp & ( mask_file1 >> 4 );
+      ais_pawn[5] = ubb_pawn_cmp & ( mask_file1 >> 5 );
+      ais_pawn[6] = ubb_pawn_cmp & ( mask_file1 >> 6 );
+      ais_pawn[7] = ubb_pawn_cmp & ( mask_file1 >> 7 );
+      ais_pawn[8] = ubb_pawn_cmp & ( mask_file1 >> 8 );
+ 
+      while ( BBTest( bb_target ) )
+	{
+	  to = FirstOne( bb_target );
+	  Xor( to, bb_target );
+
+	  if ( ! ais_pawn[aifile[to]]
+	       && ! IsMateWPawnDrop( ptree, to ) ) { return 1; }
+	}
+    }
+
+  return 0;
+}
