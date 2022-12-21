@@ -341,3 +341,32 @@ w_gen_nocaptures( const tree_t * restrict ptree,
 
       bb_desti = AttackFile( from );
       BBAnd( bb_desti, bb_desti, abb_plus_rays[from] );
+      BBAnd( bb_desti, bb_desti, bb_empty );
+
+      utemp = From2Move( from ) | Piece2Move( lance ); 
+      while ( BBTest( bb_desti ) )
+	{
+	  to = FirstOne( bb_desti );
+	  Xor( to, bb_desti );
+	  *pmove++ = To2Move( to ) | utemp;
+	}
+    }
+
+  bb_piece = BB_WKNIGHT;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      BBAnd( bb_desti, bb_empty, abb_w_knight_attacks[from] );
+      utemp = From2Move( from ) | Piece2Move( knight ); 
+      while ( BBTest( bb_desti ) )
+	{
+	  to = FirstOne( bb_desti );
+	  Xor( to, bb_desti );
+	  *pmove++ = To2Move( to ) | utemp;
+	}
+    }
+
+  return pmove;
+}
