@@ -233,4 +233,111 @@ w_gen_nocaptures( const tree_t * restrict ptree,
       from = FirstOne( bb_piece );
       Xor( from, bb_piece );
 
-      BBAnd( bb_desti, 
+      BBAnd( bb_desti, bb_empty, abb_w_gold_attacks[from] );
+      utemp = From2Move( from ) | Piece2Move( -BOARD[from] ); 
+      while ( BBTest( bb_desti ) )
+	{
+	  to = FirstOne( bb_desti );
+	  Xor( to, bb_desti );
+	  *pmove++ = To2Move( to ) | utemp;
+	}
+    }
+
+  from = SQ_WKING;
+  BBAnd( bb_desti, bb_empty, abb_king_attacks[from] );
+  utemp = From2Move( from ) | Piece2Move( king ); 
+  while ( BBTest( bb_desti ) )
+    {
+      to = FirstOne( bb_desti );
+      Xor( to, bb_desti );
+      *pmove++ = To2Move( to ) | utemp;
+    }
+
+  bb_piece.p[0] = BB_WBISHOP.p[0];
+  bb_piece.p[1] = BB_WBISHOP.p[1];
+  while( bb_piece.p[0] | bb_piece.p[1] )
+    {
+      from          = first_one01( bb_piece.p[0], bb_piece.p[1] );
+      bb_piece.p[0] ^= abb_mask[from].p[0];
+      bb_piece.p[1] ^= abb_mask[from].p[1];
+
+      AttackBishop( bb_desti, from );
+      bb_desti.p[0] &= bb_empty.p[0];
+      bb_desti.p[1] &= bb_empty.p[1];
+
+      utemp = From2Move( from ) | Piece2Move( bishop );
+      while ( bb_desti.p[0] | bb_desti.p[1] )
+	{
+	  to            = first_one01( bb_desti.p[0], bb_desti.p[1] );
+	  bb_desti.p[0] ^= abb_mask[to].p[0];
+	  bb_desti.p[1] ^= abb_mask[to].p[1];
+	  *pmove++ = To2Move( to ) | utemp;
+	}
+    }
+
+  bb_piece.p[0] = BB_WROOK.p[0];
+  bb_piece.p[1] = BB_WROOK.p[1];
+  while( bb_piece.p[0] | bb_piece.p[1] )
+    {
+      from          = first_one01( bb_piece.p[0], bb_piece.p[1] );
+      bb_piece.p[0] ^= abb_mask[from].p[0];
+      bb_piece.p[1] ^= abb_mask[from].p[1];
+
+      AttackRook( bb_desti, from );
+      bb_desti.p[0] &= bb_empty.p[0];
+      bb_desti.p[1] &= bb_empty.p[1];
+
+      utemp = From2Move( from ) | Piece2Move( rook );
+      while ( bb_desti.p[0] | bb_desti.p[1] )
+	{
+	  to            = first_one01( bb_desti.p[0], bb_desti.p[1] );
+	  bb_desti.p[0] ^= abb_mask[to].p[0];
+	  bb_desti.p[1] ^= abb_mask[to].p[1];
+	  *pmove++ = To2Move( to ) | utemp;
+	}
+    }
+
+  bb_piece = BB_WHORSE;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      AttackHorse( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_empty );
+      utemp = From2Move( from ) | Piece2Move( horse ); 
+      while ( BBTest( bb_desti ) )
+	{
+	  to = FirstOne( bb_desti );
+	  Xor( to, bb_desti );
+	  *pmove++ = To2Move( to ) | utemp;
+	}
+    }
+
+  bb_piece = BB_WDRAGON;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+      
+      AttackDragon( bb_desti, from );
+      BBAnd( bb_desti, bb_desti, bb_empty );
+      utemp = From2Move( from ) | Piece2Move( dragon ); 
+      while ( BBTest( bb_desti ) )
+	{
+	  to = FirstOne( bb_desti );
+	  Xor( to, bb_desti );
+	  *pmove++ = To2Move( to ) | utemp;
+	}
+    }
+
+  bb_empty.p[2] &= 0x7fc0000U;
+
+  bb_piece = BB_WLANCE;
+  while( BBTest( bb_piece ) )
+    {
+      from = FirstOne( bb_piece );
+      Xor( from, bb_piece );
+
+      bb_desti = AttackFile( from );
+      BBAnd( bb_desti, bb_desti, abb_plus_rays[from] );
