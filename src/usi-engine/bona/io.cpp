@@ -146,4 +146,134 @@ out_warning( const char *format, ... )
 
 
 void
-out_error( const char *format, ..
+out_error( const char *format, ... )
+{
+  va_list arg;
+  
+  if ( !( game_status & flag_nostdout ) )
+    {
+      fprintf( stderr, "\nERROR: " );
+      va_start( arg, format );
+      vfprintf( stderr, format, arg );
+      va_end( arg );
+      fprintf( stderr, "\n\n" );
+      fflush( stderr );
+    }
+
+#if ! defined(NO_LOGGING)
+  if ( pf_log != NULL )
+    {
+      fprintf( pf_log, "\nERROR: " );
+      va_start( arg, format );
+      vfprintf( pf_log, format, arg );
+      va_end( arg );
+      fprintf( pf_log, "\n\n" );
+      fflush( pf_log );
+    }
+#endif
+  
+}
+
+
+FILE *
+file_open( const char *str_file, const char *str_mode )
+{
+  FILE *pf;
+
+  pf = fopen( str_file, str_mode );
+  if ( pf == NULL )
+    {
+      snprintf( str_message, SIZE_MESSAGE,
+		"%s, %s", str_fopen_error, str_file );
+      str_error = str_message;
+      return NULL;
+    }
+  
+  return pf;
+}
+
+
+int
+file_close( FILE *pf )
+{
+  if ( pf == NULL ) { return 1; }
+  if ( ferror( pf ) )
+    {
+      fclose( pf );
+      str_error = str_io_error;
+      return -2;
+    }
+  if ( fclose( pf ) )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+
+  return 1;
+}
+
+
+void
+show_prompt( void )
+{
+  if ( game_status & flag_noprompt ) { return; }
+  
+  if ( game_status & flag_drawn ) { Out( "Drawn> " ); }
+  else if ( game_status & flag_mated )
+    {
+      if ( root_turn ) { Out( "Black Mated> " ); }
+      else             { Out( "White Mated> " ); }
+    }
+  else if ( game_status & flag_resigned )
+    {
+      if ( root_turn ) { Out( "White Resigned> " ); }
+      else             { Out( "Black Resigned> " ); }
+    }
+  else if ( game_status & flag_suspend )
+    {
+      if ( root_turn ) { Out( "White Suspend> " ); }
+      else             { Out( "Black Suspend> " ); }
+    }
+  else if ( root_turn ) { Out( "White %d> ", record_game.moves+1 ); }
+  else                  { Out( "Black %d> ", record_game.moves+1 ); }
+}
+
+
+int
+open_history( const char *str_name1, const char *str_name2 )
+{
+#if defined(YSS_ZERO)
+  return 1;
+#endif
+#if defined(NO_LOGGING)
+//  char str_file[SIZE_FILENAME];
+  int iret;
+
+  iret = record_close( &record_game );
+  if ( iret < 0 ) { return -1; }
+
+  iret = record_open( &record_game, "game.csa", mode_read_write,
+		      str_name1, str_name2 );
+  if ( iret < 0 ) { return -1; }
+
+  return 1;
+#else
+  FILE *pf;
+  int i, iret;
+  char str_file[SIZE_FILENAME];
+  
+  if ( record_game.pf != NULL && ! record_game.moves )
+    {
+      record_game.str_name1[0] = '\0';
+      record_game.str_name2[0] = '\0';
+
+      if ( str_name1 )
+	{
+	  strncpy( record_game.str_name1, str_name1, SIZE_PLAYERNAME-1 );
+	  record_game.str_name1[SIZE_PLAYERNAME-1] = '\0';
+	}
+      
+      if ( str_name2 )
+	{
+	  strncpy( record_game.str_name2, str_name2, SIZE_PLAYERNAME-1 );
+	  record_game.str_name
