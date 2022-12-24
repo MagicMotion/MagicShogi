@@ -276,4 +276,115 @@ open_history( const char *str_name1, const char *str_name2 )
       if ( str_name2 )
 	{
 	  strncpy( record_game.str_name2, str_name2, SIZE_PLAYERNAME-1 );
-	  record_game.str_name
+	  record_game.str_name2[SIZE_PLAYERNAME-1] = '\0';
+	}
+      return 1;
+    }
+
+  if ( ( ( game_status & flag_nonewlog )
+#  if defined(USI)
+	 ||  usi_mode != usi_off
+#  endif
+	 ) && 0 <= record_num )
+    {
+      iret = record_close( &record_game );
+      if ( iret < 0 ) { return -1; }
+      
+      snprintf( str_file, SIZE_FILENAME, "%s/game%03d.csa",
+		str_dir_logs, record_num );
+      iret = record_open( &record_game, str_file, mode_read_write,
+			  str_name1, str_name2 );
+      if ( iret < 0 ) { return -1; }
+    }
+  else
+    {
+      iret = file_close( pf_log );
+      if ( iret < 0 ) { return -1; }
+      
+      iret = record_close( &record_game );
+      if ( iret < 0 ) { return -1; }
+      
+      for ( i = 0; i < 999; i++ )
+	{
+	  snprintf( str_file, SIZE_FILENAME, "%s/game%03d.csa",
+		    str_dir_logs, i );
+	  pf = file_open( str_file, "r" );
+	  if ( pf == NULL ) { break; }
+	  iret = file_close( pf );
+	  if ( iret < 0 ) { return -1; }
+	}
+      record_num = i;
+      
+      snprintf( str_file, SIZE_FILENAME, "%s/n%03d.log",
+		str_dir_logs, i );
+      pf_log = file_open( str_file, "w" );
+      if ( pf_log == NULL ) { return -1; }
+      
+      snprintf( str_file, SIZE_FILENAME, "%s/game%03d.csa",
+		str_dir_logs, i );
+      iret = record_open( &record_game, str_file, mode_read_write,
+			  str_name1, str_name2 );
+      if ( iret < 0 ) { return -1; }
+    }
+  
+  return 1;
+#endif
+}
+
+
+int
+out_board( const tree_t * restrict ptree, FILE *pf, unsigned int move,
+	   int is_strict )
+{
+  int irank, ifile, i, iret, ito, ifrom;
+
+#if ! defined(WIN32_PIPE)
+  int is_promote;
+#endif
+
+  if ( game_status & flag_nostdout ) { return 1; }
+
+  if ( ! is_strict && move )
+    {
+      ito        = I2To( move );
+      ifrom      = I2From( move );
+#if ! defined(NO_STDOUT) && ! defined(WIN32_PIPE)
+      is_promote = I2IsPromote( move );
+#endif
+    }
+  else {
+    ito = ifrom = nsquare;
+#if ! defined(NO_STDOUT) && ! defined(WIN32_PIPE)
+    is_promote = 0;
+#endif
+  }
+  
+  if ( ( game_status & flag_reverse ) && ! is_strict )
+    {
+      fprintf( pf, "          <reversed>        \n" );
+      fprintf( pf, "'  1  2  3  4  5  6  7  8  9\n" );
+
+      for ( irank = rank9; irank >= rank1; irank-- )
+	{
+	  fprintf( pf, "P%d", irank + 1 );
+	  
+	  for ( ifile = file9; ifile >= file1; ifile-- )
+	    {
+	      i = irank * nfile + ifile;
+	      iret = OutBoard0( pf, BOARD[i], i, ito, ifrom, is_promote );
+	      if ( iret < 0 ) { return iret; }
+	    }
+	  fprintf( pf, "\n" );
+	}
+    }
+  else {
+    fprintf( pf, "'  9  8  7  6  5  4  3  2  1\n" );
+
+    for ( irank = rank1; irank <= rank9; irank++ )
+      {
+	fprintf( pf, "P%d", irank + 1 );
+	
+	for ( ifile = file1; ifile <= file9; ifile++ )
+	  {
+	    i = irank * nfile + ifile;
+	    iret = OutBoard0( pf, BOARD[i], i, ito, ifrom, is_promote
