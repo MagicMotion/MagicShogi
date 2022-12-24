@@ -387,4 +387,116 @@ out_board( const tree_t * restrict ptree, FILE *pf, unsigned int move,
 	for ( ifile = file1; ifile <= file9; ifile++ )
 	  {
 	    i = irank * nfile + ifile;
-	    iret = OutBoard0( pf, BOARD[i], i, ito, ifrom, is_promote
+	    iret = OutBoard0( pf, BOARD[i], i, ito, ifrom, is_promote );
+	    if ( iret < 0 ) { return iret; }
+	  }
+	fprintf( pf, "\n" );
+      }
+  }
+    
+  out_hand( pf, HAND_B, "P+" );
+  out_hand( pf, HAND_W, "P-" );
+#if defined(YSS_ZERO)
+//  record_t *pr = &record_game;	// �ʏ��͋����ہH
+//  fprintf( pf, "moves=%d, pr->games=%d,moves=%d,lines=%d\n",ptree->nrep, pr->games,pr->moves,pr->lines );
+  fprintf( pf, "moves=%3d(%d), turn %c, nHandicap=%d, seq_hash=%016" PRIx64 ,ptree->nrep+sfen_current_move_number,sfen_current_move_number, ach_turn[(root_turn)&1], nHandicap, ptree->sequence_hash );
+  if ( ptree->nrep > 0 ) {
+    const min_posi_t *p0 = &ptree->record_plus_ply_min_posi[ptree->nrep-0];
+    const min_posi_t *p1 = &ptree->record_plus_ply_min_posi[ptree->nrep-1];
+	int x,y,n=0,diff[2],d[2];
+	diff[0] = diff[1] = 0;
+	for (y=0;y<9;y++) for (x=0;x<9;x++) {
+		int z = y*9 + x;
+//		fprintf( pf, "%d,",p0->asquare[z]);
+		if ( p0->asquare[z] == p1->asquare[z] ) continue;
+		if ( n == 2 ) continue;
+		d[n] = (y+1) + (10 - (x+1))*10;
+		diff[n++] = z;	// �ύX��1�����Ȃ�����
+	}
+	int bz = diff[0];
+	int az = diff[1];
+	int b0 = d[0];
+	int a0 = d[1];
+	if ( n==2 ) {
+		if ( p0->asquare[bz] != 0 ) {
+//			bz = diff[1];
+			az = diff[0];
+			b0 = d[1];
+			a0 = d[0];
+		}
+	} else {
+		b0 = 0;
+		a0 = d[0];
+		az = diff[0];
+	}
+//	fprintf( pf, "%d,02d%d%s\n",n,b0,a0,astr_table_piece[abs(p0->asquare[az])]);
+	fprintf( pf, ", %c%02d%d%s\n",ach_turn[(root_turn+1)&1],b0,a0,astr_table_piece[abs(p0->asquare[az])]);
+  }
+  fprintf( pf, "\n");
+#endif
+  fflush( pf );
+
+  return 1;
+}
+
+#if defined(YSS_ZERO)
+void print_board(const tree_t * restrict ptree)
+{
+    game_status &= game_status & (~flag_nostdout);
+    out_board( ptree, stderr, 0, 0 );
+    game_status |= flag_nostdout;
+}
+#endif
+
+int
+next_cmdline( int is_wait )
+{
+  char *str_line_end;
+  size_t size;
+  int iret;
+
+  str_line_end = strchr( str_buffer_cmdline, '\n' );
+
+  if ( ! str_line_end )
+    {
+      if ( is_wait )
+	{
+	  do {
+	    iret = read_command( & str_line_end );
+	    if ( iret < 0 ) { return iret; }
+	  } while ( ! str_line_end && iret );
+	  if ( ! iret )
+	    {
+	      game_status |= flag_quit;
+	      return 1;
+	    }
+	}
+      else {
+	iret = check_input_buffer();
+	if ( iret <= 0 ) { return iret; }
+
+	iret = read_command( & str_line_end );
+	if ( iret < 0 ) { return iret; }
+	if ( ! iret )
+	  {
+	    game_status |= flag_quit;
+	    return 1;
+	  }
+	if ( ! str_line_end ) { return 0; }
+      }
+    }
+  
+  if ( str_line_end - str_buffer_cmdline + 1 >= SIZE_CMDLINE )
+    {
+      str_error = str_ovrflw_line;
+      memmove( str_buffer_cmdline, str_line_end + 1,
+	       strlen( str_line_end + 1 ) + 1 );
+      return -2;
+    }
+  
+  size = str_line_end - str_buffer_cmdline;
+  memcpy( str_cmdline, str_buffer_cmdline, size );
+  *( str_cmdline + size ) = '\0';
+
+#if defined(USI)
+  // ShogiDokoro sends 
