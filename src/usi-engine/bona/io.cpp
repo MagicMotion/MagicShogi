@@ -499,4 +499,148 @@ next_cmdline( int is_wait )
   *( str_cmdline + size ) = '\0';
 
 #if defined(USI)
-  // ShogiDokoro sends 
+  // ShogiDokoro sends "\r\n"
+//  fprintf(stderr,"hoge=%d'%s'\n",size,str_cmdline);
+  if ( size >= 1 ) {
+    char *p = str_cmdline + size;
+    if ( *(p-1) == '\r' ) {
+      *(p-1) = 0;
+    }
+  }
+#endif
+  
+  if ( is_wait )
+    {
+      out_file( NULL, "%s\n", str_cmdline );
+      memmove( str_buffer_cmdline, str_line_end + 1,
+	       strlen( str_line_end + 1 ) + 1 );
+    }
+
+  return 1;
+}
+
+
+static int
+#if defined(NO_STDOUT) || defined(WIN32_PIPE)
+out_board0( FILE *pf, int piece, int i, int ito, int ifrom )
+#else
+out_board0( FILE *pf, int piece, int i, int ito, int ifrom, int is_promote )
+#endif
+{
+  int ch;
+#if ! ( defined(NO_STDOUT) || defined(WIN32_PIPE) )
+  int iret;
+#endif
+
+  if ( piece )
+    {
+      ch = piece < 0 ? '-' : '+';
+#if ! ( defined(NO_STDOUT) || defined(WIN32_PIPE) )
+      if ( i == ito && pf == stdout && ! ( game_status & flag_nostress ) )
+	{
+	  iret = StdoutStress( is_promote, ifrom );
+	  if ( iret < 0 )
+	    {
+	      fprintf( pf, "\n" );
+	      return iret;
+	    }
+	}
+#endif
+      fprintf( pf, "%c%s", ch, astr_table_piece[ abs( piece ) ] );
+#if ! ( defined(NO_STDOUT) || defined(WIN32_PIPE) )
+      if ( i == ito && pf == stdout && ! ( game_status & flag_nostress ) )
+	{
+	  iret = StdoutNormal();
+	  if ( iret < 0 )
+	    {
+	      fprintf( pf, "\n" );
+	      return iret;
+	    }
+	}
+#endif
+    }
+  else {
+    if ( ifrom < nsquare
+	 && ( ifrom == i
+	      || ( adirec[ito][ifrom]
+		   && adirec[ito][ifrom] == adirec[ito][i]
+		   && ( ( ito < i && i <= ifrom )
+			|| ( ito > i && i >= ifrom ) ) ) ) )
+      {
+	fprintf( pf, "   " );
+      }
+    else { fprintf( pf, " * " ); }
+  }
+
+  return 1;
+}
+
+
+#if ! defined(NO_STDOUT) && ! defined(WIN32_PIPE)
+
+void
+out_beep( void )
+{
+  if ( game_status & flag_nobeep ) { return; }
+
+#  if defined(_WIN32)
+  if ( ! MessageBeep( MB_OK ) )
+    {
+      out_warning( "Beep is not available." );
+    }
+#  else
+  printf( "\007" );
+#  endif
+}
+
+
+int
+stdout_normal( void )
+{
+#  if defined(_WIN32)
+  HANDLE hStdout;
+  WORD wAttributes;
+  
+  hStdout = GetStdHandle( STD_OUTPUT_HANDLE );
+  if ( hStdout == INVALID_HANDLE_VALUE )
+    {
+      str_error = "GetStdHandle() faild";
+      return -1;
+    }
+
+  wAttributes = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+  if ( ! SetConsoleTextAttribute( hStdout, wAttributes ) )
+    {
+      str_error = "SetConsoleTextAttribute() faild";
+      return -1;
+    }
+
+#  else
+  printf( "\033[0m" );
+#  endif
+  return 1;
+}
+
+
+int
+stdout_stress( int is_promote, int ifrom )
+{
+#  if defined(_WIN32)
+  HANDLE hStdout;
+  WORD wAttributes;
+
+  hStdout = GetStdHandle( STD_OUTPUT_HANDLE );
+  if ( hStdout == INVALID_HANDLE_VALUE )
+    {
+      str_error = "GetStdHandle() faild";
+      return -1;
+    }
+
+  if ( is_promote )
+    {
+      wAttributes = BACKGROUND_RED | BACKGROUND_INTENSITY;
+    }
+  else if ( ifrom >= nsquare )
+    {
+      wAttributes = BACKGROUND_BLUE | BACKGROUND_INTENSITY;
+ 
