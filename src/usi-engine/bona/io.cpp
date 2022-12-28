@@ -748,4 +748,114 @@ read_command( char ** pstr_line_end )
 
   *pstr_line_end = strchr( str_buffer_cmdline, '\n' );
   if ( *pstr_line_end == NULL
-       && count_byte + count_cmdbuff + 1 >= SIZE_CM
+       && count_byte + count_cmdbuff + 1 >= SIZE_CMDLINE )
+    {
+      *str_buffer_cmdline = '\0';
+      str_error = str_ovrflw_line;
+      return -2;
+    }
+
+  return count_byte;
+}
+
+
+static int CONV
+check_input_buffer( void )
+{
+#if defined(CSA_LAN)
+  if ( sckt_csa != SCKT_NULL ) { return sckt_check( sckt_csa ); }
+#endif
+  
+#if defined(MNJ_LAN)
+  if ( sckt_mnj != SCKT_NULL ) { return sckt_check( sckt_mnj ); }
+#endif
+
+#if defined(DFPN)
+  if ( dfpn_sckt != SCKT_NULL ) { return sckt_check( dfpn_sckt ); }
+#endif
+
+  {
+#if defined(_WIN32) && defined(WIN32_PIPE)
+    BOOL bSuccess;
+    HANDLE hHandle;
+    DWORD dwBytesRead, dwTotalBytesAvail, dwBytesLeftThisMessage;
+    char buf[1];
+
+    hHandle = GetStdHandle( STD_INPUT_HANDLE );
+    if ( hHandle == INVALID_HANDLE_VALUE )
+      {
+	str_error = "GetStdHandle() faild.";
+	return -1;
+      }
+    bSuccess = PeekNamedPipe( hHandle, buf, 1, &dwBytesRead,
+			      &dwTotalBytesAvail, &dwBytesLeftThisMessage );
+    if ( ! bSuccess )
+      {
+	str_error = "PeekNamedPipe() faild.";
+	return -1;
+      }
+    if ( dwBytesRead ) { return 1; }
+    return 0;
+
+#elif defined(_WIN32)
+
+    return _kbhit();
+
+#else
+
+    fd_set readfds;
+    struct timeval tv;
+    int iret;
+
+#  if defined(__ICC)
+#    pragma warning(disable:279)
+#    pragma warning(disable:593)
+#    pragma warning(disable:1469)
+#  endif
+    
+    FD_ZERO(&readfds);
+    FD_SET(0, &readfds);
+    tv.tv_sec  = 0;
+    tv.tv_usec = 0;
+    iret       = select( 1, &readfds, NULL, NULL, &tv );
+    if ( iret == -1 )
+      {
+	str_error = "select() faild.";
+	return -1;
+      }
+    return iret;
+    
+#  if defined(__ICC)
+#    pragma warning(default:279)
+#    pragma warning(default:593)
+#    pragma warning(default:1469)
+#  endif
+#endif /* no _WIN32 */
+  }
+}
+
+
+static void CONV
+out_file( FILE *pf, const char *format, ... )
+{
+  va_list arg;
+
+  if ( pf != NULL )
+    {
+      va_start( arg, format );
+      vfprintf( pf, format, arg ); 
+      va_end( arg );
+      fflush( pf );
+    }
+  
+#if ! defined(NO_LOGGING)
+  if ( pf_log != NULL )
+    {
+      va_start( arg, format );
+      vfprintf( pf_log, format, arg ); 
+      va_end( arg );
+      fflush( pf_log );
+    }
+#endif
+
+}
