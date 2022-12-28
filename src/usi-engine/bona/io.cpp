@@ -643,4 +643,109 @@ stdout_stress( int is_promote, int ifrom )
   else if ( ifrom >= nsquare )
     {
       wAttributes = BACKGROUND_BLUE | BACKGROUND_INTENSITY;
- 
+    }
+  else {
+    wAttributes = ( BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE
+		    | BACKGROUND_INTENSITY );
+  }
+  if ( ! SetConsoleTextAttribute( hStdout, wAttributes ) )
+    {
+      str_error = "SetConsoleTextAttribute() faild";
+      return -1;
+    }
+#  else
+  if      ( is_promote )       { printf( "\033[7;31m" ); }
+  else if ( ifrom >= nsquare ) { printf( "\033[7;34m" ); }
+  else                         { printf( "\033[7m" ); }
+#  endif
+
+  return 1;
+}
+
+#endif /* no NO_STDOUT and no WIN32_PIPE */
+
+
+static void CONV
+out_hand( FILE *pf, unsigned int hand, const char *str_prefix )
+{
+  out_hand0( pf, (int)I2HandPawn(hand),   str_prefix, "00FU" );
+  out_hand0( pf, (int)I2HandLance(hand),  str_prefix, "00KY" );
+  out_hand0( pf, (int)I2HandKnight(hand), str_prefix, "00KE" );
+  out_hand0( pf, (int)I2HandSilver(hand), str_prefix, "00GI" );
+  out_hand0( pf, (int)I2HandGold(hand),   str_prefix, "00KI" );
+  out_hand0( pf, (int)I2HandBishop(hand), str_prefix, "00KA" );
+  out_hand0( pf, (int)I2HandRook(hand),   str_prefix, "00HI" );
+}
+
+
+static void CONV
+out_hand0( FILE *pf, int n, const char *str_prefix, const char *str )
+{
+  int i;
+
+  if ( n > 0 )
+    {
+      fprintf( pf, "%s", str_prefix );
+      for ( i = 0; i < n; i++ ) { fprintf( pf, "%s", str ); }
+      fprintf( pf, "\n" );
+    }
+}
+
+
+static int CONV
+read_command( char ** pstr_line_end )
+{
+  char *str_end;
+  int count_byte, count_cmdbuff;
+
+  count_cmdbuff = (int)strlen( str_buffer_cmdline );
+  str_end       = str_buffer_cmdline + count_cmdbuff;
+
+#if defined(CSA_LAN)
+  if ( sckt_csa != SCKT_NULL )
+    {
+      count_byte = sckt_in( sckt_csa, str_end, SIZE_CMDLINE-1-count_cmdbuff );
+      if ( count_byte < 0 ) { return count_byte; }
+      goto tag;
+    }
+#endif
+
+#if defined(MNJ_LAN)
+  if ( sckt_mnj != SCKT_NULL )
+    {
+      count_byte = sckt_in( sckt_mnj, str_end, SIZE_CMDLINE-1-count_cmdbuff );
+      if ( count_byte < 0 ) { return count_byte; }
+      goto tag;
+    }
+#endif
+
+#if defined(DFPN)
+  if ( dfpn_sckt != SCKT_NULL )
+    {
+      count_byte = sckt_in( dfpn_sckt, str_end, SIZE_CMDLINE-1-count_cmdbuff );
+      if ( count_byte < 0 ) { return count_byte; }
+      goto tag;
+    }
+#endif
+
+  do { count_byte = (int)read( 0, str_end, SIZE_CMDBUFFER-1-count_cmdbuff ); }
+  while ( count_byte < 0 && errno == EINTR );
+  
+  if ( count_byte < 0 )
+    {
+      str_error = "read() faild.";
+      return -1;
+    }
+  *( str_end + count_byte ) = '\0';
+
+#if defined(CSA_LAN) || defined(MNJ_LAN) || defined(DFPN)
+ tag:
+#endif
+
+#if defined(USI)
+  if ( usi_mode != usi_off ) { Out( "IN: %s[END]\n", str_end );}
+#endif
+
+  *pstr_line_end = strchr( str_buffer_cmdline, '\n' );
+  if ( *pstr_line_end == NULL
+       && count_byte + count_cmdbuff + 1 >= SIZE_CM
