@@ -704,3 +704,449 @@ iterate( tree_t * restrict ptree )
     int misc   = fmg_misc;
     int drop   = fmg_drop;
     int cap    = fmg_cap;
+    int mt     = fmg_mt;
+    int misc_k = fmg_misc_king;
+    int cap_k  = fmg_cap_king;
+    Out( "    futility -> misc=%d drop=%d cap=%d mt=%d misc(k)=%d cap(k)=%d\n",
+	 misc, drop, cap, mt, misc_k, cap_k );
+  }
+#endif
+
+  /* hashing-statistics */
+  {
+    double dalways, dprefer, dsupe, dinfe;
+    double dlower, dupper, dsat;
+    uint64_t word2;
+    int ntrans_table, i, n;
+
+    ntrans_table = 1 << log2_ntrans_table;
+    if ( ntrans_table > 8192 ) { ntrans_table = 8192; }
+    
+    for ( i = 0, n = 0; i < ntrans_table; i++ )
+      {
+	word2 = ptrans_table[i].prefer.word2;
+	SignKey( word2, ptrans_table[i].prefer.word1 );
+	if ( trans_table_age == ( 7 & (int)word2 ) ) { n++; }
+
+	word2 = ptrans_table[i].always[0].word2;
+	SignKey( word2, ptrans_table[i].always[0].word1 );
+	if ( trans_table_age == ( 7 & (int)word2 ) ) { n++; }
+
+	word2 = ptrans_table[i].always[1].word2;
+	SignKey( word2, ptrans_table[i].always[1].word1 );
+	if ( trans_table_age == ( 7 & (int)word2 ) ) { n++; }
+      }
+
+    dalways  = 100.0 * (double)ptree->ntrans_always_hit;
+    dalways /= (double)( ptree->ntrans_probe + 1 );
+
+    dprefer  = 100.0 * (double)ptree->ntrans_prefer_hit;
+    dprefer /= (double)( ptree->ntrans_probe + 1 );
+
+    dsupe    = 100.0 * (double)ptree->ntrans_superior_hit;
+    dsupe   /= (double)( ptree->ntrans_probe + 1 );
+
+    dinfe    = 100.0 * (double)ptree->ntrans_inferior_hit;
+    dinfe   /= (double)( ptree->ntrans_probe + 1 );
+
+    Out( "    hashing  -> always=%2.0f%% prefer=%2.0f%% supe=%4.2f%% "
+	 "infe=%4.2f%%\n", dalways, dprefer, dsupe, dinfe );
+
+    dlower  = 100.0 * (double)ptree->ntrans_lower;
+    dlower /= (double)( ptree->ntrans_probe + 1 );
+
+    dupper  = 100.0 * (double)ptree->ntrans_upper;
+    dupper /= (double)( ptree->ntrans_probe + 1 );
+
+    dsat    = 100.0 * (double)n;
+    dsat   /= (double)( 3 * ntrans_table );
+
+    OutCsaShogi( "statsatu=%.0f", dsat );
+    Out( "    hashing  -> "
+	 "exact=%d lower=%2.0f%% upper=%4.2f%% sat=%2.0f%% age=%d\n",
+	 ptree->ntrans_exact, dlower, dupper, dsat, trans_table_age );
+    if ( dsat > 9.0 ) { trans_table_age  = ( trans_table_age + 1 ) & 0x7; }
+  }
+
+#if defined(TLP)
+  if ( tlp_max > 1 )
+    {
+      Out( "    threading-> split=%d abort=%d slot=%d\n",
+	   tlp_nsplit, tlp_nabort, tlp_nslot+1 );
+      if ( tlp_nslot+1 == TLP_NUM_WORK )
+	{
+	  out_warning( "THREAD WORK AREA IS USED UP!!!" );
+	}
+    }
+#endif
+
+#if defined(DFPN_CLIENT)
+  if ( dfpn_client_sckt != SCKT_NULL )
+    {
+      int asum[4] = { 0, 0, 0, 0 };
+      int i, n;
+
+      n = root_nmove;
+      for ( i = 0; i < n; i += 1 )
+	{
+	  asum[ root_move_list[i].dfpn_cresult ] += 1;
+	}
+
+      switch ( dfpn_client_rresult_unlocked )
+	{
+	case dfpn_client_na:
+	  Out( "    dfpn     -> n/a " );
+	  break;
+
+	case dfpn_client_win:
+	  if ( dfpn_client_move_unlocked != MOVE_NA )
+	    {
+	      Out( "    dfpn     -> win %s ",
+		   str_CSA_move(dfpn_client_move_unlocked) );
+	    }
+	  else { Out( "    dfpn     -> win ignore " ); }
+	  break;
+
+	case dfpn_client_lose:
+	  Out( "    dfpn     -> lose " );
+	  break;
+
+	default:
+	  assert( dfpn_client_misc == dfpn_client_rresult_unlocked );
+	  Out( "    dfpn     -> misc " );
+	  break;
+	}
+	  
+      Out( "(children win %d, lose %d, misc %d, n/a %d)\n",
+	   asum[dfpn_client_win], asum[dfpn_client_lose],
+	   asum[dfpn_client_misc], asum[dfpn_client_na] );
+    }
+  if ( dfpn_client_move_unlocked )
+    {
+      last_root_value = root_turn ? -score_matelong : score_matelong;
+      last_pv.a[1]   = dfpn_client_move_unlocked;
+      last_pv.length = 1;
+      last_pv.depth  = 0;
+      last_pv.type   = no_rep;
+      MnjOut( "pid=%d move=%s n=0 v=%de final%s\n", mnj_posi_id,
+	      str_CSA_move(last_pv.a[1]), score_matelong,
+	      ( mnj_depth_stable == INT_MAX ) ? "" : " stable" );
+    }
+#endif
+
+  {
+    double dcpu_percent, dnps, dmat;
+    unsigned int cpu, elapsed;
+
+    Out( "    n=%" PRIu64 " quies=%u eval=%u rep=%u %u(chk) %u(supe)\n",
+	 ptree->node_searched, ptree->nquies_called, ptree->neval_called,
+	 ptree->nfour_fold_rep, ptree->nperpetual_check,
+	 ptree->nsuperior_rep );
+
+    if ( get_cputime( &cpu )     < 0 ) { return -1; }
+    if ( get_elapsed( &elapsed ) < 0 ) { return -1; }
+
+    cpu             -= cpu_start;
+    elapsed         -= time_start;
+
+    dcpu_percent     = 100.0 * (double)cpu;
+    dcpu_percent    /= (double)( elapsed + 1U );
+
+    dnps             = 1000.0 * (double)ptree->node_searched;
+    dnps            /= (double)( elapsed + 1U );
+
+#if defined(TLP)
+    {
+      double n = (double)tlp_max;
+      node_per_second  = (unsigned int)( ( dnps + 0.5 ) / n );
+    }
+#else
+    node_per_second  = (unsigned int)( dnps + 0.5 );
+#endif
+
+    dmat  = (double)MATERIAL;
+    dmat /= (double)MT_CAP_PAWN;
+
+    OutCsaShogi( " cpu=%.0f nps=%.2f\n", dcpu_percent, dnps / 1e3 );
+    Out( "    time=%s  ", str_time_symple( elapsed ) );
+    Out( "cpu=%3.0f%%  mat=%.1f  nps=%.2fK\n", dcpu_percent, dmat, dnps/1e3 );
+  }
+
+  if ( ( game_status & flag_problem ) && ! right_answer_made ) { iret = 0; }
+  else                                                         { iret = 1; }
+
+  return iret;
+}
+
+
+#if defined(USI)
+int CONV
+usi_root_list( tree_t * restrict ptree )
+{
+#define SIZE_STR ( MAX_LEGAL_MOVES * 6 + 200 )
+  char str[ SIZE_STR ];
+  char str_usi[6];
+  unsigned int elapsed;
+  int i, istr;
+
+  ptree->node_searched         =  0;
+  ptree->current_move[0]       =  MOVE_NA;
+  ptree->save_eval[0]          =  INT_MAX;
+  ptree->save_eval[1]          =  INT_MAX;
+  ptree->pv[0].a[0]            =  0;
+  ptree->pv[0].a[1]            =  0;
+  ptree->pv[0].depth           =  0;
+  ptree->pv[0].length          =  0;
+  easy_value                   =  0;
+  easy_abs                     =  0;
+  root_abort                   =  0;
+  root_nmove                   =  0;
+  root_value                   = -score_bound;
+  root_alpha                   = -score_bound;
+  root_beta                    =  score_bound;
+  node_last_check              =  0;
+  game_status                 &= ~( flag_move_now | flag_suspend
+				    | flag_quit_ponder | flag_search_error );
+
+  Out( "- root move generation" );
+  make_root_move_list( ptree );
+
+  if ( game_status & flag_search_error ) { return -1; }
+  if ( game_status & ( flag_quit | flag_quit_ponder | flag_suspend ) )
+    {
+      return 1;
+    }
+
+  if ( ! root_nmove )
+    {
+      str_error = "No legal moves to search";
+      return -1;
+    }
+
+  if ( get_elapsed( &elapsed ) < 0 ) { return -1; }
+  Out( " ... done (%d moves, %ss)\n",
+       root_nmove, str_time_symple( elapsed - time_start ) );
+
+  istr = snprintf( str, SIZE_STR, "genmove_probability" );
+  for ( i = 0; i < root_nmove; i++ )
+    {
+      csa2usi( ptree, str_CSA_move(root_move_list[i].move), str_usi );
+      istr += snprintf( str + istr, SIZE_STR - istr, " %s %d",
+			str_usi, i + 1 );
+    }
+
+  USIOut( "%s\n", str );
+  return 1;
+}
+
+
+int CONV
+usi_book( tree_t * restrict ptree )
+{
+  char str_usi[6];
+  int is_book_hit;
+
+  if ( pf_book == NULL || rep_book_prob( ptree  ) )
+    {
+      USIOut( "bestmove pass\n" );
+      return 1;
+    }
+
+  is_book_hit = book_probe( ptree );
+  if ( is_book_hit < 0 ) { return is_book_hit; }
+
+  if ( ! is_book_hit )
+    {
+      USIOut( "bestmove pass\n" );
+      return 1;
+    }
+
+  csa2usi( ptree, str_CSA_move(ptree->current_move[1]), str_usi );
+  USIOut( "bestmove %s\n", str_usi );
+  return 1;
+}
+#endif
+
+
+#if defined(DFPN_CLIENT)
+void CONV
+dfpn_client_check_results( void )
+{
+  int i, n, index, num;
+
+  n = root_nmove;
+  lock( &dfpn_client_lock );
+
+  if ( dfpn_client_rresult_unlocked == dfpn_client_na )
+    {
+      dfpn_client_rresult_unlocked = dfpn_client_rresult;
+      if ( dfpn_client_rresult == dfpn_client_win
+	   && dfpn_client_move_unlocked == MOVE_NA )
+	{
+	  for ( i = 0; i < n; i += 1 )
+	    if ( ! strcmp( (const char *)dfpn_client_str_move,
+			   str_CSA_move(root_move_list[i].move) ) )
+	      {
+		dfpn_client_move_unlocked = root_move_list[i].move;
+		break;
+	      }
+	}
+    }
+
+  num = dfpn_client_num_cresult;
+  for ( index = dfpn_client_cresult_index; index < num; index += 1 )
+    {
+      for ( i = 0; i < n; i += 1 ) {
+	
+	if ( root_move_list[i].dfpn_cresult != dfpn_client_na ) { continue; }
+	
+	if ( ! strcmp( (const char *)dfpn_client_cresult[index].str_move,
+		       str_CSA_move(root_move_list[i].move) ) ) {
+
+	  root_move_list[i].dfpn_cresult
+	    = (int)dfpn_client_cresult[index].result;
+	  break;
+	}
+      }
+    }
+
+  dfpn_client_cresult_index = index;
+  dfpn_client_flag_read     = 0;
+  unlock( &dfpn_client_lock );
+}
+#endif
+
+
+static int CONV rep_book_prob( tree_t * restrict ptree )
+{
+  int i;
+
+  for ( i = ptree->nrep - 2; i >= 0; i -= 2 )
+    if ( ptree->rep_board_list[i] == HASH_KEY
+	 && ptree->rep_hand_list[i] == HAND_B )
+      {
+	Out( "- book is ignored due to a repetition.\n" );
+	return 1;
+      }
+
+  return 0;
+}
+
+
+static void CONV adjust_fmg( void )
+{
+  int misc, cap, drop, mt, misc_king, cap_king;
+
+  misc      = fmg_misc      - FMG_MG      / 2;
+  cap       = fmg_cap       - FMG_MG      / 2;
+  drop      = fmg_drop      - FMG_MG      / 2;
+  misc_king = fmg_misc_king - FMG_MG_KING / 2;
+  cap_king  = fmg_cap_king  - FMG_MG_KING / 2;
+  mt        = fmg_mt        - FMG_MG_MT   / 2;
+
+  fmg_misc      = ( misc      < FMG_MISC      ) ? FMG_MISC      : misc;
+  fmg_cap       = ( cap       < FMG_CAP       ) ? FMG_CAP       : cap;
+  fmg_drop      = ( drop      < FMG_DROP      ) ? FMG_DROP      : drop;
+  fmg_misc_king = ( misc_king < FMG_MISC_KING ) ? FMG_MISC_KING : misc_king;
+  fmg_cap_king  = ( cap_king  < FMG_CAP_KING  ) ? FMG_CAP_KING  : cap_king;
+  fmg_mt        = ( mt        < FMG_MT        ) ? FMG_MT        : mt;
+}
+
+
+static int CONV set_root_beta( int nfail_high, int root_beta_old )
+{
+  int aspiration_hwdth, aspiration_fail1;
+
+  if ( time_max_limit != time_limit )
+    {
+      aspiration_hwdth = MT_CAP_DRAGON / 8;
+      aspiration_fail1 = MT_CAP_DRAGON / 2;
+    }
+  else {
+    aspiration_hwdth = MT_CAP_DRAGON / 4;
+    aspiration_fail1 = ( MT_CAP_DRAGON * 3 ) / 4;
+  }
+
+  switch ( nfail_high )
+    {
+    case 0:  root_beta_old += aspiration_hwdth;                     break;
+    case 1:  root_beta_old += aspiration_fail1 - aspiration_hwdth;  break;
+    case 2:  root_beta_old  = score_bound;                          break;
+    default:
+      out_error( "Error at set_root_beta!" );
+      exit(1);
+    }
+  if ( root_beta_old > score_max_eval ) { root_beta_old = score_bound; }
+
+  return root_beta_old;
+}
+
+
+static int CONV set_root_alpha( int nfail_low, int root_alpha_old )
+{
+  int aspiration_hwdth, aspiration_fail1;
+
+  if ( time_max_limit != time_limit )
+    {
+      aspiration_hwdth = MT_CAP_DRAGON / 8;
+      aspiration_fail1 = MT_CAP_DRAGON / 2;
+    }
+  else {
+    aspiration_hwdth = MT_CAP_DRAGON / 4;
+    aspiration_fail1 = ( MT_CAP_DRAGON * 3 ) / 4;
+  }
+
+  switch ( nfail_low )
+    {
+    case 0:  root_alpha_old -= aspiration_hwdth;                     break;
+    case 1:  root_alpha_old -= aspiration_fail1 - aspiration_hwdth;  break;
+    case 2:  root_alpha_old  = -score_bound;                         break;
+    default:
+      out_error( "Error at set_root_alpha!" );
+      exit(1);
+    }
+  if ( root_alpha_old < -score_max_eval ) { root_alpha_old = -score_bound; }
+
+  return root_alpha_old;
+}
+
+
+static const char * CONV str_fail_high( int turn, int nfail_high )
+{
+  const char *str;
+
+  if ( time_max_limit != time_limit )
+    {
+      if ( nfail_high == 1 ) { str = turn ? "-1" : "+1"; }
+      else                   { str = turn ? "-4" : "+4"; }
+    }
+  else {
+    if ( nfail_high == 1 ) { str = turn ? "-2" : "+2"; }
+    else                   { str = turn ? "-6" : "+6"; }
+  }
+  return str;
+}
+
+
+static int CONV is_answer_right( unsigned int move )
+{
+  const char *str_anser;
+  const char *str_move;
+  int ianser, iret;
+  
+  iret     = 0;
+  str_move = str_CSA_move( move );
+
+  for ( ianser = 0; ianser < MAX_ANSWER; ianser++ )
+    {
+      str_anser = &( record_problems.info.str_move[ianser][0] );
+      if ( str_anser[0] == '\0' ) { break; }
+      if ( ! strcmp( str_anser+1, str_move ) )
+	{
+	  iret = 1;
+	  break;
+	}
+    }
+
+  return iret;
+}
