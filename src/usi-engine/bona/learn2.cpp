@@ -171,3 +171,119 @@ static void fv_sym( void )
   int q, r, il, ir, ir0, jl, jr, k0l, k0r, k1l, k1r;
 
   for ( k0l = 0; k0l < nsquare; k0l++ ) {
+    q = k0l / nfile;
+    r = k0l % nfile;
+    k0r = q*nfile + nfile-1-r;
+    if ( k0l > k0r ) { continue; }
+
+    for ( il = 0; il < fe_end; il++ ) {
+      if ( il < fe_hand_end ) { ir0 = il; }
+      else {
+	q = ( il- fe_hand_end ) / nfile;
+	r = ( il- fe_hand_end ) % nfile;
+	ir0 = q*nfile + nfile-1-r + fe_hand_end;
+      }
+
+      for ( jl = 0; jl <= il; jl++ ) {
+	if ( jl < fe_hand_end )
+	  {
+	    ir = ir0;
+	    jr = jl;
+	  }
+	else {
+	  q = ( jl - fe_hand_end ) / nfile;
+	  r = ( jl - fe_hand_end ) % nfile;
+	  jr = q*nfile + nfile-1-r + fe_hand_end;
+	  if ( jr > ir0 )
+	    {
+	      ir = jr;
+	      jr = ir0;
+	    }
+	  else { ir = ir0; }
+	}
+	if ( k0l == k0r && il*(il+1)/2+jl >= ir*(ir+1)/2+jr ) { continue; }
+
+	PcPcOnSq(k0l,il,jl) = PcPcOnSq(k0r,ir,jr);
+      }
+    }
+  }
+
+  for ( k0l = 0; k0l < nsquare; k0l++ ) {
+    q = k0l / nfile;
+    r = k0l % nfile;
+    k0r = q*nfile + nfile-1-r;
+    if ( k0l > k0r ) { continue; }
+
+    for ( k1l = 0; k1l < nsquare; k1l++ ) {
+      q = k1l / nfile;
+      r = k1l % nfile;
+      k1r = q*nfile + nfile-1-r;
+      if ( k0l == k0r && k1l > k1r ) { continue; }
+
+      for ( il = 0; il < kkp_end; il++ ) {
+	if ( il < kkp_hand_end ) { ir = il; }
+	else {
+	  q  = ( il- kkp_hand_end ) / nfile;
+	  r  = ( il- kkp_hand_end ) % nfile;
+	  ir = q*nfile + nfile-1-r + kkp_hand_end;
+	}
+	if ( k0l == k0r && k1l == k1r && il >= ir ) { continue; }
+
+	kkp[k0l][k1l][il] = kkp[k0r][k1r][ir];
+      }
+    }
+  }
+}
+
+
+double
+calc_penalty( void )
+{
+  uint64_t u64sum;
+  int i;
+
+  u64sum = 0;
+
+#define Foo(x) u64sum += (uint64_t)abs((int)x);
+  GO_THROUGH_ALL_PARAMETERS_BY_FOO;
+#undef Foo
+
+  return (double)u64sum * FV_PENALTY;
+}
+
+
+void
+renovate_param( const param_t *pd )
+{
+  double *pv[14], *p;
+  double v[16];
+  unsigned int u32rand, u;
+  int i, j;
+
+  v[pawn]       = pd->pawn;         v[lance]      = pd->lance;
+  v[knight]     = pd->knight;       v[silver]     = pd->silver;
+  v[gold]       = pd->gold;         v[bishop]     = pd->bishop;
+  v[rook]       = pd->rook;         v[pro_pawn]   = pd->pro_pawn;
+  v[pro_lance]  = pd->pro_lance;    v[pro_knight] = pd->pro_knight;
+  v[pro_silver] = pd->pro_silver;   v[horse]      = pd->horse;
+  v[dragon]     = pd->dragon;       v[king]       = FLT_MAX;
+
+  pv[ 0] = v + pawn;         pv[ 1] = v + lance;
+  pv[ 2] = v + knight;       pv[ 3] = v + silver;
+  pv[ 4] = v + gold;         pv[ 5] = v + bishop;
+  pv[ 6] = v + rook;         pv[ 7] = v + pro_pawn;
+  pv[ 8] = v + pro_lance;    pv[ 9] = v + pro_knight;
+  pv[10] = v + pro_silver;   pv[11] = v + horse;
+  pv[12] = v + dragon;       pv[13] = v + king;
+
+  /* insertion sort */
+  for ( i = 13 - 2; i >= 0; i-- )
+    {
+      p = pv[i];
+      for ( j = i+1; *pv[j] < *p; j++ ) { pv[j-1] = pv[j]; }
+      pv[j-1] = p;
+    }
+
+  u32rand = rand32();
+  u       = u32rand % 7U;
+ 
