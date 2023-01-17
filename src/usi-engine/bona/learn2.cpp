@@ -286,4 +286,94 @@ renovate_param( const param_t *pd )
 
   u32rand = rand32();
   u       = u32rand % 7U;
- 
+  u32rand = u32rand / 7U;
+  p = pv[u+6];  pv[u+6] = pv[12];  pv[12] = p;
+  for ( i = 5; i > 0; i-- )
+    {
+      u       = u32rand % (i+1);
+      u32rand = u32rand / (i+1);
+      p = pv[u];  pv[u] = pv[i];  pv[i] = p;
+
+      u       = u32rand % (i+1);
+      u32rand = u32rand / (i+1);
+      p = pv[u+6];  pv[u+6] = pv[i+6];  pv[i+6] = p;
+    }
+
+  *pv[ 0] = *pv[ 1] = -2.0;
+  *pv[ 2] = *pv[ 3] = *pv[ 4] = -1.0;
+  *pv[ 5] = *pv[ 6] = *pv[ 7] =  0.0;
+  *pv[ 8] = *pv[ 9] = *pv[10] =  1.0;
+  *pv[11] = *pv[12] =  2.0;
+
+  rmt( v, pawn );        rmt( v, lance );       rmt( v, knight );
+  rmt( v, silver );      rmt( v, gold );        rmt( v, bishop );
+  rmt( v, rook );        rmt( v, pro_pawn );    rmt( v, pro_lance );
+  rmt( v, pro_knight );  rmt( v, pro_silver );  rmt( v, horse );
+  rmt( v, dragon );
+
+#define Foo(v) rparam( &v, pd->v );
+  GO_THROUGH_ALL_PARAMETERS_BY_FOO;
+#undef Foo
+
+  fv_sym();
+  set_derivative_param();
+  ehash_clear();
+}
+
+
+int
+out_param( void )
+{
+  size_t size;
+  FILE *pf;
+  int apc[17], apv[17];
+  int iret, i, j, pc, pv;
+
+  for ( i = 0; i < 17; i++ ) { apc[i] = i;  apv[i] = INT_MAX; }
+  apv[pawn]       = p_value_ex[15+pawn];
+  apv[lance]      = p_value_ex[15+lance];
+  apv[knight]     = p_value_ex[15+knight];
+  apv[silver]     = p_value_ex[15+silver];
+  apv[gold]       = p_value_ex[15+gold];
+  apv[bishop]     = p_value_ex[15+bishop];
+  apv[rook]       = p_value_ex[15+rook];
+  apv[pro_pawn]   = p_value_ex[15+pro_pawn];
+  apv[pro_lance]  = p_value_ex[15+pro_lance];
+  apv[pro_knight] = p_value_ex[15+pro_knight];
+  apv[pro_silver] = p_value_ex[15+pro_silver];
+  apv[horse]      = p_value_ex[15+horse];
+  apv[dragon]     = p_value_ex[15+dragon];
+
+  /* insertion sort */
+  for ( i = dragon-1; i >= 0; i-- )
+    {
+      pv = apv[i];  pc = apc[i];
+      for ( j = i+1; apv[j] < pv; j++ )
+	{
+	  apv[j-1] = apv[j];
+	  apc[j-1] = apc[j];
+	}
+      apv[j-1] = pv;  apc[j-1] = pc;
+    }
+      
+  pf = file_open( "param.h_", "w" );
+  if ( pf == NULL ) { return -2; }
+  
+  for ( i = 0; i < 13; i++ )
+    {
+      fprintf( pf, "#define " );
+      switch ( apc[i] )
+	{
+	case pawn:        fprintf( pf, "DPawn     " );  break;
+	case lance:       fprintf( pf, "DLance    " );  break;
+	case knight:      fprintf( pf, "DKnight   " );  break;
+	case silver:      fprintf( pf, "DSilver   " );  break;
+	case gold:        fprintf( pf, "DGold     " );  break;
+	case bishop:      fprintf( pf, "DBishop   " );  break;
+	case rook:        fprintf( pf, "DRook     " );  break;
+	case pro_pawn:    fprintf( pf, "DProPawn  " );  break;
+	case pro_lance:   fprintf( pf, "DProLance " );  break;
+	case pro_knight:  fprintf( pf, "DProKnight" );  break;
+	case pro_silver:  fprintf( pf, "DProSilver" );  break;
+	case horse:       fprintf( pf, "DHorse    " );  break;
+	case dragon:      fprintf( 
