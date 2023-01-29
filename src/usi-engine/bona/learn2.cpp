@@ -376,4 +376,100 @@ out_param( void )
 	case pro_knight:  fprintf( pf, "DProKnight" );  break;
 	case pro_silver:  fprintf( pf, "DProSilver" );  break;
 	case horse:       fprintf( pf, "DHorse    " );  break;
-	case dragon:      fprintf( 
+	case dragon:      fprintf( pf, "DDragon   " );  break;
+	}
+      fprintf( pf, "     %4d /* %4d */\n", p_value[15+apc[i]], apv[i] );
+    }
+  fprintf( pf, "#define DKing         15000\n\n" );
+
+  iret = file_close( pf );
+  if ( iret < 0 ) { return -2; }
+
+  pf = file_open( "fv.bin", "wb" );
+  if ( pf == NULL ) { return -2; }
+
+  size = nsquare * pos_n;
+  if ( fwrite( pc_on_sq, sizeof(short), size, pf ) != size )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+
+  size = nsquare * nsquare * kkp_end;
+  if ( fwrite( kkp, sizeof(short), size, pf ) != size )
+    {
+      str_error = str_io_error;
+      return -2;
+    }
+  
+  return file_close( pf );
+}
+
+
+void
+inc_param( const tree_t * restrict ptree, param_t * restrict pd, double dinc )
+{
+  float f;
+  int anpiece[16], list0[52], list1[52];
+  int nlist, sq_bk, sq_wk, k0, k1, l0, l1, i, j;
+
+  f     = (float)( dinc / (double)FV_SCALE );
+  nlist = make_list( ptree, list0, list1, anpiece, pd, f );
+  sq_bk = SQ_BKING;
+  sq_wk = Inv( SQ_WKING );
+
+  pd->pawn       += dinc * (double)anpiece[pawn];
+  pd->lance      += dinc * (double)anpiece[lance];
+  pd->knight     += dinc * (double)anpiece[knight];
+  pd->silver     += dinc * (double)anpiece[silver];
+  pd->gold       += dinc * (double)anpiece[gold];
+  pd->bishop     += dinc * (double)anpiece[bishop];
+  pd->rook       += dinc * (double)anpiece[rook];
+  pd->pro_pawn   += dinc * (double)anpiece[pro_pawn];
+  pd->pro_lance  += dinc * (double)anpiece[pro_lance];
+  pd->pro_knight += dinc * (double)anpiece[pro_knight];
+  pd->pro_silver += dinc * (double)anpiece[pro_silver];
+  pd->horse      += dinc * (double)anpiece[horse];
+  pd->dragon     += dinc * (double)anpiece[dragon];
+
+  for ( i = 0; i < nlist; i++ )
+    {
+      k0 = list0[i];
+      k1 = list1[i];
+      for ( j = 0; j <= i; j++ )
+	{
+	  l0 = list0[j];
+	  l1 = list1[j];
+	  assert( k0 >= l0 && k1 >= l1 );
+	  pd->PcPcOnSq( sq_bk, k0, l0 ) += f;
+	  pd->PcPcOnSq( sq_wk, k1, l1 ) -= f;
+	}
+    }
+}
+
+
+static int
+make_list( const tree_t * restrict ptree, int list0[52], int list1[52],
+	   int anpiece[16], param_t * restrict pd, float f )
+{
+  bitboard_t bb;
+  int list2[34];
+  int nlist, sq, sq_bk0, sq_bk1, sq_wk0, sq_wk1, n2, i, itemp1, itemp2;
+
+  itemp1          = (int)I2HandPawn(HAND_B);
+  itemp2          = (int)I2HandPawn(HAND_W);
+  anpiece[pawn]   = itemp1 - itemp2;
+
+  itemp1          = (int)I2HandLance(HAND_B);
+  itemp2          = (int)I2HandLance(HAND_W);
+  anpiece[lance]  = itemp1 - itemp2;
+
+  itemp1          = (int)I2HandKnight(HAND_B);
+  itemp2          = (int)I2HandKnight(HAND_W);
+  anpiece[knight] = itemp1 - itemp2;
+
+  itemp1          = (int)I2HandSilver(HAND_B);
+  itemp2          = (int)I2HandSilver(HAND_W);
+  anpiece[silver] = itemp1 - itemp2;
+
+  itemp1          = (int)
