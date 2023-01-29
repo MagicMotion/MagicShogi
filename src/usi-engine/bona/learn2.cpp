@@ -533,4 +533,128 @@ make_list( const tree_t * restrict ptree, int list0[52], int list1[52],
   pd->kkp[sq_bk1][sq_wk1][kkp_hand_pawn  +I2HandPawn(HAND_W)  ] -= f;
   pd->kkp[sq_bk1][sq_wk1][kkp_hand_lance +I2HandLance(HAND_W) ] -= f;
   pd->kkp[sq_bk1][sq_wk1][kkp_hand_knight+I2HandKnight(HAND_W)] -= f;
-  pd->kkp[sq_bk1][sq_wk1
+  pd->kkp[sq_bk1][sq_wk1][kkp_hand_silver+I2HandSilver(HAND_W)] -= f;
+  pd->kkp[sq_bk1][sq_wk1][kkp_hand_gold  +I2HandGold(HAND_W)  ] -= f;
+  pd->kkp[sq_bk1][sq_wk1][kkp_hand_bishop+I2HandBishop(HAND_W)] -= f;
+  pd->kkp[sq_bk1][sq_wk1][kkp_hand_rook  +I2HandRook(HAND_W)  ] -= f;
+
+  n2 = 0;
+  bb = BB_BPAWN;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    Xor( sq, bb );
+
+    pd->kkp[sq_bk0][sq_wk0][kkp_pawn+sq] += f;
+    anpiece[pawn] += 1;
+    list0[nlist] = f_pawn + sq;
+    list2[n2]    = e_pawn + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+
+  bb = BB_WPAWN;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    Xor( sq, bb );
+
+    pd->kkp[sq_bk1][sq_wk1][kkp_pawn+Inv(sq)] -= f;
+    anpiece[pawn] -= 1;
+    list0[nlist] = e_pawn + sq;
+    list2[n2]    = f_pawn + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+  for ( i = 0; i < n2; i++ ) { list1[nlist-i-1] = list2[i]; }
+
+  n2 = 0;
+  bb = BB_BLANCE;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    Xor( sq, bb );
+
+    pd->kkp[sq_bk0][sq_wk0][kkp_lance+sq] += f;
+    anpiece[lance] += 1;
+    list0[nlist] = f_lance + sq;
+    list2[n2]    = e_lance + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+
+  bb = BB_WLANCE;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    Xor( sq, bb );
+
+    pd->kkp[sq_bk1][sq_wk1][kkp_lance+Inv(sq)] -= f;
+    anpiece[lance] -= 1;
+    list0[nlist] = e_lance + sq;
+    list2[n2]    = f_lance + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+  for ( i = 0; i < n2; i++ ) { list1[nlist-i-1] = list2[i]; }
+
+
+  n2 = 0;
+  bb = BB_BKNIGHT;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    Xor( sq, bb );
+
+    pd->kkp[sq_bk0][sq_wk0][kkp_knight+sq] += f;
+    anpiece[knight] += 1;
+    list0[nlist] = f_knight + sq;
+    list2[n2]    = e_knight + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+
+  bb = BB_WKNIGHT;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    Xor( sq, bb );
+
+    pd->kkp[sq_bk1][sq_wk1][kkp_knight+Inv(sq)] -= f;
+    anpiece[knight] -= 1;
+    list0[nlist] = e_knight + sq;
+    list2[n2]    = f_knight + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+  for ( i = 0; i < n2; i++ ) { list1[nlist-i-1] = list2[i]; }
+
+
+  n2 = 0;
+  bb = BB_BSILVER;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    Xor( sq, bb );
+
+    pd->kkp[sq_bk0][sq_wk0][kkp_silver+sq] += f;
+    anpiece[silver] += 1;
+    list0[nlist] = f_silver + sq;
+    list2[n2]    = e_silver + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+
+  bb = BB_WSILVER;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    Xor( sq, bb );
+
+    pd->kkp[sq_bk1][sq_wk1][kkp_silver+Inv(sq)] -= f;
+    anpiece[silver] -= 1;
+    list0[nlist] = e_silver + sq;
+    list2[n2]    = f_silver + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+  for ( i = 0; i < n2; i++ ) { list1[nlist-i-1] = list2[i]; }
+
+
+  n2 = 0;
+  bb = BB_BTGOLD;
+  while ( BBTest(bb) ) {
+    sq = FirstOne( bb );
+    
