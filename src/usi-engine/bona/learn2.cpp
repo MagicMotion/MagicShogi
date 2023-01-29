@@ -472,4 +472,65 @@ make_list( const tree_t * restrict ptree, int list0[52], int list1[52],
   itemp2          = (int)I2HandSilver(HAND_W);
   anpiece[silver] = itemp1 - itemp2;
 
-  itemp1          = (int)
+  itemp1          = (int)I2HandGold(HAND_B);
+  itemp2          = (int)I2HandGold(HAND_W);
+  anpiece[gold]   = itemp1 - itemp2;
+
+  itemp1          = (int)I2HandBishop(HAND_B);
+  itemp2          = (int)I2HandBishop(HAND_W);
+  anpiece[bishop] = itemp1 - itemp2;
+
+  itemp1          = (int)I2HandRook(HAND_B);
+  itemp2          = (int)I2HandRook(HAND_W);
+  anpiece[rook]   = itemp1 - itemp2;
+
+  anpiece[pro_pawn]   = anpiece[pro_lance]  = anpiece[pro_knight] = 0;
+  anpiece[pro_silver] = anpiece[horse]      = anpiece[dragon]     = 0;
+  nlist  = 14;
+  sq_bk0 = SQ_BKING;
+  sq_wk0 = SQ_WKING;
+  sq_bk1 = Inv(SQ_WKING);
+  sq_wk1 = Inv(SQ_BKING);
+
+  list0[ 0] = f_hand_pawn   + I2HandPawn(HAND_B);
+  list0[ 1] = e_hand_pawn   + I2HandPawn(HAND_W);
+  list0[ 2] = f_hand_lance  + I2HandLance(HAND_B);
+  list0[ 3] = e_hand_lance  + I2HandLance(HAND_W);
+  list0[ 4] = f_hand_knight + I2HandKnight(HAND_B);
+  list0[ 5] = e_hand_knight + I2HandKnight(HAND_W);
+  list0[ 6] = f_hand_silver + I2HandSilver(HAND_B);
+  list0[ 7] = e_hand_silver + I2HandSilver(HAND_W);
+  list0[ 8] = f_hand_gold   + I2HandGold(HAND_B);
+  list0[ 9] = e_hand_gold   + I2HandGold(HAND_W);
+  list0[10] = f_hand_bishop + I2HandBishop(HAND_B);
+  list0[11] = e_hand_bishop + I2HandBishop(HAND_W);
+  list0[12] = f_hand_rook   + I2HandRook(HAND_B);
+  list0[13] = e_hand_rook   + I2HandRook(HAND_W);
+
+  list1[ 0] = f_hand_pawn   + I2HandPawn(HAND_W);
+  list1[ 1] = e_hand_pawn   + I2HandPawn(HAND_B);
+  list1[ 2] = f_hand_lance  + I2HandLance(HAND_W);
+  list1[ 3] = e_hand_lance  + I2HandLance(HAND_B);
+  list1[ 4] = f_hand_knight + I2HandKnight(HAND_W);
+  list1[ 5] = e_hand_knight + I2HandKnight(HAND_B);
+  list1[ 6] = f_hand_silver + I2HandSilver(HAND_W);
+  list1[ 7] = e_hand_silver + I2HandSilver(HAND_B);
+  list1[ 8] = f_hand_gold   + I2HandGold(HAND_W);
+  list1[ 9] = e_hand_gold   + I2HandGold(HAND_B);
+  list1[10] = f_hand_bishop + I2HandBishop(HAND_W);
+  list1[11] = e_hand_bishop + I2HandBishop(HAND_B);
+  list1[12] = f_hand_rook   + I2HandRook(HAND_W);
+  list1[13] = e_hand_rook   + I2HandRook(HAND_B);
+
+  pd->kkp[sq_bk0][sq_wk0][kkp_hand_pawn  +I2HandPawn(HAND_B)  ] += f;
+  pd->kkp[sq_bk0][sq_wk0][kkp_hand_lance +I2HandLance(HAND_B) ] += f;
+  pd->kkp[sq_bk0][sq_wk0][kkp_hand_knight+I2HandKnight(HAND_B)] += f;
+  pd->kkp[sq_bk0][sq_wk0][kkp_hand_silver+I2HandSilver(HAND_B)] += f;
+  pd->kkp[sq_bk0][sq_wk0][kkp_hand_gold  +I2HandGold(HAND_B)  ] += f;
+  pd->kkp[sq_bk0][sq_wk0][kkp_hand_bishop+I2HandBishop(HAND_B)] += f;
+  pd->kkp[sq_bk0][sq_wk0][kkp_hand_rook  +I2HandRook(HAND_B)  ] += f;
+
+  pd->kkp[sq_bk1][sq_wk1][kkp_hand_pawn  +I2HandPawn(HAND_W)  ] -= f;
+  pd->kkp[sq_bk1][sq_wk1][kkp_hand_lance +I2HandLance(HAND_W) ] -= f;
+  pd->kkp[sq_bk1][sq_wk1][kkp_hand_knight+I2HandKnight(HAND_W)] -= f;
+  pd->kkp[sq_bk1][sq_wk1
