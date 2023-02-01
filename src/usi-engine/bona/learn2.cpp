@@ -788,4 +788,71 @@ make_list( const tree_t * restrict ptree, int list0[52], int list1[52],
     sq = FirstOne( bb );
     Xor( sq, bb );
 
-    pd->kkp[s
+    pd->kkp[sq_bk1][sq_wk1][kkp_dragon+Inv(sq)] -= f;
+    anpiece[dragon] -= 1;
+    list0[nlist] = e_dragon + sq;
+    list2[n2]    = f_dragon + Inv(sq);
+    nlist += 1;
+    n2    += 1;
+  }
+  for ( i = 0; i < n2; i++ ) { list1[nlist-i-1] = list2[i]; }
+
+  assert( nlist <= 52 );
+  return nlist;
+}
+
+
+static void
+rmt( const double avalue[16], int pc )
+{
+  int pc_v;
+
+  pc_v  = (int)p_value[15+pc] + (int)avalue[pc];
+
+  if ( 0 < pc_v && pc_v <= SHRT_MAX ) { p_value[15+pc] = (short)pc_v; }
+  else {
+    out_warning( "A material value is out of bounce. (%s=%d)\n",
+		 astr_table_piece[pc], pc_v );
+  }
+}
+
+
+static void
+rparam( short *pv, float dv )
+{
+  int v, istep;
+
+  istep  = brand();
+  istep += brand();
+  v      = *pv;
+
+  if      ( v > 0 ) { dv -= (float)FV_PENALTY; }
+  else if ( v < 0 ) { dv += (float)FV_PENALTY; }
+
+  if      ( dv >= 0.0 && v <= SHRT_MAX - istep ) { v += istep; }
+  else if ( dv <= 0.0 && v >= SHRT_MIN + istep ) { v -= istep; }
+  else { out_warning( "A fvcoef parameter is out of bounce.\n" ); }
+
+  *pv = (short)v;
+}
+
+
+static int
+brand( void )
+{
+  static unsigned int urand = 0;
+  static unsigned int uc    = 31;
+  unsigned int uret;
+
+  if ( uc == 31 )
+    {
+      urand = rand32();
+      uc    = 0;
+    }
+  else { uc += 1; }
+  uret    = urand & 1U;
+  urand >>= 1;
+  return uret;
+}
+
+#endif /* MINIMUM */
