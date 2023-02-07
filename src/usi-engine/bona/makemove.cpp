@@ -282,4 +282,51 @@ make_move_w( tree_t * restrict ptree, unsigned int move, int ply )
 
     if ( is_promote) switch( ipiece_move )
       {
- 
+      case pawn:   NocapProW( PAWN, PRO_PAWN, pawn, pro_pawn );
+                   Xor( to, BB_WPAWN_ATK );
+                   Xor( to, BB_WTGOLD );                           break;
+      case lance:  NocapProW( LANCE, PRO_LANCE, lance, pro_lance );
+                   Xor( to, BB_WTGOLD );                           break;
+      case knight: NocapProW( KNIGHT, PRO_KNIGHT, knight, pro_knight );
+                   Xor( to, BB_WTGOLD );                           break;
+      case silver: NocapProW( SILVER, PRO_SILVER, silver, pro_silver );
+                   Xor( to, BB_WTGOLD );                           break;
+      case bishop: NocapProW( BISHOP, HORSE, bishop, horse );
+                   Xor( to, BB_W_HDK );
+		   SetClear( BB_W_BH );                              break;
+      default:     NocapProW( ROOK, DRAGON, rook, dragon);
+                   Xor( to, BB_W_HDK );
+		   SetClear( BB_W_RD );                              break;
+      }
+    else switch ( ipiece_move )
+      {
+      case pawn:       NocapNoproW( PAWN, pawn );
+                       Xor( to+nfile, BB_WPAWN_ATK );
+                       Xor( to,       BB_WPAWN_ATK );     break;
+      case lance:      NocapNoproW( LANCE,     lance);      break;
+      case knight:     NocapNoproW( KNIGHT,    knight);     break;
+      case silver:     NocapNoproW( SILVER,    silver);     break;
+      case gold:       NocapNoproW( GOLD,      gold);
+                       SetClear( BB_WTGOLD );             break;
+      case bishop:     NocapNoproW( BISHOP,    bishop);
+                       SetClear( BB_W_BH );                break;
+      case rook:       NocapNoproW( ROOK,      rook);
+                       SetClear( BB_W_RD );                break;
+      case king:       HASH_KEY    ^= w_king_rand[to] ^ w_king_rand[from];
+                       BOARD[to]  = - king;
+                       SQ_WKING   = (char)to;
+                       SetClear( BB_W_HDK );               break;
+      case pro_pawn:   NocapNoproW( PRO_PAWN,   pro_pawn);
+                       SetClear( BB_WTGOLD );             break;
+      case pro_lance:  NocapNoproW( PRO_LANCE,  pro_lance);
+                       SetClear( BB_WTGOLD );             break;
+      case pro_knight: NocapNoproW( PRO_KNIGHT, pro_knight);
+                       SetClear( BB_WTGOLD );             break;
+      case pro_silver: NocapNoproW( PRO_SILVER, pro_silver);
+                       SetClear( BB_WTGOLD );             break;
+      case horse:      NocapNoproW( HORSE, horse );
+                       SetClear( BB_W_HDK );
+                       SetClear( BB_W_BH );                break;
+      default:         NocapNoproW( DRAGON, dragon );
+                       SetClear( BB_W_HDK );
+                       SetClear( BB_W_RD );              
