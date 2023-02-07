@@ -92,4 +92,67 @@ make_move_b( tree_t * restrict ptree, unsigned int move, int ply )
       switch ( From2Drop(from) )
 	{
 	case pawn:   Xor( to-nfile, BB_BPAWN_ATK );
-               
+                     DropB( PAWN,   pawn   );  break;
+	case lance:  DropB( LANCE,  lance  );  break;
+	case knight: DropB( KNIGHT, knight );  break;
+	case silver: DropB( SILVER, silver );  break;
+	case gold:   DropB( GOLD,   gold   );
+                     Xor( to, BB_BTGOLD );     break;
+	case bishop: DropB( BISHOP, bishop );
+                     Xor( to, BB_B_BH );       break;
+	default:     assert( From2Drop(from) == rook );
+                     DropB( ROOK,  rook );
+		     Xor( to, BB_B_RD );       break;
+	}
+      Xor( to, BB_BOCCUPY );
+      XorFile( to, OCCUPIED_FILE );
+      XorDiag2( to, OCCUPIED_DIAG2 );
+      XorDiag1( to, OCCUPIED_DIAG1 );
+    }
+  else {
+    const int ipiece_move = (int)I2PieceMove(move);
+    const int ipiece_cap  = (int)UToCap(move);
+    const int is_promote  = (int)I2IsPromote(move);
+    bitboard_t bb_set_clear;
+
+    BBOr( bb_set_clear, abb_mask[from], abb_mask[to] );
+    SetClear( BB_BOCCUPY );
+    BOARD[from] = empty;
+
+    if ( is_promote ) switch( ipiece_move )
+      {
+      case pawn:   Xor( to, BB_BPAWN_ATK );
+                   Xor( to, BB_BTGOLD );
+                   NocapProB( PAWN,   PRO_PAWN,   pawn,   pro_pawn );   break;
+      case lance:  Xor( to, BB_BTGOLD );
+                   NocapProB( LANCE,  PRO_LANCE,  lance,  pro_lance );  break;
+      case knight: Xor( to, BB_BTGOLD );
+                   NocapProB( KNIGHT, PRO_KNIGHT, knight, pro_knight ); break;
+      case silver: Xor( to, BB_BTGOLD );
+                   NocapProB( SILVER, PRO_SILVER, silver, pro_silver ); break;
+      case bishop: Xor( to, BB_B_HDK );
+		   SetClear( BB_B_BH );
+                   NocapProB( BISHOP, HORSE,      bishop, horse );      break;
+      default:     assert( ipiece_move == rook );
+                   Xor( to, BB_B_HDK );
+		   SetClear( BB_B_RD );
+                   NocapProB( ROOK,   DRAGON,     rook,   dragon );     break;
+      }
+    else switch ( ipiece_move )
+      {
+      case pawn:       Xor( to-nfile, BB_BPAWN_ATK );
+                       Xor( to,       BB_BPAWN_ATK );
+                       NocapNoproB( PAWN,   pawn);       break;
+      case lance:      NocapNoproB( LANCE,  lance);      break;
+      case knight:     NocapNoproB( KNIGHT, knight);     break;
+      case silver:     NocapNoproB( SILVER, silver);     break;
+      case gold:       NocapNoproB( GOLD,   gold);
+                       SetClear( BB_BTGOLD );             break;
+      case bishop:     SetClear( BB_B_BH );
+                       NocapNoproB( BISHOP, bishop);     break;
+      case rook:       NocapNoproB( ROOK,   rook);
+                       SetClear( BB_B_RD );                break;
+      case king:       HASH_KEY ^= b_king_rand[to] ^ b_king_rand[from];
+                       SetClear( BB_B_HDK );
+                       BOARD[to] = king;
+           
