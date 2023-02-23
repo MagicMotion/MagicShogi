@@ -520,4 +520,69 @@ make_move_root( tree_t * restrict ptree, unsigned int move, int flag )
   snprintf( (char *)dfpn_client_signature, DFPN_CLIENT_SIZE_SIGNATURE,
 	    "%" PRIx64 "_%x_%x_%x", HASH_KEY, HAND_B, HAND_W, root_turn );
   dfpn_client_signature[DFPN_CLIENT_SIZE_SIGNATURE-1] = '\0';
-  df
+  dfpn_client_rresult       = dfpn_client_na;
+  dfpn_client_num_cresult   = 0;
+  dfpn_client_flag_read     = 0;
+  dfpn_client_out( "%s %s\n", str_CSA_move(move), dfpn_client_signature );
+  unlock( &dfpn_client_lock );
+#endif
+
+  return 1;
+}
+
+
+int CONV unmake_move_root( tree_t * restrict ptree )
+{
+  unsigned int move;
+  int i;
+
+  if ( ptree->nrep == 0 || amove_save[NUM_UNMAKE-1] == MOVE_NA )
+    {
+      str_error = "no more undo infomation at root";
+      return -1;
+    }
+
+  ptree->nsuc_check[1]    = ptree->nsuc_check[0];
+  ptree->nsuc_check[0]    = ansuc_check_save[NUM_UNMAKE-1];
+  ptree->save_material[1] = (short)amaterial_save[NUM_UNMAKE-1];
+  move                    = amove_save[NUM_UNMAKE-1];
+  last_root_value         = alast_root_value_save[NUM_UNMAKE-1];
+  last_pv                 = alast_pv_save[NUM_UNMAKE-1];
+
+  ptree->nrep -= 1;
+  game_status &= ~( flag_drawn | flag_mated );
+  root_turn    = Flip(root_turn);
+
+  for ( i = NUM_UNMAKE-1; i > 0; i -= 1 )
+    {
+      amove_save[i]            = amove_save[i-1];
+      amaterial_save[i]        = amaterial_save[i-1];
+      ansuc_check_save[i]      = ansuc_check_save[i-1];
+      alast_root_value_save[i] = alast_root_value_save[i-1];
+      alast_pv_save[i]         = alast_pv_save[i-1];
+    }
+  amove_save[0]            = MOVE_NA;
+  amaterial_save[0]        = 0;
+  ansuc_check_save[0]      = 0;
+  alast_root_value_save[0] = 0;
+  alast_pv_save[0].a[0]    = 0;
+  alast_pv_save[0].a[1]    = 0;
+  alast_pv_save[0].depth   = 0;
+  alast_pv_save[0].length  = 0;
+
+  UnMakeMove( root_turn, move, 1 );
+
+#if defined(DFPN_CLIENT)
+  lock( &dfpn_client_lock );
+  snprintf( (char *)dfpn_client_signature, DFPN_CLIENT_SIZE_SIGNATURE,
+	    "%" PRIx64 "_%x_%x_%x", HASH_KEY, HAND_B, HAND_W, root_turn );
+  dfpn_client_signature[DFPN_CLIENT_SIZE_SIGNATURE-1] = '\0';
+  dfpn_client_rresult       = dfpn_client_na;
+  dfpn_client_flag_read     = 0;
+  dfpn_client_num_cresult   = 0;
+  dfpn_client_out( "unmake\n" );
+  unlock( &dfpn_client_lock );
+#endif
+
+  return 1;
+}
