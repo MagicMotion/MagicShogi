@@ -417,4 +417,107 @@ make_move_root( tree_t * restrict ptree, unsigned int move, int flag )
   ptree->move_last[1]  = ptree->move_last[0];
   if ( check )
     {
-      ptree->nsuc_check[2] =
+      ptree->nsuc_check[2] = (unsigned char)( ptree->nsuc_check[0] + 1U );
+    }
+  else { ptree->nsuc_check[2] = 0; }
+
+  /* detect repetitions */
+  if ( flag & flag_rep )
+    {
+      switch ( detect_repetition( ptree, 2, Flip(root_turn), 3 ) )
+	{
+	case perpetual_check:
+	  str_error = str_perpet_check;
+	  UnMakeMove( root_turn, move, 1 );
+	  return -2;
+      
+	case four_fold_rep:
+	  drawn = 1;
+	  break;
+	}
+    }
+
+  /* return, since all of rule-checks were done */
+  if ( flag & flag_nomake_move )
+    {
+      UnMakeMove( root_turn, move, 1 );
+      return drawn ? 2 : 1;
+    }
+
+  if ( drawn ) { game_status |= flag_drawn; }
+
+  /* update time */
+  if ( flag & flag_time )
+    {
+      iret = update_time( root_turn );
+      if ( iret < 0 ) { return -1; }
+    }
+
+  root_turn = Flip( root_turn );
+
+  /* detect checkmate */
+  if ( check && is_mate( ptree, 1 ) ) { game_status |= flag_mated; }
+
+  /* save history */
+  if ( flag & flag_history ) { out_CSA( ptree, &record_game, move ); }
+
+  /* renew repetition table */
+  n = ptree->nrep;
+  if ( n >= REP_HIST_LEN - PLY_MAX -1 )
+    {
+      for ( i = 0; i < n; i++ )
+	{
+	  ptree->rep_board_list[i] = ptree->rep_board_list[i+1];
+	  ptree->rep_hand_list[i]  = ptree->rep_hand_list[i+1];
+#if defined(YSS_ZERO)
+	  ptree->history_in_check[i] = ptree->history_in_check[i+1];
+#endif
+	}
+    }
+  else { ptree->nrep++; }
+
+  for ( i = 1; i < NUM_UNMAKE; i += 1 )
+    {
+      amove_save[i-1]            = amove_save[i];
+      amaterial_save[i-1]        = amaterial_save[i];
+      ansuc_check_save[i-1]      = ansuc_check_save[i];
+      alast_root_value_save[i-1] = alast_root_value_save[i];
+      alast_pv_save[i-1]         = alast_pv_save[i];
+    }
+  amove_save      [NUM_UNMAKE-1] = move;
+  amaterial_save  [NUM_UNMAKE-1] = ptree->save_material[1];
+  ansuc_check_save[NUM_UNMAKE-1] = ptree->nsuc_check[0];
+  ptree->nsuc_check[0]           = ptree->nsuc_check[1];
+  ptree->nsuc_check[1]           = ptree->nsuc_check[2];
+
+  /* update pv */
+  alast_root_value_save[NUM_UNMAKE-1] = last_root_value;
+  alast_pv_save[NUM_UNMAKE-1]         = last_pv;
+
+  if ( last_pv.a[1] == move && last_pv.length >= 2 )
+    {
+      if ( last_pv.depth )
+	{
+#if PLY_INC == EXT_CHECK
+	  if ( ! check )
+#endif
+	    last_pv.depth--;
+	}
+      last_pv.length--;
+      memmove( &(last_pv.a[1]), &(last_pv.a[2]),
+	       last_pv.length * sizeof( unsigned int ) );
+    }
+  else {
+    last_pv.a[0]    = 0;
+    last_pv.a[1]    = 0;
+    last_pv.depth   = 0;
+    last_pv.length  = 0;
+    last_root_value = 0;
+  }
+
+#if defined(DFPN_CLIENT)
+  lock( &dfpn_client_lock );
+  snprintf( (char *)dfpn_client_signature, DFPN_CLIENT_SIZE_SIGNATURE,
+	    "%" PRIx64 "_%x_%x_%x", HASH_KEY, HAND_B, HAND_W, root_turn );
+  dfpn_client_signature[DFPN_CLIENT_SIZE_SIGNATURE-1] = '\0';
+  df
