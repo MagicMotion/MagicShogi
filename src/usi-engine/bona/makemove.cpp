@@ -329,4 +329,92 @@ make_move_w( tree_t * restrict ptree, unsigned int move, int ply )
                        SetClear( BB_W_BH );                break;
       default:         NocapNoproW( DRAGON, dragon );
                        SetClear( BB_W_HDK );
-                       SetClear( BB_W_RD );              
+                       SetClear( BB_W_RD );                break;
+      }
+
+    if ( ipiece_cap )
+      {
+	switch( ipiece_cap )
+	  {
+	  case pawn:       CapB( PAWN, pawn, pawn );
+                           Xor( to-nfile, BB_BPAWN_ATK );           break;
+	  case lance:      CapB( LANCE,  lance,  lance );           break;
+	  case knight:     CapB( KNIGHT, knight, knight );          break;
+	  case silver:     CapB( SILVER, silver, silver );          break;
+	  case gold:       CapB( GOLD,   gold,   gold );
+                           Xor( to, BB_BTGOLD );                   break;
+	  case bishop:     CapB( BISHOP, bishop, bishop );
+                           Xor( to, BB_B_BH );                      break;
+	  case rook:       CapB( ROOK, rook, rook );
+                           Xor( to, BB_B_RD );                      break;
+	  case pro_pawn:   CapB( PRO_PAWN, pawn, pro_pawn );
+                           Xor( to, BB_BTGOLD );                   break;
+	  case pro_lance:  CapB( PRO_LANCE, lance, pro_lance );
+                           Xor( to, BB_BTGOLD );                   break;
+	  case pro_knight: CapB( PRO_KNIGHT, knight, pro_knight );
+                           Xor( to, BB_BTGOLD );                   break;
+	  case pro_silver: CapB( PRO_SILVER, silver, pro_silver );
+                           Xor( to, BB_BTGOLD );                   break;
+	  case horse:      CapB( HORSE, bishop, horse );
+                           Xor( to, BB_B_HDK );
+                           Xor( to, BB_B_BH );                      break;
+	  default:         CapB( DRAGON, rook, dragon );
+                           Xor( to, BB_B_HDK );
+                           Xor( to, BB_B_RD );                      break;
+	  }
+	Xor( to, BB_BOCCUPY );
+	XorFile( from, OCCUPIED_FILE );
+	XorDiag1( from, OCCUPIED_DIAG1 );
+	XorDiag2( from, OCCUPIED_DIAG2 );
+      }
+    else {
+      SetClearFile( from, to, OCCUPIED_FILE );
+      SetClearDiag1( from, to, OCCUPIED_DIAG1 );
+      SetClearDiag2( from, to, OCCUPIED_DIAG2 );
+    }
+  }
+
+  assert( exam_bb( ptree ) );
+}
+
+#undef DropB
+#undef DropW
+#undef CapB
+#undef CapW
+#undef NocapProB
+#undef NocapProW
+#undef NocapNoproB
+#undef NocapNoproW
+
+/*
+ * flag_detect_hang
+ * flag_rep
+ * flag_time
+ * flag_nomake_move
+ * flag_history
+ */
+int CONV
+make_move_root( tree_t * restrict ptree, unsigned int move, int flag )
+{
+  int check, drawn, iret, i, n;
+
+  MakeMove( root_turn, move, 1 );
+
+#if defined(YSS_ZERO)
+  copy_min_posi(ptree, Flip(root_turn), 1);
+#endif
+
+  /* detect hang-king */
+  if ( ( flag & flag_detect_hang ) && InCheck(root_turn) )
+    {
+      str_error = str_king_hang;
+      UnMakeMove( root_turn, move, 1 );
+      return -2;
+    }
+
+  drawn = 0;
+  check = InCheck( Flip(root_turn) );
+  ptree->move_last[1]  = ptree->move_last[0];
+  if ( check )
+    {
+      ptree->nsuc_check[2] =
