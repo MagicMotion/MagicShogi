@@ -165,4 +165,114 @@ mate3_and( tree_t * restrict ptree, int turn, int ply, int flag )
 
   while ( gen_next_evasion_mate( ptree, asq, ply, turn, flag ) ) {
 
-    if ( ptree-
+    if ( ptree->anext_move[ply].next_phase == mate_intercept_drop_sup )
+      {
+	return 0;
+      }
+
+    MakeMove( turn, MOVE_CURR, ply );
+    assert( ! InCheck(turn) );
+
+    if ( InCheck( Flip(turn) ) ) { move = 0; }
+    else                         { move = IsMateIn1Ply( Flip(turn) ); }
+
+    if ( ! move
+	 && ptree->anext_move[ply].next_phase == mate_intercept_weak_move )
+      {
+	assert( asq[1] == nsquare );
+	move = (unsigned int)mate_weak_or( ptree, Flip(turn), ply+1, asq[0],
+					   I2To(MOVE_CURR) );
+      }
+
+    UnMakeMove( turn, MOVE_CURR, ply );
+      
+    if ( ! move ) { return 0; }
+  }
+  
+  return 1;
+}
+
+
+static int CONV
+mate_weak_or( tree_t * restrict ptree, int turn, int ply, int from,
+	      int to )
+{
+  int idirec, pc, pc_cap, value, flag;
+
+  if ( ply >= PLY_MAX-2 ) { return 0; }
+  
+  if ( turn )
+    {
+      if ( IsDiscoverWK( from, to ) ) { return 0; }
+
+      pc     = -BOARD[from];
+      pc_cap =  BOARD[to];
+      MOVE_CURR = ( To2Move(to) | From2Move(from)
+		      | Piece2Move(pc) | Cap2Move(pc_cap) );
+      if ( ( pc == bishop || pc == rook )
+	   && ( to > I4 || from > I4 ) ) { MOVE_CURR |= FLAG_PROMO; }
+    }
+  else {
+    if ( IsDiscoverBK( from, to ) ) { return 0; }
+    
+    pc     =  BOARD[from];
+    pc_cap = -BOARD[to];
+    MOVE_CURR = ( To2Move(to) | From2Move(from) | Piece2Move(pc)
+		  | Cap2Move(pc_cap) );
+    if ( ( pc == bishop || pc == rook )
+	 && ( to < A6 || from < A6 ) ) { MOVE_CURR |= FLAG_PROMO; }
+  }
+
+  MakeMove( turn, MOVE_CURR, ply );
+  if ( I2From(MOVE_LAST) < nsquare )
+    {
+      if ( InCheck(turn) )
+	{
+	  UnMakeMove( turn, MOVE_CURR, ply );
+	  return 0;
+	}
+      flag = 1;
+    }
+  else {
+    assert( ! InCheck(turn) );
+    flag = 2;
+  }
+  
+  ptree->move_last[ply] = ptree->move_last[ply-1];
+  value = mate3_and( ptree, Flip(turn), ply+1, flag );
+  
+  UnMakeMove( turn, MOVE_CURR, ply );
+
+  return value;
+}
+
+
+static int CONV
+gen_next_evasion_mate( tree_t * restrict ptree, const char *psq, int ply,
+		       int turn, int flag )
+{
+  switch ( ptree->anext_move[ply].next_phase )
+    {
+    case mate_king_cap_checker:
+      ptree->anext_move[ply].next_phase = mate_cap_checker_gen;
+      MOVE_CURR = gen_king_cap_checker( ptree, psq[0], turn );
+      if ( MOVE_CURR ) { return 1; }
+
+    case mate_cap_checker_gen:
+      ptree->anext_move[ply].next_phase = mate_cap_checker;
+      ptree->anext_move[ply].move_last	= ptree->move_last[ply-1];
+      ptree->move_last[ply]             = ptree->move_last[ply-1];
+      if ( psq[1] == nsquare )
+	{
+	  ptree->move_last[ply]
+	    = gen_move_to( ptree, psq[0], turn, ptree->move_last[ply-1] );
+	}
+
+    case mate_cap_checker:
+      if ( ptree->anext_move[ply].move_last != ptree->move_last[ply] )
+	{
+	  MOVE_CURR = *(ptree->anext_move[ply].move_last++);
+	  return 1;
+	}
+
+    case mate_king_cap_gen
