@@ -275,4 +275,124 @@ gen_next_evasion_mate( tree_t * restrict ptree, const char *psq, int ply,
 	  return 1;
 	}
 
-    case mate_king_cap_gen
+    case mate_king_cap_gen:
+      ptree->anext_move[ply].next_phase = mate_king_cap;
+      ptree->anext_move[ply].move_last  = ptree->move_last[ply-1];
+      ptree->move_last[ply]
+	= gen_king_move( ptree, psq, turn, 1, ptree->move_last[ply-1] );
+
+    case mate_king_cap:
+      if ( ptree->anext_move[ply].move_last != ptree->move_last[ply] )
+	{
+	  MOVE_CURR = *(ptree->anext_move[ply].move_last++);
+	  return 1;
+	}
+
+    case mate_king_move_gen:
+      ptree->anext_move[ply].next_phase = mate_king_move;
+      ptree->anext_move[ply].move_last  = ptree->move_last[ply-1];
+      ptree->move_last[ply]
+	= gen_king_move( ptree, psq, turn, 0, ptree->move_last[ply-1] );
+
+    case mate_king_move:
+      if ( ptree->anext_move[ply].move_last != ptree->move_last[ply] )
+	{
+	  MOVE_CURR = *(ptree->anext_move[ply].move_last++);
+	  return 1;
+	}
+
+    case mate_intercept_move_gen:
+      ptree->anext_move[ply].remaining  = 0;
+      ptree->anext_move[ply].next_phase = mate_intercept_move;
+      ptree->anext_move[ply].move_last  = ptree->move_last[ply-1];
+      ptree->move_last[ply]             = ptree->move_last[ply-1];
+      if ( psq[1] == nsquare && abs(BOARD[(int)psq[0]]) != knight  )
+	{
+	  int n;
+	  ptree->move_last[ply] = gen_intercept( ptree, psq[0], ply, turn, &n,
+						 ptree->move_last[ply-1],
+						 flag );
+	  if ( n < 0 )
+	    {
+	      ptree->anext_move[ply].next_phase = mate_intercept_drop_sup;
+	      ptree->anext_move[ply].remaining  = 0;
+	      MOVE_CURR = *(ptree->anext_move[ply].move_last++);
+	      return 1;
+	    }
+
+	  ptree->anext_move[ply].remaining = n;
+	}
+
+    case mate_intercept_move:
+      if ( ptree->anext_move[ply].remaining-- )
+	{
+	  MOVE_CURR = *(ptree->anext_move[ply].move_last++);
+	  return 1;
+	}
+      ptree->anext_move[ply].next_phase = mate_intercept_weak_move;
+
+    case mate_intercept_weak_move:
+      if ( ptree->anext_move[ply].move_last != ptree->move_last[ply] )
+	{
+	  MOVE_CURR = *(ptree->anext_move[ply].move_last++);
+	  return 1;
+	}
+      break;
+
+    default:
+      assert( 0 );
+    }
+
+  return 0;
+}
+
+
+static void CONV
+checker( const tree_t * restrict ptree, char *psq, int turn )
+{
+  bitboard_t bb;
+  int n, sq0, sq1, sq_king;
+
+  if ( turn )
+    {
+      sq_king = SQ_WKING;
+      bb = b_attacks_to_piece( ptree, sq_king );
+    }
+  else {
+    sq_king = SQ_BKING;
+    bb = w_attacks_to_piece( ptree, sq_king );
+  }
+
+
+  assert( BBTest(bb) );
+  sq0 = LastOne( bb );
+  sq1 = nsquare;
+
+  Xor( sq0, bb );
+  if ( BBTest( bb ) )
+    {
+      sq1 = LastOne( bb );
+      if ( BBContract( abb_king_attacks[sq_king], abb_mask[sq1] ) )
+	{
+	  n   = sq0;
+	  sq0 = sq1;
+	  sq1 = n;
+	}
+    }
+
+  psq[0] = (char)sq0;
+  psq[1] = (char)sq1;
+}
+
+
+static unsigned int CONV
+gen_king_cap_checker( const tree_t * restrict ptree, int to, int turn )
+{
+  unsigned int move;
+  int from;
+
+  if ( turn )
+    {
+      from = SQ_WKING;
+      if ( ! BBContract( abb_king_attacks[from],
+			 abb_mask[to] ) )   { 
