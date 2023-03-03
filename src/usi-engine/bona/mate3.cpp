@@ -395,4 +395,125 @@ gen_king_cap_checker( const tree_t * restrict ptree, int to, int turn )
     {
       from = SQ_WKING;
       if ( ! BBContract( abb_king_attacks[from],
-			 abb_mask[to] ) )   { 
+			 abb_mask[to] ) )   { return 0;}
+      if ( is_white_attacked( ptree, to ) ) { return 0; }
+      move = Cap2Move(BOARD[to]);
+    }
+  else {
+    from = SQ_BKING;
+    if ( ! BBContract( abb_king_attacks[from],
+		       abb_mask[to] ) )   { return 0;}
+    if ( is_black_attacked( ptree, to ) ) { return 0; }
+    move = Cap2Move(-BOARD[to]);
+  }
+  move |= To2Move(to) | From2Move(from) | Piece2Move(king);
+
+  return move;
+}
+
+
+static unsigned int * CONV
+gen_move_to( const tree_t * restrict ptree, int to, int turn,
+	     unsigned int * restrict pmove )
+{
+  bitboard_t bb;
+  int direc, from, pc, flag_promo, flag_unpromo;
+
+  if ( turn )
+    {
+      bb = w_attacks_to_piece( ptree, to );
+      BBNotAnd( bb, bb, abb_mask[SQ_WKING] );
+      while ( BBTest(bb) )
+	{
+	  from = LastOne( bb );
+	  Xor( from, bb );
+
+	  direc = (int)adirec[SQ_WKING][from];
+	  if ( direc && is_pinned_on_white_king( ptree, from, direc ) )
+	    {
+	      continue;
+	    }
+
+	  flag_promo   = 0;
+	  flag_unpromo = 1;
+	  pc           = -BOARD[from];
+	  switch ( pc )
+	    {
+	    case pawn:
+	      if ( to > I4 ) { flag_promo = 1;  flag_unpromo = 0; }
+	      break;
+
+	    case lance:	 case knight:
+	      if      ( to > I3 ) { flag_promo = 1;  flag_unpromo = 0; }
+	      else if ( to > I4 ) { flag_promo = 1; }
+	      break;
+
+	    case silver:
+	      if ( to > I4 || from > I4 ) { flag_promo = 1; }
+	      break;
+
+	    case bishop:  case rook:
+	      if ( to > I4
+		   || from > I4 ) { flag_promo = 1;  flag_unpromo = 0; }
+	      break;
+
+	    default:
+	      break;
+	    }
+	  assert( flag_promo || flag_unpromo );
+	  if ( flag_promo )
+	    {
+	      *pmove++ = ( From2Move(from) | To2Move(to) | FLAG_PROMO
+			   | Piece2Move(pc) | Cap2Move(BOARD[to]) );
+	    }
+	  if ( flag_unpromo )
+	    {
+	      *pmove++ = ( From2Move(from) | To2Move(to)
+			   | Piece2Move(pc) | Cap2Move(BOARD[to]) );
+	    }
+	}
+    }
+  else {
+    bb = b_attacks_to_piece( ptree, to );
+    BBNotAnd( bb, bb, abb_mask[SQ_BKING] );
+    while ( BBTest(bb) )
+      {
+	from = FirstOne( bb );
+	Xor( from, bb );
+	
+	direc = (int)adirec[SQ_BKING][from];
+	if ( direc && is_pinned_on_black_king( ptree, from, direc ) )
+	  {
+	    continue;
+	  }
+
+	flag_promo   = 0;
+	flag_unpromo = 1;
+	pc           = BOARD[from];
+	switch ( pc )
+	  {
+	  case pawn:
+	    if ( to < A6 ) { flag_promo = 1;  flag_unpromo = 0; }
+	    break;
+	    
+	  case lance:  case knight:
+	    if      ( to < A7 ) { flag_promo = 1;  flag_unpromo = 0; }
+	    else if ( to < A6 ) { flag_promo = 1; }
+	    break;
+	    
+	  case silver:
+	    if ( to < A6 || from < A6 ) { flag_promo = 1; }
+	    break;
+	    
+	  case bishop:  case rook:
+	    if ( to < A6
+		 || from < A6 ) { flag_promo = 1;  flag_unpromo = 0; }
+	    break;
+	    
+	  default:
+	    break;
+	  }
+	assert( flag_promo || flag_unpromo );
+	if ( flag_promo )
+	  {
+	    *pmove++ = ( From2Move(from) | To2Move
