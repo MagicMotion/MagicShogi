@@ -516,4 +516,115 @@ gen_move_to( const tree_t * restrict ptree, int to, int turn,
 	assert( flag_promo || flag_unpromo );
 	if ( flag_promo )
 	  {
-	    *pmove++ = ( From2Move(from) | To2Move
+	    *pmove++ = ( From2Move(from) | To2Move(to) | FLAG_PROMO
+			 | Piece2Move(pc) | Cap2Move(-BOARD[to]) );
+	  }
+	if ( flag_unpromo )
+	  {
+	    *pmove++ = ( From2Move(from) | To2Move(to)
+			 | Piece2Move(pc) | Cap2Move(-BOARD[to]) );
+	  }
+      }
+  }
+
+  return pmove;
+}
+
+
+static unsigned int * CONV
+gen_king_move( const tree_t * restrict ptree, const char *psq, int turn,
+	       int is_capture, unsigned int * restrict pmove )
+{
+  bitboard_t bb;
+  int to, from;
+
+  if ( turn )
+    {
+      from = SQ_WKING;
+      bb   = abb_king_attacks[from];
+      if ( is_capture )
+	{
+	  BBAnd( bb, bb, BB_BOCCUPY );
+	  BBNotAnd( bb, bb, abb_mask[(int)psq[0]] );
+	}
+      else { BBNotAnd( bb, bb, BB_BOCCUPY ); }
+      BBNotAnd( bb, bb, BB_WOCCUPY );
+    }
+  else {
+    from = SQ_BKING;
+    bb   = abb_king_attacks[from];
+    if ( is_capture )
+      {
+	BBAnd( bb, bb, BB_WOCCUPY );
+	BBNotAnd( bb, bb, abb_mask[(int)psq[0]] );
+      }
+    else { BBNotAnd( bb, bb, BB_WOCCUPY ); }
+    BBNotAnd( bb, bb, BB_BOCCUPY );
+  }
+  
+  while ( BBTest(bb) )
+    {
+      to = LastOne( bb );
+      Xor( to, bb );
+
+      if ( psq[1] != nsquare
+	   && ( adirec[from][(int)psq[1]]
+		== adirec[from][to] ) ) { continue; }
+
+      if ( psq[0] != to
+	   && adirec[from][(int)psq[0]] == adirec[from][to] ) {
+	  if ( adirec[from][(int)psq[0]] & flag_cross )
+	    {
+	      if ( abs(BOARD[(int)psq[0]]) == lance
+		   || abs(BOARD[(int)psq[0]]) == rook
+		   || abs(BOARD[(int)psq[0]]) == dragon ) { continue; }
+	    }
+	  else if ( ( adirec[from][(int)psq[0]] & flag_diag )
+		    && ( abs(BOARD[(int)psq[0]]) == bishop
+			 || abs(BOARD[(int)psq[0]]) == horse ) ){ continue; }
+	}
+
+      if ( turn )
+	{
+	  if ( is_white_attacked( ptree, to ) ) { continue; }
+
+	  *pmove++ = ( From2Move(from) | To2Move(to)
+		       | Piece2Move(king) | Cap2Move(BOARD[to]) );
+	}
+      else {
+	if ( is_black_attacked( ptree, to ) ) { continue; }
+
+	*pmove++ = ( From2Move(from) | To2Move(to)
+		     | Piece2Move(king) | Cap2Move(-BOARD[to]) );
+      }
+    }
+
+  return pmove;
+}
+
+
+static unsigned int * CONV
+gen_intercept( tree_t * restrict __ptree__, int sq_checker, int ply, int turn,
+	       int * restrict premaining, unsigned int * restrict pmove,
+	       int flag )
+{
+#define Drop(pc) ( To2Move(to) | Drop2Move(pc) )
+
+  const tree_t * restrict ptree = __ptree__;
+  bitboard_t bb_atk, bb_defender, bb;
+  unsigned int amove[16];
+  unsigned int hand;
+  int n0, n1, inc, pc, sq_k, to, from, direc, nmove, nsup, i, min_chuai, itemp;
+  int dist, flag_promo, flag_unpromo;
+
+  n0 = n1 = 0;
+  if ( turn )
+    {
+      sq_k        = SQ_WKING;
+      bb_defender = BB_WOCCUPY;
+      BBNotAnd( bb_defender, bb_defender, abb_mask[sq_k] );
+    }
+  else {
+    sq_k        = SQ_BKING;
+    bb_defender = BB_BOCCUPY;
+    BBNotAnd( bb_defender, bb_defender, a
