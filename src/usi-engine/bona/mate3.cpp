@@ -627,4 +627,129 @@ gen_intercept( tree_t * restrict __ptree__, int sq_checker, int ply, int turn,
   else {
     sq_k        = SQ_BKING;
     bb_defender = BB_BOCCUPY;
-    BBNotAnd( bb_defender, bb_defender, a
+    BBNotAnd( bb_defender, bb_defender, abb_mask[sq_k] );
+  }
+
+  switch ( adirec[sq_k][sq_checker] )
+    {
+    case direc_rank:
+      min_chuai = ( sq_k < A8 || I2 < sq_k ) ? 2 : 4;
+      inc       = 1;
+      break;
+
+    case direc_diag1:
+      min_chuai = 3;
+      inc       = 8;
+      break;
+
+    case direc_file:
+      itemp     = (int)aifile[sq_k];
+      min_chuai = ( itemp == file1 || itemp == file9 ) ? 2 : 4;
+      inc = 9;
+      break;
+
+    default:
+      assert( (int)adirec[sq_k][sq_checker] == direc_diag2 );
+      min_chuai = 3;
+      inc       = 10;
+    }
+  if ( sq_k > sq_checker ) { inc = -inc; }
+  
+  for ( dist = 1, to = sq_k + inc;
+	to != sq_checker;
+	dist += 1, to += inc ) {
+
+    assert( 0 <= to && to < nsquare && BOARD[to] == empty );
+
+    nmove  = 0;
+    bb_atk = attacks_to_piece( ptree, to );
+    BBAnd( bb, bb_defender, bb_atk );
+    while ( BBTest(bb) )
+      {
+	from = LastOne( bb );
+	Xor( from, bb );
+	
+	direc        = (int)adirec[sq_k][from];
+	flag_promo   = 0;
+	flag_unpromo = 1;
+	if ( turn )
+	  {
+	    if ( direc && is_pinned_on_white_king( ptree, from, direc ) )
+	      {
+		continue;
+	      }
+	    pc = -BOARD[from];
+	    switch ( pc )
+	      {
+	      case pawn:
+		if ( to > I4 ) { flag_promo = 1;  flag_unpromo = 0; }
+		break;
+		
+	      case lance:  case knight:
+		if      ( to > I3 ) { flag_promo = 1;  flag_unpromo = 0; }
+		else if ( to > I4 ) { flag_promo = 1; }
+		break;
+		
+	      case silver:
+		if ( to > I4 || from > I4 ) { flag_promo = 1; }
+		break;
+		
+	      case bishop:  case rook:
+		if ( to > I4
+		     || from > I4 ) { flag_promo = 1;  flag_unpromo = 0; }
+		break;
+		
+	      default:
+		break;
+	      }
+	  }
+	else {
+	  if ( direc && is_pinned_on_black_king( ptree, from, direc ) )
+	    {
+	      continue;
+	    }
+	  pc = BOARD[from];
+	  switch ( pc )
+	    {
+	    case pawn:
+	      if ( to < A6 ) { flag_promo = 1;  flag_unpromo = 0; }
+	      break;
+	      
+	    case lance:  case knight:
+	      if      ( to < A7 ) { flag_promo = 1;  flag_unpromo = 0; }
+	      else if ( to < A6 ) { flag_promo = 1; }
+	      break;
+	      
+	    case silver:
+	      if ( to < A6 || from < A6 ) { flag_promo = 1; }
+	      break;
+	      
+	    case bishop:  case rook:
+	      if ( to < A6
+		   || from < A6 ) { flag_promo = 1;  flag_unpromo = 0; }
+	      break;
+	      
+	    default:
+	      break;
+	    }
+	}
+	assert( flag_promo || flag_unpromo );
+	if ( flag_promo )
+	  {
+	    amove[nmove++] = ( From2Move(from) | To2Move(to)
+			       | FLAG_PROMO | Piece2Move(pc) );
+	  }
+	if ( flag_unpromo )
+	  {
+	    amove[nmove++] = ( From2Move(from) | To2Move(to)
+			       | Piece2Move(pc) );
+	  }
+      }
+    
+    nsup = ( to == sq_k + inc ) ? nmove + 1 : nmove;
+    if ( nsup > 1 )
+      {
+	for ( i = n0 + n1 - 1; i >= n0; i-- ) { pmove[i+nmove] = pmove[i]; }
+	for ( i = 0; i < nmove; i++ ) { pmove[n0++] = amove[i]; }
+      }
+    else
