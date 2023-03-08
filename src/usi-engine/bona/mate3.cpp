@@ -752,4 +752,112 @@ gen_intercept( tree_t * restrict __ptree__, int sq_checker, int ply, int turn,
 	for ( i = n0 + n1 - 1; i >= n0; i-- ) { pmove[i+nmove] = pmove[i]; }
 	for ( i = 0; i < nmove; i++ ) { pmove[n0++] = amove[i]; }
       }
-    else
+    else if ( nmove ) { pmove[n0 + n1++] = amove[0]; }
+    
+    if ( ! nsup )
+      {
+	/* - tentative assumption - */
+	/* no recursive drops at non-supported square. */
+	if ( flag == 2  ) { continue; }
+	
+	/* -tentative assumption- */
+	/* no intercept-drop at non-supported square. */
+	if ( (int)I2To(MOVE_LAST) == sq_checker
+	     && dist > min_chuai ) { continue; }
+      }
+    
+    nmove = 0;
+    
+    if ( turn ) {
+      
+      hand = HAND_W;
+      
+      if ( nsup ) {
+	
+	if ( IsHandRook(hand) ) { amove[nmove++] = Drop(rook); }
+	else if ( IsHandLance(hand) && to < A1 )
+	  {
+	    amove[nmove++] = Drop(lance);
+	  }
+	else if ( IsHandPawn(hand)
+		  && to < A1
+		  && ! ( BBToU(BB_WPAWN) & ( mask_file1 >> aifile[to] ) )
+		  && ! IsMateWPawnDrop( __ptree__, to ) )
+	  {
+	    amove[nmove++] = Drop(pawn);
+	  }
+	
+      } else {
+	
+	if ( IsHandPawn(hand)
+	     && to < A1
+	     && ! ( BBToU(BB_WPAWN) & ( mask_file1 >> aifile[to] ) )
+	     && ! IsMateWPawnDrop( __ptree__, to ) )
+	  {
+	    amove[nmove++] = Drop(pawn);
+	  }
+	if ( IsHandLance(hand) && to < A1 ) { amove[nmove++] = Drop(lance); }
+	if ( IsHandRook(hand) )             { amove[nmove++] = Drop(rook); }
+      }
+      
+      if ( IsHandKnight(hand) && to < A2 ) { amove[nmove++] = Drop(knight); }
+      
+    } else {
+      
+      hand = HAND_B;
+      
+      if ( nsup ) {
+	
+	if ( IsHandRook(hand) ) { amove[nmove++] = Drop(rook); }
+	else if ( IsHandLance(hand) && to > I9 )
+	  {
+	    amove[nmove++] = Drop(lance);
+	  }
+	else if ( IsHandPawn(hand)
+		  && to > I9
+		  && ! ( BBToU(BB_BPAWN) & ( mask_file1 >> aifile[to] ) )
+		  && ! IsMateBPawnDrop( __ptree__, to ) )
+	  {
+	    amove[nmove++] = Drop(pawn);
+	  }
+	
+      } else {
+	
+	if ( IsHandPawn(hand)
+	     && to > I9
+	     && ! ( BBToU(BB_BPAWN) & ( mask_file1 >> aifile[to] ) )
+	     && ! IsMateBPawnDrop( __ptree__, to ) )
+	  {
+	    amove[nmove++] = Drop(pawn);
+	  }
+	if ( IsHandLance(hand) && to > I9 ) { amove[nmove++] = Drop(lance); }
+	if ( IsHandRook(hand) )             { amove[nmove++] = Drop(rook); }
+      }
+      
+      if ( IsHandKnight(hand) && to > I8 ) { amove[nmove++] = Drop(knight); }
+    }
+    
+    if ( IsHandSilver(hand) ) { amove[nmove++] = Drop(silver); }
+    if ( IsHandGold(hand) )   { amove[nmove++] = Drop(gold); }
+    if ( IsHandBishop(hand) ) { amove[nmove++] = Drop(bishop); }
+    
+    if ( nsup )
+      {
+	/* - tentative assumption - */
+	/* a supported intercepter saves the king for two plies at least. */
+	if ( nmove && flag == 0 && dist > min_chuai
+	     && I2From(MOVE_LAST) >= nsquare )
+	    {
+	      *premaining = -1;
+	      pmove[0]    = amove[0];
+	      return pmove + 1;
+	    }
+
+	for ( i = n0 + n1 - 1; i >= n0; i-- ) { pmove[i+nmove] = pmove[i]; }
+	for ( i = 0; i < nmove; i++ ) { pmove[n0++] = amove[i]; }
+      }
+    else for ( i = 0; i < nmove; i++ ) { pmove[n0 + n1++] = amove[i]; }
+  }
+  
+  *premaining = n0;
+  return pm
