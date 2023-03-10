@@ -860,4 +860,7 @@ gen_intercept( tree_t * restrict __ptree__, int sq_checker, int ply, int turn,
   }
   
   *premaining = n0;
-  return pm
+  return pmove + n0 + n1;
+
+#undef Drop
+}
