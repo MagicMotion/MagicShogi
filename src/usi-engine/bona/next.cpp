@@ -182,4 +182,113 @@ gen_next_move( tree_t * restrict ptree, int ply, int turn )
 		continue;
 	      }
 
-	
+	    if ( UToCap(pmove[i]) ) { continue; }
+	    if ( I2IsPromote(pmove[i])
+		 && I2PieceMove(pmove[i]) != silver ) { continue; }
+
+
+	    key   = phash( pmove[i], turn );
+	    good  = ptree->hist_good[key]  + 1;
+	    tried = ptree->hist_tried[key] + 2;
+	    value = ( good * 8192U ) / tried;
+	    if ( value > value_best )
+	      {
+		value_best = value;
+		ibest      = i;
+	      }
+	  }
+
+	if ( ibest >= 0 )
+	  {
+	    ptree->anext_move[ply].phase_done |= phase_history1;
+	    ptree->anext_move[ply].next_phase  = next_move_history2;
+	    MOVE_CURR  = pmove[ibest];
+	    pmove[ibest] = 0;
+	    return 1;
+	  }
+      }
+      
+    case next_move_history2:
+      {
+	unsigned int * restrict pmove;
+	unsigned int value_best, value, key, good, tried;
+	int ibest, i, n;
+
+	ptree->anext_move[ply].next_phase = next_move_misc;
+	value_best = 0;
+	ibest      = -1;
+	n = (int)( ptree->move_last[ply] - ptree->anext_move[ply].move_last );
+	pmove = ptree->anext_move[ply].move_last;
+
+	for ( i = 0; i < n; i++ )
+	  {
+	    if ( UToCap(pmove[i]) ) { continue; }
+	    if ( I2IsPromote(pmove[i])
+		 && I2PieceMove(pmove[i]) != silver ) { continue; }
+
+	    key   = phash( pmove[i], turn );
+	    good  = ptree->hist_good[key]  + 1;
+	    tried = ptree->hist_tried[key] + 2;
+	    value = ( good * 8192U ) / tried;
+	    if ( value > value_best && pmove[i] )
+	      {
+		value_best = value;
+		ibest      = i;
+	      }
+	  }
+
+	if ( ibest >= 0 )
+	  {
+	    ptree->anext_move[ply].phase_done |= phase_history2;
+	    MOVE_CURR  = pmove[ibest];
+	    pmove[ibest] = 0;
+	    return 1;
+	  }
+      }
+      
+    default:
+      assert( ptree->anext_move[ply].next_phase == next_move_misc );
+      while ( ptree->anext_move[ply].move_last < ptree->move_last[ply] )
+	{
+	  if ( *( ptree->anext_move[ply].move_last ) )
+	    {
+	      MOVE_CURR = *(ptree->anext_move[ply].move_last++);
+	      ptree->anext_move[ply].phase_done |= phase_misc;
+	      return 1;
+	    }
+	  ptree->anext_move[ply].move_last++;
+	}
+    }
+  return 0;
+}
+
+
+int CONV
+gen_next_evasion( tree_t * restrict ptree, int ply, int turn )
+{
+  switch ( ptree->anext_move[ply].next_phase )
+    {
+    case next_evasion_hash:
+      ptree->move_last[ply] = GenEvasion( turn, ptree->move_last[ply] );
+
+      if ( ptree->amove_hash[ply] )
+	{
+#if ! defined(MINIMUM)
+	  unsigned int * restrict p;
+	  
+	  for ( p = ptree->move_last[ply-1]; p < ptree->move_last[ply]; p++ )
+	    if ( *p == ptree->amove_hash[ply] ) { break; }
+	  
+	  if ( *p != ptree->amove_hash[ply] )
+	    {
+	      out_warning( "An invalid hash evasion-move is found!!" );
+	      out_board( ptree, stdout, 0, 0 );
+	      Out( "%c%s\n", ach_turn[turn],
+		   str_CSA_move(ptree->amove_hash[ply]) );
+	      Out( "hash key = %" PRIu64 ", hand = %u, turn = %d\n",
+		   HASH_KEY, HAND_B, turn );
+	      ptree->amove_hash[ply] = 0U;
+	    }
+	  else
+#endif
+	    
