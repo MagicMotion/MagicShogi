@@ -170,3 +170,37 @@ gen_next_quies( tree_t * restrict ptree, int alpha, int turn, int ply,
 	      {
 		value = swap( ptree, move, -1, MT_CAP_SILVER, turn );
 		if ( -1 < value )
+		  {
+		    psortv[nqmove]  = value + diff;
+		    pmove[nqmove++] = move;
+		  }
+	      }
+	  }
+	
+	/* insertion sort */
+	psortv[nqmove] = INT_MIN;
+	for ( i = nqmove-2; i >= 0; i-- )
+	  {
+	    value = psortv[i];  move = pmove[i];
+	    for ( j = i+1; psortv[j] > value; j++ )
+	      {
+		psortv[j-1] = psortv[j];  pmove[j-1] = pmove[j];
+	      }
+	    psortv[j-1] = value;  pmove[j-1] = move;
+	  }
+
+	ptree->move_last[ply]             = ptree->move_last[ply-1] + nqmove;
+	ptree->anext_move[ply].move_last  = pmove;
+	ptree->anext_move[ply].next_phase = next_quies_captures;
+      }
+      
+    case next_quies_captures:
+      if ( ptree->anext_move[ply].move_last != ptree->move_last[ply] )
+	{
+	  MOVE_CURR = *ptree->anext_move[ply].move_last++;
+	  return 1;
+	}
+    }
+
+  return 0;
+}
