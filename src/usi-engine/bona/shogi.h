@@ -139,4 +139,82 @@ extern unsigned char ailast_one[512];
 #if defined(YSS_ZERO)
 #define REP_HIST_LEN            (1024+PLY_MAX)
 #else
-#define REP_HIST_LEN    
+#define REP_HIST_LEN            256
+#endif
+
+#define EHASH_MASK              0x3fffffU      /* occupies 32MB */
+#define MATE3_MASK              0x07ffffU      /* occupies 4MB */
+
+#define HIST_SIZE               0x4000U
+#define HIST_INVALID            0xffffU
+#define HIST_MAX                0x8000U
+
+#define REJEC_MASK              0x0ffffU
+#define REJEC_MIN_DEPTH        ( ( PLY_INC  * 5 ) )
+
+#define EXT_RECAP1             ( ( PLY_INC  * 1 ) /  4 )
+#define EXT_RECAP2             ( ( PLY_INC  * 2 ) /  4 )
+#define EXT_ONEREP             ( ( PLY_INC  * 2 ) /  4 )
+#define EXT_CHECK              ( ( PLY_INC  * 4 ) /  4 )
+
+#define EFUTIL_MG1             ( ( MT_CAP_DRAGON * 2 ) /  8 )
+#define EFUTIL_MG2             ( ( MT_CAP_DRAGON * 2 ) /  8 )
+
+#define FMG_MG                 ( ( MT_CAP_DRAGON * 2 ) / 16 )
+#define FMG_MG_KING            ( ( MT_CAP_DRAGON * 3 ) / 16 )
+#define FMG_MG_MT              ( ( MT_CAP_DRAGON * 8 ) / 16 )
+#define FMG_MISC               ( ( MT_CAP_DRAGON * 2 ) /  8 )
+#define FMG_CAP                ( ( MT_CAP_DRAGON * 2 ) /  8 )
+#define FMG_DROP               ( ( MT_CAP_DRAGON * 2 ) /  8 )
+#define FMG_MT                 ( ( MT_CAP_DRAGON * 2 ) /  8 )
+#define FMG_MISC_KING          ( ( MT_CAP_DRAGON * 2 ) /  8 )
+#define FMG_CAP_KING           ( ( MT_CAP_DRAGON * 2 ) /  8 )
+
+#define FV_WINDOW               256
+#define FV_SCALE                32
+#define FV_PENALTY             ( 0.2 / (double)FV_SCALE )
+
+#define MPV_MAX_PV              16
+
+#define TLP_MAX_THREADS         12
+#define TLP_NUM_WORK           ( TLP_MAX_THREADS * 8 )
+
+#define TIME_CHECK_MIN_NODE     10000U
+#define TIME_CHECK_MAX_NODE     100000U
+
+#define SIZE_FILENAME           256
+#define SIZE_PLAYERNAME         256
+#define SIZE_MESSAGE            512
+#define SIZE_CSALINE            512
+
+#if defined(USI)
+#  define SIZE_CMDLINE          ( 1024 * 16 )
+#  define SIZE_CMDBUFFER        ( 1024 * 16 )
+#else
+#  define SIZE_CMDLINE          512
+#  define SIZE_CMDBUFFER        512
+#endif
+
+#define IsMove(move)           ( (move) & 0xffffffU )
+#define MOVE_NA                 0x00000000U
+#define MOVE_PASS               0x01000000U
+#define MOVE_PONDER_FAILED      0xfe000000U
+#define MOVE_RESIGN             0xff000000U
+#define MOVE_CHK_SET            0x80000000U
+#define MOVE_CHK_CLEAR          0x40000000U
+
+#define MAX_LEGAL_MOVES         700
+#define MAX_LEGAL_EVASION       256
+#define MOVE_LIST_LEN           16384
+
+#define MAX_SIZE_SECTION        0xffff
+#define NUM_SECTION             0x4000
+
+#define MATERIAL            (ptree->posi.material)
+#define HAND_B              (ptree->posi.hand_black)
+#define HAND_W              (ptree->posi.hand_white)
+
+#define BB_BOCCUPY          (ptree->posi.b_occupied)
+#define BB_BTGOLD           (ptree->posi.b_tgold)
+#define BB_B_HDK            (ptree->posi.b_hdk)
+#define BB_B
