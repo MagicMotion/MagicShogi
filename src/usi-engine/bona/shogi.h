@@ -217,4 +217,63 @@ extern unsigned char ailast_one[512];
 #define BB_BOCCUPY          (ptree->posi.b_occupied)
 #define BB_BTGOLD           (ptree->posi.b_tgold)
 #define BB_B_HDK            (ptree->posi.b_hdk)
-#define BB_B
+#define BB_B_BH             (ptree->posi.b_bh)
+#define BB_B_RD             (ptree->posi.b_rd)
+#define BB_BPAWN_ATK        (ptree->posi.b_pawn_attacks)
+#define BB_BPAWN            (ptree->posi.b_pawn)
+#define BB_BLANCE           (ptree->posi.b_lance)
+#define BB_BKNIGHT          (ptree->posi.b_knight)
+#define BB_BSILVER          (ptree->posi.b_silver)
+#define BB_BGOLD            (ptree->posi.b_gold)
+#define BB_BBISHOP          (ptree->posi.b_bishop)
+#define BB_BROOK            (ptree->posi.b_rook)
+#define BB_BKING            (abb_mask[SQ_BKING])
+#define BB_BPRO_PAWN        (ptree->posi.b_pro_pawn)
+#define BB_BPRO_LANCE       (ptree->posi.b_pro_lance)
+#define BB_BPRO_KNIGHT      (ptree->posi.b_pro_knight)
+#define BB_BPRO_SILVER      (ptree->posi.b_pro_silver)
+#define BB_BHORSE           (ptree->posi.b_horse)
+#define BB_BDRAGON          (ptree->posi.b_dragon)
+
+#define BB_WOCCUPY          (ptree->posi.w_occupied)
+#define BB_WTGOLD           (ptree->posi.w_tgold)
+#define BB_W_HDK            (ptree->posi.w_hdk)
+#define BB_W_BH             (ptree->posi.w_bh)
+#define BB_W_RD             (ptree->posi.w_rd)
+#define BB_WPAWN_ATK        (ptree->posi.w_pawn_attacks)
+#define BB_WPAWN            (ptree->posi.w_pawn)
+#define BB_WLANCE           (ptree->posi.w_lance)
+#define BB_WKNIGHT          (ptree->posi.w_knight)
+#define BB_WSILVER          (ptree->posi.w_silver)
+#define BB_WGOLD            (ptree->posi.w_gold)
+#define BB_WBISHOP          (ptree->posi.w_bishop)
+#define BB_WROOK            (ptree->posi.w_rook)
+#define BB_WKING            (abb_mask[SQ_WKING])
+#define BB_WPRO_PAWN        (ptree->posi.w_pro_pawn)
+#define BB_WPRO_LANCE       (ptree->posi.w_pro_lance)
+#define BB_WPRO_KNIGHT      (ptree->posi.w_pro_knight)
+#define BB_WPRO_SILVER      (ptree->posi.w_pro_silver)
+#define BB_WHORSE           (ptree->posi.w_horse)
+#define BB_WDRAGON          (ptree->posi.w_dragon)
+
+#define OCCUPIED_FILE       (ptree->posi.occupied_rl90)
+#define OCCUPIED_DIAG1      (ptree->posi.occupied_rr45)
+#define OCCUPIED_DIAG2      (ptree->posi.occupied_rl45)
+#define BOARD               (ptree->posi.asquare)
+
+#define SQ_BKING            (ptree->posi.isquare_b_king)
+#define SQ_WKING            (ptree->posi.isquare_w_king)
+
+#define HASH_KEY            (ptree->posi.hash_key)
+#define HASH_VALUE          (ptree->sort_value[0])
+#define MOVE_CURR           (ptree->current_move[ply])
+#define MOVE_LAST           (ptree->current_move[ply-1])
+
+#define NullDepth(d) ( (d) <  PLY_INC*26/4 ? (d)-PLY_INC*12/4 :              \
+                     ( (d) <= PLY_INC*30/4 ? PLY_INC*14/4                    \
+                                           : (d)-PLY_INC*16/4) )
+
+#define RecursionThreshold  ( PLY_INC * 3 )
+
+#define RecursionDepth(d) ( (d) < PLY_INC*18/4 ? PLY_INC*6/4                 \
+                                               : (d)-PLY_
