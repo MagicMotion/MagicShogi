@@ -390,4 +390,64 @@ extern unsigned char ailast_one[512];
                                         : b_gen_nocaptures( ptree, pmove ) )
 
 #define GenDrop(turn,pmove)     ( (turn) ? w_gen_drop( ptree, pmove )       \
-           
+                                         : b_gen_drop( ptree, pmove ) )
+
+#define GenCapNoProEx2(turn,pmove)                                 \
+                ( (turn) ? w_gen_cap_nopro_ex2( ptree, pmove )   \
+                         : b_gen_cap_nopro_ex2( ptree, pmove ) )
+
+#define GenNoCapNoProEx2(turn,pmove)                                \
+                ( (turn) ? w_gen_nocap_nopro_ex2( ptree, pmove )  \
+                         : b_gen_nocap_nopro_ex2( ptree, pmove ) )
+
+#define GenEvasion(turn,pmove)                                  \
+                ( (turn) ? w_gen_evasion( ptree, pmove )      \
+                         : b_gen_evasion( ptree, pmove ) )
+
+#define GenCheck(turn,pmove)                                  \
+                ( (turn) ? w_gen_checks( ptree, pmove )      \
+                         : b_gen_checks( ptree, pmove ) )
+
+#define IsMateIn1Ply(turn)                                    \
+                ( (turn) ? is_w_mate_in_1ply( ptree )         \
+                         : is_b_mate_in_1ply( ptree ) )
+
+#define IsDiscoverBK(from,to)                                  \
+          idirec = (int)adirec[SQ_BKING][from],               \
+          ( idirec && ( idirec!=(int)adirec[SQ_BKING][to] )   \
+            && is_pinned_on_black_king( ptree, from, idirec ) )
+
+#define IsDiscoverWK(from,to)                                  \
+          idirec = (int)adirec[SQ_WKING][from],               \
+          ( idirec && ( idirec!=(int)adirec[SQ_WKING][to] )   \
+            && is_pinned_on_white_king( ptree, from, idirec ) )
+#define IsMateWPawnDrop(ptree,to) ( BOARD[(to)+9] == king                 \
+                                     && is_mate_w_pawn_drop( ptree, to ) )
+
+#define IsMateBPawnDrop(ptree,to) ( BOARD[(to)-9] == -king                \
+                                     && is_mate_b_pawn_drop( ptree, to ) )
+
+enum { b0000, b0001, b0010, b0011, b0100, b0101, b0110, b0111,
+       b1000, b1001, b1010, b1011, b1100, b1101, b1110, b1111 };
+
+enum { A9 = 0, B9, C9, D9, E9, F9, G9, H9, I9,
+           A8, B8, C8, D8, E8, F8, G8, H8, I8,
+           A7, B7, C7, D7, E7, F7, G7, H7, I7,
+           A6, B6, C6, D6, E6, F6, G6, H6, I6,
+           A5, B5, C5, D5, E5, F5, G5, H5, I5,
+           A4, B4, C4, D4, E4, F4, G4, H4, I4,
+           A3, B3, C3, D3, E3, F3, G3, H3, I3,
+           A2, B2, C2, D2, E2, F2, G2, H2, I2,
+           A1, B1, C1, D1, E1, F1, G1, H1, I1 };
+
+enum { promote = 8, empty = 0,
+       pawn, lance, knight, silver, gold, bishop, rook, king, pro_pawn,
+       pro_lance, pro_knight, pro_silver, piece_null, horse, dragon };
+
+enum { npawn_max = 18,  nlance_max  = 4,  nknight_max = 4,  nsilver_max = 4,
+       ngold_max = 4,   nbishop_max = 2,  nrook_max   = 2,  nking_max   = 2 };
+
+enum { rank1 = 0, rank2, rank3, rank4, rank5, rank6, rank7, rank8, rank9 };
+enum { file1 = 0, file2, file3, file4, file5, file6, file7, file8, file9 };
+
+enum { nhand = 7, nfil
