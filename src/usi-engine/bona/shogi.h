@@ -337,4 +337,57 @@ extern unsigned char ailast_one[512];
 #define From2Drop(from)         ((from)-nsquare+1)
 
 
-#define AttackFile(i)  (abb_file_attacks[i]
+#define AttackFile(i)  (abb_file_attacks[i]                               \
+                         [((ptree->posi.occupied_rl90.p[aslide[i].irl90]) \
+                            >> aslide[i].srl90) & 0x7f])
+
+#define AttackRank(i)  (abb_rank_attacks[i]                               \
+                         [((ptree->posi.b_occupied.p[aslide[i].ir0]       \
+                            |ptree->posi.w_occupied.p[aslide[i].ir0])     \
+                             >> aslide[i].sr0) & 0x7f ])
+
+#define AttackDiag1(i)                                         \
+          (abb_bishop_attacks_rr45[i]                        \
+            [((ptree->posi.occupied_rr45.p[aslide[i].irr45]) \
+               >> aslide[i].srr45) & 0x7f])
+
+#define AttackDiag2(i)                                         \
+          (abb_bishop_attacks_rl45[i]                        \
+            [((ptree->posi.occupied_rl45.p[aslide[i].irl45]) \
+               >> aslide[i].srl45) & 0x7f])
+
+#define BishopAttack0(i) ( AttackDiag1(i).p[0] | AttackDiag2(i).p[0] )
+#define BishopAttack1(i) ( AttackDiag1(i).p[1] | AttackDiag2(i).p[1] )
+#define BishopAttack2(i) ( AttackDiag1(i).p[2] | AttackDiag2(i).p[2] )
+#define AttackBLance(bb,i) BBAnd( bb, abb_minus_rays[i], AttackFile(i) )
+#define AttackWLance(bb,i) BBAnd( bb, abb_plus_rays[i],  AttackFile(i) )
+#define AttackBishop(bb,i) BBOr( bb, AttackDiag1(i), AttackDiag2(i) )
+#define AttackRook(bb,i)   BBOr( bb, AttackFile(i), AttackRank(i) )
+#define AttackHorse(bb,i)  AttackBishop(bb,i); BBOr(bb,bb,abb_king_attacks[i])
+#define AttackDragon(bb,i) AttackRook(bb,i);   BBOr(bb,bb,abb_king_attacks[i])
+
+#define InCheck(turn)                                        \
+         ( (turn) ? is_white_attacked( ptree, SQ_WKING )     \
+                  : is_black_attacked( ptree, SQ_BKING ) )
+
+#define MakeMove(turn,move,ply)                                \
+                ( (turn) ? make_move_w( ptree, move, ply ) \
+                         : make_move_b( ptree, move, ply ) )
+
+#define UnMakeMove(turn,move,ply)                                \
+                ( (turn) ? unmake_move_w( ptree, move, ply ) \
+                         : unmake_move_b( ptree, move, ply ) )
+
+#define IsMoveCheck( ptree, turn, move )                        \
+                ( (turn) ? is_move_check_w( ptree, move )   \
+                         : is_move_check_b( ptree, move ) )
+
+#define GenCaptures(turn,pmove) ( (turn) ? w_gen_captures( ptree, pmove )   \
+                                         : b_gen_captures( ptree, pmove ) )
+
+#define GenNoCaptures(turn,pmove)                                             \
+                               ( (turn) ? w_gen_nocaptures( ptree, pmove )  \
+                                        : b_gen_nocaptures( ptree, pmove ) )
+
+#define GenDrop(turn,pmove)     ( (turn) ? w_gen_drop( ptree, pmove )       \
+           
