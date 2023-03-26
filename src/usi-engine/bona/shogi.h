@@ -276,4 +276,65 @@ extern unsigned char ailast_one[512];
 #define RecursionThreshold  ( PLY_INC * 3 )
 
 #define RecursionDepth(d) ( (d) < PLY_INC*18/4 ? PLY_INC*6/4                 \
-                                               : (d)-PLY_
+                                               : (d)-PLY_INC*12/4 )
+
+#define LimitExtension(e,ply) if ( (e) && (ply) > 2 * iteration_depth ) {     \
+                                if ( (ply) < 4 * iteration_depth ) {          \
+                                  e *= 4 * iteration_depth - (ply);           \
+                                  e /= 2 * iteration_depth;                   \
+                                } else { e = 0; } }
+
+#define Flip(turn)          ((turn)^1)
+#define Inv(sq)             (nsquare-1-sq)
+#define PcOnSq(k,i)         pc_on_sq[k][(i)*((i)+3)/2]
+#define PcPcOnSq(k,i,j)     pc_on_sq[k][(i)*((i)+1)/2+(j)]
+
+/*
+  xxxxxxxx xxxxxxxx xxx11111  pawn
+  xxxxxxxx xxxxxxxx 111xxxxx  lance
+  xxxxxxxx xxxxx111 xxxxxxxx  knight
+  xxxxxxxx xx111xxx xxxxxxxx  silver
+  xxxxxxx1 11xxxxxx xxxxxxxx  gold
+  xxxxx11x xxxxxxxx xxxxxxxx  bishop
+  xxx11xxx xxxxxxxx xxxxxxxx  rook
+ */
+#define I2HandPawn(hand)       (((hand) >>  0) & 0x1f)
+#define I2HandLance(hand)      (((hand) >>  5) & 0x07)
+#define I2HandKnight(hand)     (((hand) >>  8) & 0x07)
+#define I2HandSilver(hand)     (((hand) >> 11) & 0x07)
+#define I2HandGold(hand)       (((hand) >> 14) & 0x07)
+#define I2HandBishop(hand)     (((hand) >> 17) & 0x03)
+#define I2HandRook(hand)        ((hand) >> 19)
+#define IsHandPawn(hand)       ((hand) & 0x000001f)
+#define IsHandLance(hand)      ((hand) & 0x00000e0)
+#define IsHandKnight(hand)     ((hand) & 0x0000700)
+#define IsHandSilver(hand)     ((hand) & 0x0003800)
+#define IsHandGold(hand)       ((hand) & 0x001c000)
+#define IsHandBishop(hand)     ((hand) & 0x0060000)
+#define IsHandRook(hand)       ((hand) & 0x0180000)
+#define IsHandSGBR(hand)       ((hand) & 0x01ff800)
+/*
+  xxxxxxxx xxxxxxxx x1111111  destination
+  xxxxxxxx xx111111 1xxxxxxx  starting square or drop piece+nsquare-1
+  xxxxxxxx x1xxxxxx xxxxxxxx  flag for promotion
+  xxxxx111 1xxxxxxx xxxxxxxx  piece to move
+  x1111xxx xxxxxxxx xxxxxxxx  captured piece
+ */
+#define To2Move(to)             ((unsigned int)(to)   <<  0)
+#define From2Move(from)         ((unsigned int)(from) <<  7)
+#define Drop2Move(piece)        ((nsquare-1+(piece))  <<  7)
+#define Drop2From(piece)         (nsquare-1+(piece))
+#define FLAG_PROMO               (1U                  << 14)
+#define Piece2Move(piece)       ((piece)              << 15)
+#define Cap2Move(piece)         ((piece)              << 19)
+#define I2To(move)              (((move) >>  0) & 0x007fU)
+#define I2From(move)            (((move) >>  7) & 0x007fU)
+#define I2FromTo(move)          (((move) >>  0) & 0x3fffU)
+#define I2IsPromote(move)       ((move) & FLAG_PROMO)
+#define I2PieceMove(move)       (((move) >> 15) & 0x000fU)
+#define UToFromToPromo(u)       ( (u) & 0x7ffffU )
+#define UToCap(u)               (((u)    >> 19) & 0x000fU)
+#define From2Drop(from)         ((from)-nsquare+1)
+
+
+#define AttackFile(i)  (abb_file_attacks[i]
