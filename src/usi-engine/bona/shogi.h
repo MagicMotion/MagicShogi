@@ -450,4 +450,87 @@ enum { npawn_max = 18,  nlance_max  = 4,  nknight_max = 4,  nsilver_max = 4,
 enum { rank1 = 0, rank2, rank3, rank4, rank5, rank6, rank7, rank8, rank9 };
 enum { file1 = 0, file2, file3, file4, file5, file6, file7, file8, file9 };
 
-enum { nhand = 7, nfil
+enum { nhand = 7, nfile = 9,  nrank = 9,  nsquare = 81 };
+
+enum { mask_file1 = (( 1U << 18 | 1U << 9 | 1U ) << 8) };
+
+enum { flag_diag1 = b0001, flag_plus = b0010 };
+
+enum { score_draw     =     1,
+       score_max_eval = 30000,
+       score_matelong = 30002,
+       score_mate1ply = 32598,
+       score_inferior = 32599,
+       score_bound    = 32600,
+       score_foul     = 32600 };
+
+enum { phase_hash      = b0001,
+       phase_killer1   = b0001 << 1,
+       phase_killer2   = b0010 << 1,
+       phase_killer    = b0011 << 1,
+       phase_cap1      = b0001 << 3,
+       phase_cap_misc  = b0010 << 3,
+       phase_cap       = b0011 << 3,
+       phase_history1  = b0001 << 5,
+       phase_history2  = b0010 << 5,
+       phase_history   = b0011 << 5,
+       phase_misc      = b0100 << 5 };
+
+enum { next_move_hash = 0,  next_move_capture,   next_move_history2,
+       next_move_misc };
+
+/* next_evasion_hash should be the same as next_move_hash */
+enum { next_evasion_hash = 0, next_evasion_genall, next_evasion_misc };
+
+
+enum { next_quies_gencap, next_quies_captures, next_quies_misc };
+
+enum { no_rep = 0, four_fold_rep, perpetual_check, perpetual_check2,
+       black_superi_rep, white_superi_rep, hash_hit, prev_solution, book_hit,
+       pv_fail_high, mate_search };
+
+enum { record_misc, record_eof, record_next, record_resign, record_drawn,
+       record_error };
+
+enum { black = 0, white = 1 };	// black(sente), white(gote).
+
+enum { direc_misc           = b0000,
+       direc_file           = b0010, /* | */
+       direc_rank           = b0011, /* - */
+       direc_diag1          = b0100, /* / */
+       direc_diag2          = b0101, /* \ */
+       flag_cross           = b0010,
+       flag_diag            = b0100 };
+
+enum { value_null           = b0000,
+       value_upper          = b0001,
+       value_lower          = b0010,
+       value_exact          = b0011,
+       flag_value_up_exact  = b0001,
+       flag_value_low_exact = b0010,
+       node_do_null         = b0100,
+       node_do_recap        = b1000,
+       node_do_mate         = b0001 << 4,
+       node_mate_threat     = b0010 << 4, /* <- don't change it */ 
+       node_do_futile       = b0100 << 4,
+       node_do_recursion    = b1000 << 4,
+       node_do_hashcut      = b0001 << 8,
+       state_node_end };
+/* note: maximum bits are 8.  tlp_state_node uses type unsigned char. */
+
+enum { flag_from_ponder     = b0001 };
+
+enum { flag_time            = b0001,
+       flag_history         = b0010,
+       flag_rep             = b0100,
+       flag_detect_hang     = b1000,
+       flag_nomake_move     = b0010 << 4,
+       flag_nofmargin       = b0100 << 4 };
+
+/* flags represent status of root move */
+enum { flag_searched        = b0001,
+       flag_first           = b0010 };
+
+
+enum { flag_mated           = b0001,
+       fl
