@@ -619,4 +619,104 @@ enum { f_hand_pawn   =    0,
        kkp_bishop      = 414,
        kkp_horse       = 495,
        kkp_rook        = 576,
-      
+       kkp_dragon      = 657,
+       kkp_end         = 738 };
+
+enum { pos_n = fe_end * ( fe_end + 1 ) / 2 };
+
+typedef struct { bitboard_t gold, silver, knight, lance; } check_table_t;
+
+#if ! defined(MINIMUM)
+typedef struct { fpos_t fpos;  unsigned int games, moves, lines; } rpos_t;
+typedef struct {
+  double pawn, lance, knight, silver, gold, bishop, rook;
+  double pro_pawn, pro_lance, pro_knight, pro_silver, horse, dragon;
+  float pc_on_sq[nsquare][fe_end*(fe_end+1)/2];
+  float kkp[nsquare][nsquare][kkp_end];
+} param_t;
+#endif
+
+typedef enum { mode_write, mode_read_write, mode_read } record_mode_t;
+
+typedef struct { uint64_t word1, word2; }                        trans_entry_t;
+typedef struct { trans_entry_t prefer, always[2]; }              trans_table_t;
+typedef struct { int count;  unsigned int cnst[2], vec[RAND_N]; }rand_work_t;
+
+typedef struct {
+  int no1_value, no2_value;
+  unsigned int no1, no2;
+} move_killer_t;
+
+typedef struct { unsigned int no1, no2; } killer_t;
+
+typedef struct {
+  union { char str_move[ MAX_ANSWER ][ 8 ]; } info;
+  char str_name1[ SIZE_PLAYERNAME ];
+  char str_name2[ SIZE_PLAYERNAME ];
+  FILE *pf;
+  unsigned int games, moves, lines;
+} record_t;
+
+typedef struct {
+  unsigned int a[PLY_MAX];
+  unsigned char type;
+  unsigned char length;
+  unsigned char depth;
+} pv_t;
+
+typedef struct {
+  unsigned char ir0,   sr0;
+  unsigned char irl90, srl90;
+  unsigned char irl45, srl45;
+  unsigned char irr45, srr45;
+} slide_tbl_t;
+
+
+typedef struct {
+  uint64_t hash_key;
+  bitboard_t b_occupied,     w_occupied;
+  bitboard_t occupied_rl90,  occupied_rl45, occupied_rr45;
+  bitboard_t b_hdk,          w_hdk;
+  bitboard_t b_tgold,        w_tgold;
+  bitboard_t b_bh,           w_bh;
+  bitboard_t b_rd,           w_rd;
+  bitboard_t b_pawn_attacks, w_pawn_attacks;
+  bitboard_t b_lance,        w_lance;
+  bitboard_t b_knight,       w_knight;
+  bitboard_t b_silver,       w_silver;
+  bitboard_t b_bishop,       w_bishop;
+  bitboard_t b_rook,         w_rook;
+  bitboard_t b_horse,        w_horse;
+  bitboard_t b_dragon,       w_dragon;
+  bitboard_t b_pawn,         w_pawn;
+  bitboard_t b_gold,         w_gold;
+  bitboard_t b_pro_pawn,     w_pro_pawn;
+  bitboard_t b_pro_lance,    w_pro_lance;
+  bitboard_t b_pro_knight,   w_pro_knight;
+  bitboard_t b_pro_silver,   w_pro_silver;
+  unsigned int hand_black, hand_white;
+  int material;
+  signed char asquare[nsquare];
+  unsigned char isquare_b_king, isquare_w_king;
+} posi_t;
+
+
+typedef struct {
+  unsigned int hand_black, hand_white;
+  char turn_to_move;
+  signed char asquare[nsquare];
+} min_posi_t;
+
+typedef struct {
+  uint64_t nodes;
+  unsigned int move, status;
+#if defined(DFPN_CLIENT)
+  volatile int dfpn_cresult;
+#endif
+} root_move_t;
+
+typedef struct {
+  unsigned int *move_last;
+  unsigned int move_cap1;
+  unsigned int move_cap2;
+  int phase_done, next_ph
