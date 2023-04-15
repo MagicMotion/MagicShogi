@@ -814,3 +814,91 @@ extern int npawn_box;
 extern int nlance_box;
 extern int nknight_box;
 extern int nsilver_box;
+extern int ngold_box;
+extern int nbishop_box;
+extern int nrook_box;
+
+extern unsigned int ponder_move_list[ MAX_LEGAL_MOVES ];
+extern unsigned int ponder_move;
+extern int ponder_nmove;
+
+extern root_move_t root_move_list[ MAX_LEGAL_MOVES ];
+extern SHARE int root_abort;
+extern int root_nmove;
+extern int root_index;
+extern int root_value;
+extern int root_alpha;
+extern int root_beta;
+extern int root_turn;
+extern int root_nfail_high;
+extern int root_nfail_low;
+extern int resign_threshold;
+
+extern uint64_t node_limit;
+extern unsigned int node_per_second;
+extern unsigned int node_next_signal;
+extern unsigned int node_last_check;
+
+extern unsigned int hash_mask;
+extern int trans_table_age;
+
+extern pv_t last_pv;
+extern pv_t alast_pv_save[NUM_UNMAKE];
+extern int alast_root_value_save[NUM_UNMAKE];
+extern int last_root_value;
+extern int amaterial_save[NUM_UNMAKE];
+extern unsigned int amove_save[NUM_UNMAKE];
+extern unsigned char ansuc_check_save[NUM_UNMAKE];
+
+extern SHARE trans_table_t *ptrans_table;
+extern trans_table_t *ptrans_table_orig;
+extern int log2_ntrans_table;
+
+extern int depth_limit;
+
+extern unsigned int time_last_result;
+extern unsigned int time_last_eff_search;
+extern unsigned int time_last_search;
+extern unsigned int time_last_check;
+extern unsigned int time_turn_start;
+extern unsigned int time_start;
+extern unsigned int time_max_limit;
+extern unsigned int time_limit;
+extern unsigned int time_response;
+extern unsigned int sec_limit;
+extern unsigned int sec_limit_up;
+extern unsigned int sec_limit_depth;
+extern unsigned int sec_elapsed;
+extern unsigned int sec_b_total;
+extern unsigned int sec_w_total;
+
+extern record_t record_problems;
+extern record_t record_game;
+extern FILE *pf_book;
+extern int record_num;
+
+extern int p_value_ex[31];
+extern int p_value_pm[15];
+extern int p_value[31];
+extern short pc_on_sq[nsquare][fe_end*(fe_end+1)/2];
+extern short kkp[nsquare][nsquare][kkp_end];
+
+extern uint64_t ehash_tbl[ EHASH_MASK + 1 ];
+extern rand_work_t rand_work;
+extern slide_tbl_t aslide[ nsquare ];
+extern bitboard_t abb_b_knight_attacks[ nsquare ];
+extern bitboard_t abb_b_silver_attacks[ nsquare ];
+extern bitboard_t abb_b_gold_attacks[ nsquare ];
+extern bitboard_t abb_w_knight_attacks[ nsquare ];
+extern bitboard_t abb_w_silver_attacks[ nsquare ];
+extern bitboard_t abb_w_gold_attacks[ nsquare ];
+extern bitboard_t abb_king_attacks[ nsquare ];
+extern bitboard_t abb_obstacle[ nsquare ][ nsquare ];
+extern bitboard_t abb_bishop_attacks_rl45[ nsquare ][ 128 ];
+extern bitboard_t abb_bishop_attacks_rr45[ nsquare ][ 128 ];
+extern bitboard_t abb_rank_attacks[ nsquare ][ 128 ];
+extern bitboard_t abb_file_attacks[ nsquare ][ 128 ];
+extern bitboard_t abb_mask[ nsquare ];
+extern bitboard_t abb_mask_rl90[ nsquare ];
+extern bitboard_t abb_mask_rl45[ nsquare ];
+extern bit
