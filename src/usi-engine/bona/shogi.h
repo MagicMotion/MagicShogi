@@ -719,4 +719,98 @@ typedef struct {
   unsigned int *move_last;
   unsigned int move_cap1;
   unsigned int move_cap2;
-  int phase_done, next_ph
+  int phase_done, next_phase, remaining, value_cap1, value_cap2;
+} next_move_t;
+
+/* data: 31  1bit flag_learned */
+/*       30  1bit is_flip      */
+/*       15 16bit value        */
+typedef struct {
+  uint64_t key_book;
+  unsigned int key_responsible, key_probed, key_played;
+  unsigned int hand_responsible, hand_probed, hand_played;
+  unsigned int move_played, move_responsible, move_probed, data;
+} history_book_learn_t;
+
+typedef struct tree tree_t;
+struct tree {
+  posi_t posi;
+  uint64_t rep_board_list[ REP_HIST_LEN ];
+#if defined(YSS_ZERO)
+  // 棋譜と探索木を含めた局面図
+  min_posi_t record_plus_ply_min_posi[REP_HIST_LEN];
+  int history_in_check[REP_HIST_LEN];	// 王手がかかっているか
+  uint64_t sequence_hash;
+  uint64_t keep_sequence_hash[REP_HIST_LEN];
+  int reached_ply;
+  int max_reached_ply;
+  int sum_reached_ply;
+#endif
+  uint64_t node_searched;
+  unsigned int *move_last[ PLY_MAX ];
+  next_move_t anext_move[ PLY_MAX ];
+  pv_t pv[ PLY_MAX ];
+  move_killer_t amove_killer[ PLY_MAX ];
+  unsigned int null_pruning_done;
+  unsigned int null_pruning_tried;
+  unsigned int check_extension_done;
+  unsigned int recap_extension_done;
+  unsigned int onerp_extension_done;
+  unsigned int neval_called;
+  unsigned int nquies_called;
+  unsigned int nfour_fold_rep;
+  unsigned int nperpetual_check;
+  unsigned int nsuperior_rep;
+  unsigned int nrep_tried;
+  unsigned int ntrans_always_hit;
+  unsigned int ntrans_prefer_hit;
+  unsigned int ntrans_probe;
+  unsigned int ntrans_exact;
+  unsigned int ntrans_lower;
+  unsigned int ntrans_upper;
+  unsigned int ntrans_superior_hit;
+  unsigned int ntrans_inferior_hit;
+  unsigned int fail_high;
+  unsigned int fail_high_first;
+  unsigned int rep_hand_list[ REP_HIST_LEN ];
+  unsigned int amove_hash[ PLY_MAX ];
+  unsigned int amove[ MOVE_LIST_LEN ];
+  unsigned int current_move[ PLY_MAX ];
+  killer_t killers[ PLY_MAX ];
+  unsigned int hist_nmove[ PLY_MAX ];
+  unsigned int hist_move[ PLY_MAX ][ MAX_LEGAL_MOVES ];
+  int sort_value[ MAX_LEGAL_MOVES ];
+  unsigned short hist_tried[ HIST_SIZE ];
+  unsigned short hist_good[ HIST_SIZE ];
+  short save_material[ PLY_MAX ];
+  int save_eval[ PLY_MAX+1 ];
+  unsigned char nsuc_check[ PLY_MAX+1 ];
+  int nrep;
+#if defined(TLP)
+  struct tree *tlp_ptrees_sibling[ TLP_MAX_THREADS ];
+  struct tree *tlp_ptree_parent;
+  lock_t tlp_lock;
+  volatile int tlp_abort;
+  volatile int tlp_used;
+  unsigned short tlp_slot;
+  short tlp_beta;
+  short tlp_best;
+  volatile unsigned char tlp_nsibling;
+  unsigned char tlp_depth;
+  unsigned char tlp_state_node;
+  unsigned char tlp_id;
+  char tlp_turn;
+  char tlp_ply;
+#endif
+};
+
+#if defined(YSS_ZERO)
+void copy_min_posi(tree_t * restrict ptree, int sideToMove, int ply);
+#endif
+
+extern SHARE unsigned int game_status;
+
+extern int npawn_box;
+extern int nlance_box;
+extern int nknight_box;
+extern int nsilver_box;
