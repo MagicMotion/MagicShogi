@@ -975,3 +975,76 @@ extern const char *str_unexpect_eof;
 extern const char *str_ovrflw_line;
 extern const char *str_warning;
 extern const char *str_on;
+extern const char *str_off;
+extern const char *str_book;
+extern const char *str_hash;
+extern const char *str_fv;
+extern const char *str_book_error;
+extern const char *str_perpet_check;
+extern const char *str_bad_cmdline;
+extern const char *str_busy_think;
+extern const char *str_bad_record;
+extern const char *str_bad_board;
+extern const char *str_delimiters;
+extern const char *str_fmt_line;
+extern const char *str_illegal_move;
+extern const char *str_double_pawn;
+extern const char *str_mate_drppawn;
+extern const char *str_fopen_error;
+extern const char *str_game_ended;
+extern const char *str_io_error;
+extern const char *str_spaces;
+extern const char *str_no_legal_move;
+extern const char *str_king_hang;
+#if defined(CSA_LAN)
+extern const char *str_server_err;
+#endif
+extern const char *str_myname;
+extern const char *str_version;
+extern char engine_name[];
+extern const min_posi_t min_posi_no_handicap;
+extern const int ashell_h[ SHELL_H_LEN ];
+extern const int aikkp[16];
+extern const int aikpp[31];
+extern const int aikkp_hand[8];
+extern const char ach_turn[2];
+extern const unsigned char aifile[ nsquare ];
+extern const unsigned char airank[ nsquare ];
+
+#if defined(DFPN_CLIENT)
+#  define DFPN_CLIENT_SIZE_SIGNATURE 64
+enum { dfpn_client_na, dfpn_client_win, dfpn_client_lose, dfpn_client_misc };
+typedef struct { char str_move[7], result; } dfpn_client_cresult_t;
+extern volatile int dfpn_client_flag_read;
+extern volatile sckt_t dfpn_client_sckt;
+extern volatile unsigned int dfpn_client_move_unlocked;
+extern volatile int dfpn_client_rresult_unlocked;
+extern volatile int dfpn_client_num_cresult;
+extern volatile char dfpn_client_signature[ DFPN_CLIENT_SIZE_SIGNATURE ];
+extern volatile dfpn_client_cresult_t dfpn_client_cresult[ MAX_LEGAL_MOVES ];
+extern volatile char dfpn_client_str_move[7];
+extern volatile int dfpn_client_rresult;
+extern unsigned int dfpn_client_best_move;
+extern lock_t dfpn_client_lock;
+extern char dfpn_client_str_addr[256];
+extern int dfpn_client_port;
+extern int dfpn_client_cresult_index;
+void CONV dfpn_client_start( const tree_t * restrict ptree );
+void CONV dfpn_client_check_results( void );
+int CONV dfpn_client_out( const char *fmt, ... );
+#endif
+
+void CONV pv_close( tree_t * restrict ptree, int ply, int type );
+void CONV pv_copy( tree_t * restrict ptree, int ply );
+void set_derivative_param( void );
+void CONV set_search_limit_time( int turn );
+void CONV ehash_clear( void );
+void CONV hash_store_pv( const tree_t * restrict ptree, unsigned int move,
+			 int turn );
+void CONV check_futile_score_quies( const tree_t * restrict ptree,
+				    unsigned int move, int old_val,
+				    int new_val, int turn );
+void out_warning( const char *format, ... );
+void out_error( const char *format, ... );
+void show_prompt( void );
+void CONV
