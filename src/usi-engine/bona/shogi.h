@@ -1047,4 +1047,58 @@ void CONV check_futile_score_quies( const tree_t * restrict ptree,
 void out_warning( const char *format, ... );
 void out_error( const char *format, ... );
 void show_prompt( void );
-void CONV
+void CONV make_move_w( tree_t * restrict ptree, unsigned int move, int ply );
+void CONV make_move_b( tree_t * restrict ptree, unsigned int move, int ply );
+void CONV unmake_move_b( tree_t * restrict ptree, unsigned int move, int ply );
+void CONV unmake_move_w( tree_t * restrict ptree, unsigned int move, int ply );
+void ini_rand( unsigned int s );
+void out_CSA( tree_t * restrict ptree, record_t *pr, unsigned int move );
+void CONV out_pv( tree_t * restrict ptree, int value, int turn,
+		  unsigned int time );
+void CONV hash_store( const tree_t * restrict ptree, int ply, int depth,
+		      int turn, int value_type, int value, unsigned int move,
+		      unsigned int state_node );
+void * CONV memory_alloc( size_t nbytes );
+void CONV adjust_time( unsigned int elapsed_new, int turn );
+int CONV load_fv( void );
+int CONV unmake_move_root( tree_t * restrict ptree );
+int CONV popu_count012( unsigned int u0, unsigned int u1, unsigned int u2 );
+int CONV first_one012( unsigned int u0, unsigned int u1, unsigned int u2 );
+int CONV last_one210( unsigned int u2, unsigned int u1, unsigned int u0 );
+int CONV first_one01( unsigned int u0, unsigned int u1 );
+int CONV first_one12( unsigned int u1, unsigned int u2 );
+int CONV last_one01( unsigned int u0, unsigned int u1 );
+int CONV last_one12( unsigned int u1, unsigned int u2 );
+int CONV first_one1( unsigned int u1 );
+int CONV first_one2( unsigned int u2 );
+int CONV last_one0( unsigned int u0 );
+int CONV last_one1( unsigned int u1 );
+int CONV memory_free( void *p );
+int CONV reset_time( unsigned int b_remain, unsigned int w_remain );
+int CONV gen_legal_moves( tree_t * restrict ptree, unsigned int *p0,
+			  int flag );
+#if defined(YSS_ZERO)
+int CONV gen_legal_moves_aobazero( tree_t * restrict ptree, unsigned int *p0, int flag, int turn );
+#endif
+
+int CONV detect_signals( tree_t * restrict ptree );
+int ini( tree_t * restrict ptree );
+int fin( void );
+int ponder( tree_t * restrict ptree );
+int CONV book_on( void );
+int CONV book_off( void );
+int CONV solve_problems( tree_t * restrict ptree, unsigned int nposition );
+int CONV solve_mate_problems( tree_t * restrict ptree,
+			      unsigned int nposition );
+int read_board_rep1( const char *str_line, min_posi_t *pmin_posi );
+int CONV com_turn_start( tree_t * restrict ptree, int flag );
+int read_record( tree_t * restrict ptree, const char *str_file,
+		 unsigned int moves, int flag );
+int out_board( const tree_t * restrict ptree, FILE *pf, unsigned int move,
+	       int flag );
+int make_root_move_list( tree_t * restrict ptree );
+int record_wind( record_t *pr );
+int CONV book_probe( tree_t * restrict ptree );
+int CONV detect_repetition( tree_t * restrict ptree, int ply, int turn,
+			    int nth );
+int CONV is_move( const char *str 
