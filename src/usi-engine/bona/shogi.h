@@ -1101,4 +1101,59 @@ int record_wind( record_t *pr );
 int CONV book_probe( tree_t * restrict ptree );
 int CONV detect_repetition( tree_t * restrict ptree, int ply, int turn,
 			    int nth );
-int CONV is_move( const char *str 
+int CONV is_move( const char *str );
+int CONV is_mate( tree_t * restrict ptree, int ply );
+int CONV is_mate_w_pawn_drop( tree_t * restrict ptree, int sq_drop );
+int CONV is_mate_b_pawn_drop( tree_t * restrict ptree, int sq_drop );
+int CONV clear_trans_table( void );
+int CONV eval_max_score( const tree_t * restrict ptree, unsigned int move,
+			 int value, int turn, int diff );
+int CONV estimate_score_diff( const tree_t * restrict ptree, unsigned int move,
+			      int turn );
+int CONV eval_material( const tree_t * restrict ptree );
+int CONV ini_trans_table( void );
+int CONV is_hand_eq_supe( unsigned int u, unsigned int uref );
+int CONV is_move_valid( tree_t * restrict ptree, unsigned int move, int turn );
+int CONV iterate( tree_t * restrict ptree );
+int CONV gen_next_move( tree_t * restrict ptree, int ply, int turn );
+int CONV gen_next_evasion( tree_t * restrict ptree, int ply, int turn );
+int CONV ini_game( tree_t * restrict ptree, const min_posi_t *pmin_posi,
+		   int flag, const char *str_name1, const char *str_name2 );
+int open_history( const char *str_name1, const char *str_name2 );
+int next_cmdline( int is_wait );
+int CONV procedure( tree_t * restrict ptree );
+int CONV get_cputime( unsigned int *ptime );
+int CONV get_elapsed( unsigned int *ptime );
+int interpret_CSA_move( tree_t * restrict ptree, unsigned int *pmove,
+			const char *str );
+int in_CSA( tree_t * restrict ptree, record_t *pr, unsigned int *pmove,
+	    int do_history );
+int in_CSA_record( FILE * restrict pf, tree_t * restrict ptree );
+int CONV update_time( int turn );
+int CONV exam_tree( const tree_t * restrict ptree );
+int rep_check_root( tree_t * restrict ptree );
+int CONV make_move_root( tree_t * restrict ptree, unsigned int move,
+			 int flag );
+int CONV search_quies( tree_t * restrict ptree, int alpha, int beta, int turn,
+		       int ply, int qui_ply );
+int CONV search( tree_t * restrict ptree, int alpha, int beta, int turn,
+		 int depth, int ply, unsigned int state_node );
+int CONV searchr( tree_t * restrict ptree, int alpha, int beta, int turn,
+	     int depth );
+int CONV evaluate( tree_t * restrict ptree, int ply, int turn );
+int CONV swap( const tree_t * restrict ptree, unsigned int move, int alpha,
+	       int beta, int turn );
+int file_close( FILE *pf );
+int record_open( record_t *pr, const char *str_file,
+		 record_mode_t record_mode, const char *str_name1,
+		 const char *str_name2 );
+int record_close( record_t *pr );
+unsigned int CONV phash( unsigned int move, int turn );
+unsigned int CONV is_mate_in3ply( tree_t * restrict ptree, int turn, int ply );
+unsigned int CONV is_b_mate_in_1ply( tree_t * restrict ptree );
+unsigned int CONV is_w_mate_in_1ply( tree_t * restrict ptree );
+unsigned int CONV hash_probe( tree_t * restrict ptree, int ply, int depth,
+			      int turn, int alpha, int beta,
+			      unsigned int *pstate_node );
+unsigned int rand32( void );
+unsigned int CONV is_black_attacked( c
