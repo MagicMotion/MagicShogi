@@ -1212,4 +1212,103 @@ std::string string_CSA_move( unsigned int move );
 #if defined(MPV)
 int root_mpv;
 int mpv_num;
-int
+int mpv_width;
+pv_t mpv_pv[ MPV_MAX_PV*2 + 1 ];
+#endif
+
+#  if ! defined(_WIN32) && ( defined(DFPN_CLIENT) || defined(TLP) )
+extern pthread_attr_t pthread_attr;
+#  endif
+
+#if defined(DFPN_CLIENT) || defined(TLP)
+void CONV lock( lock_t *plock );
+void CONV unlock( lock_t *plock );
+int CONV lock_init( lock_t *plock );
+int CONV lock_free( lock_t *plock );
+void tlp_yield( void );
+extern lock_t io_lock;
+#endif
+
+#if defined(TLP)
+#  define SignKey(word2, word1) word2 ^= ( word1 )
+#  define TlpEnd()              tlp_end();
+#  if defined(MNJ_LAN) || defined(USI)
+uint64_t tlp_count_node( tree_t * restrict ptree );
+#  endif
+void tlp_set_abort( tree_t * restrict ptree );
+void tlp_end( void );
+int CONV tlp_search( tree_t * restrict ptree, int alpha, int beta, int turn,
+		int depth, int ply, unsigned int state_node );
+int tlp_split( tree_t * restrict ptree );
+int tlp_start( void );
+int tlp_is_descendant( const tree_t * restrict ptree, int slot_ancestor );
+extern lock_t tlp_lock;
+extern volatile int tlp_abort;
+extern volatile int tlp_idle;
+extern volatile int tlp_num;
+extern int tlp_max;
+extern int tlp_nsplit;
+extern int tlp_nabort;
+extern int tlp_nslot;
+extern tree_t tlp_atree_work[ TLP_NUM_WORK ];
+extern tree_t * volatile tlp_ptrees[ TLP_MAX_THREADS ];
+#else /* no TLP */
+#  define SignKey(word2, word1)
+#  define TlpEnd()
+extern tree_t tree;
+#endif
+
+#if ! defined(_WIN32)
+extern clock_t clk_tck;
+#endif
+
+#if ! defined(NDEBUG)
+int exam_bb( const tree_t *ptree );
+#endif
+
+#if ! ( defined(NO_STDOUT) && defined(NO_LOGGING) )
+#  define Out( ... ) out( __VA_ARGS__ )
+void out( const char *format, ... );
+#else
+#  define Out( ... )
+#endif
+
+#if ! defined(NO_LOGGING)
+extern FILE *pf_log;
+extern const char *str_dir_logs;
+#endif
+
+#if defined(NO_STDOUT) || defined(WIN32_PIPE)
+#  define OutBeep()
+#  define StdoutStress(x,y) 1
+#  define StdoutNormal()    1
+#else
+#  define OutBeep()         out_beep()
+#  define StdoutStress(x,y) stdout_stress(x,y)
+#  define StdoutNormal()    stdout_normal()
+void out_beep( void );
+int stdout_stress( int is_promote, int ifrom );
+int stdout_normal( void );
+#endif
+
+#if defined(CSA_LAN) || defined(MNJ_LAN) || defined(DFPN)
+void CONV shutdown_all( void );
+#  define ShutdownAll() shutdown_all();
+#else
+#  define ShutdownAll()
+#endif
+
+#if defined(CSA_LAN)||defined(MNJ_LAN)||defined(DFPN_CLIENT)||defined(DFPN)
+int client_next_game( tree_t * restrict ptree, const char *str_addr,
+		      int iport );
+sckt_t CONV sckt_connect( const char *str_addr, int iport );
+int CONV sckt_recv_all( sckt_t sd );
+int CONV sckt_shutdown( sckt_t sd );
+int CONV sckt_check( sckt_t sd );
+int CONV sckt_in( sckt_t sd, char *str, int n );
+int CONV sckt_out( sckt_t sd, const char *fmt, ... );
+extern unsigned int time_last_send;
+#endif
+
+#if defined(DFPN)
+#  define DFPNOut( ... ) if ( df
