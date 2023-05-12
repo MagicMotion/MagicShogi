@@ -1156,4 +1156,60 @@ unsigned int CONV hash_probe( tree_t * restrict ptree, int ply, int depth,
 			      int turn, int alpha, int beta,
 			      unsigned int *pstate_node );
 unsigned int rand32( void );
-unsigned int CONV is_black_attacked( c
+unsigned int CONV is_black_attacked( const tree_t * restrict ptree, int sq );
+unsigned int CONV is_white_attacked( const tree_t * restrict ptree, int sq );
+unsigned int CONV is_pinned_on_black_king( const tree_t * restrict ptree,
+				     int isquare, int idirec );
+unsigned int CONV is_pinned_on_white_king( const tree_t * restrict ptree,
+				     int isquare, int idirec );
+unsigned int * CONV b_gen_captures( const tree_t * restrict ptree,
+				    unsigned int * restrict pmove );
+unsigned int * CONV b_gen_nocaptures( const tree_t * restrict ptree,
+				      unsigned int * restrict pmove );
+unsigned int * CONV b_gen_drop( tree_t * restrict ptree,
+			  unsigned int * restrict pmove );
+unsigned int * CONV b_gen_evasion( tree_t *restrict ptree,
+				   unsigned int * restrict pmove );
+unsigned int * CONV b_gen_checks( tree_t * restrict __ptree__,
+				  unsigned int * restrict pmove );
+unsigned int * CONV b_gen_cap_nopro_ex2( const tree_t * restrict ptree,
+					 unsigned int * restrict pmove );
+unsigned int * CONV b_gen_nocap_nopro_ex2( const tree_t * restrict ptree,
+				     unsigned int * restrict pmove );
+unsigned int * CONV w_gen_captures( const tree_t * restrict ptree,
+				    unsigned int * restrict pmove );
+unsigned int * CONV w_gen_nocaptures( const tree_t * restrict ptree,
+				      unsigned int * restrict pmove );
+unsigned int * CONV w_gen_drop( tree_t * restrict ptree,
+				unsigned int * restrict pmove );
+unsigned int * CONV w_gen_evasion( tree_t * restrict ptree,
+				   unsigned int * restrict pmove );
+unsigned int * CONV w_gen_checks( tree_t * restrict __ptree__,
+				  unsigned int * restrict pmove );
+unsigned int * CONV w_gen_cap_nopro_ex2( const tree_t * restrict ptree,
+					 unsigned int * restrict pmove );
+unsigned int * CONV w_gen_nocap_nopro_ex2( const tree_t * restrict ptree,
+					   unsigned int * restrict pmove );
+int CONV b_have_checks( tree_t * restrict ptree );
+int CONV w_have_checks( tree_t * restrict ptree );
+int CONV b_have_evasion( tree_t * restrict ptree );
+int CONV w_have_evasion( tree_t * restrict ptree );
+int CONV is_move_check_b( const tree_t * restrict ptree, unsigned int move );
+int CONV is_move_check_w( const tree_t * restrict ptree, unsigned int move );
+uint64_t CONV hash_func( const tree_t * restrict ptree );
+uint64_t rand64( void );
+FILE *file_open( const char *str_file, const char *str_mode );
+bitboard_t CONV attacks_to_piece( const tree_t * restrict ptree, int sq );
+bitboard_t CONV b_attacks_to_piece( const tree_t * restrict ptree, int sq );
+bitboard_t CONV w_attacks_to_piece( const tree_t * restrict ptree, int sq );
+const char * CONV str_time( unsigned int time );
+const char * CONV str_time_symple( unsigned int time );
+const char *str_CSA_move( unsigned int move );
+#if defined(YSS_ZERO)
+std::string string_CSA_move( unsigned int move );
+#endif
+
+#if defined(MPV)
+int root_mpv;
+int mpv_num;
+int
