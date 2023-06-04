@@ -1311,4 +1311,100 @@ extern unsigned int time_last_send;
 #endif
 
 #if defined(DFPN)
-#  define DFPNOut( ... ) if ( df
+#  define DFPNOut( ... ) if ( dfpn_sckt != SCKT_NULL ) \
+                           sckt_out( dfpn_sckt, __VA_ARGS__ )
+int CONV dfpn( tree_t * restrict ptree, int turn, int ply );
+int CONV dfpn_ini_hash( void );
+extern unsigned int dfpn_hash_log2;
+extern sckt_t dfpn_sckt;
+#else
+#  define DFPNOut( ... )
+#endif
+
+#if defined(CSA_LAN)
+extern int client_turn;
+extern int client_ngame;
+extern int client_max_game;
+extern long client_port;
+extern char client_str_addr[256];
+extern char client_str_id[256];
+extern char client_str_pwd[256];
+extern sckt_t sckt_csa;
+#endif
+
+#if defined(MNJ_LAN) || defined(USI)
+extern unsigned int moves_ignore[MAX_LEGAL_MOVES];
+#endif
+
+#if defined(MNJ_LAN)
+#  define MnjOut( ... ) if ( sckt_mnj != SCKT_NULL ) \
+                          sckt_out( sckt_mnj, __VA_ARGS__ )
+extern sckt_t sckt_mnj;
+extern int mnj_posi_id;
+extern int mnj_depth_stable;
+void CONV mnj_check_results( void );
+int CONV mnj_reset_tbl( int sd, unsigned int seed );
+int analyze( tree_t * restrict ptree );
+#else
+#  define MnjOut( ... )
+#endif
+
+#if defined(USI)
+#  define USIOut( ... ) if ( usi_mode != usi_off ) usi_out( __VA_ARGS__ )
+enum usi_mode { usi_off, usi_on };
+extern enum usi_mode usi_mode;
+extern unsigned int usi_time_out_last;
+extern unsigned int usi_byoyomi;
+extern int fUSIMoveCount;
+
+void CONV usi_out( const char *format, ... );
+int CONV usi_book( tree_t * restrict ptree );
+int CONV usi_root_list( tree_t * restrict ptree );
+int CONV usi2csa( const tree_t * restrict ptree, const char *str_usi,
+		  char *str_csa );
+int CONV csa2usi( const tree_t * restrict ptree, const char *str_csa,
+		  char *str_usi );
+int analyze( tree_t * restrict ptree );
+#else
+#  define USIOut( ... )
+#endif
+
+#if defined(CSA_LAN) || defined(MNJ_LAN) || defined(DFPN_CLIENT)||defined(DFPN)
+const char *str_WSAError( const char *str );
+#endif
+
+#if defined(CSASHOGI)
+#  define OutCsaShogi( ... ) out_csashogi( __VA_ARGS__ )
+void out_csashogi( const char *format, ... );
+#else
+#  define OutCsaShogi( ... )
+#endif
+
+
+
+extern check_table_t b_chk_tbl[nsquare];
+extern check_table_t w_chk_tbl[nsquare];
+
+#if defined(DBG_EASY)
+extern unsigned int easy_move;
+#endif
+
+#if defined(INANIWA_SHIFT)
+extern int inaniwa_flag;
+#endif
+
+#if defined(MINIMUM)
+
+#  define MT_CAP_PAWN       ( DPawn      + DPawn )
+#  define MT_CAP_LANCE      ( DLance     + DLance )
+#  define MT_CAP_KNIGHT     ( DKnight    + DKnight )
+#  define MT_CAP_SILVER     ( DSilver    + DSilver )
+#  define MT_CAP_GOLD       ( DGold      + DGold )
+#  define MT_CAP_BISHOP     ( DBishop    + DBishop )
+#  define MT_CAP_ROOK       ( DRook      + DRook )
+#  define MT_CAP_PRO_PAWN   ( DProPawn   + DPawn )
+#  define MT_CAP_PRO_LANCE  ( DProLance  + DLance )
+#  define MT_CAP_PRO_KNIGHT ( DProKnight + DKnight )
+#  define MT_CAP_PRO_SILVER ( DProSilver + DSilver )
+#  define MT_CAP_HORSE      ( DHorse     + DBishop )
+#  define MT_CAP_DRA
