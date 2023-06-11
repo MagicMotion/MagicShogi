@@ -1407,4 +1407,69 @@ extern int inaniwa_flag;
 #  define MT_CAP_PRO_KNIGHT ( DProKnight + DKnight )
 #  define MT_CAP_PRO_SILVER ( DProSilver + DSilver )
 #  define MT_CAP_HORSE      ( DHorse     + DBishop )
-#  define MT_CAP_DRA
+#  define MT_CAP_DRAGON     ( DDragon    + DRook )
+#  define MT_CAP_KING       ( DKing      + DKing )
+#  define MT_PRO_PAWN       ( DProPawn   - DPawn )
+#  define MT_PRO_LANCE      ( DProLance  - DLance )
+#  define MT_PRO_KNIGHT     ( DProKnight - DKnight )
+#  define MT_PRO_SILVER     ( DProSilver - DSilver )
+#  define MT_PRO_BISHOP     ( DHorse     - DBishop )
+#  define MT_PRO_ROOK       ( DDragon    - DRook )
+
+#else
+
+#  define MT_CAP_PAWN       ( p_value_ex[ 15 + pawn ] )
+#  define MT_CAP_LANCE      ( p_value_ex[ 15 + lance ] )
+#  define MT_CAP_KNIGHT     ( p_value_ex[ 15 + knight ] )
+#  define MT_CAP_SILVER     ( p_value_ex[ 15 + silver ] )
+#  define MT_CAP_GOLD       ( p_value_ex[ 15 + gold ] )
+#  define MT_CAP_BISHOP     ( p_value_ex[ 15 + bishop ] )
+#  define MT_CAP_ROOK       ( p_value_ex[ 15 + rook ] )
+#  define MT_CAP_PRO_PAWN   ( p_value_ex[ 15 + pro_pawn ] )
+#  define MT_CAP_PRO_LANCE  ( p_value_ex[ 15 + pro_lance ] )
+#  define MT_CAP_PRO_KNIGHT ( p_value_ex[ 15 + pro_knight ] )
+#  define MT_CAP_PRO_SILVER ( p_value_ex[ 15 + pro_silver ] )
+#  define MT_CAP_HORSE      ( p_value_ex[ 15 + horse ] )
+#  define MT_CAP_DRAGON     ( p_value_ex[ 15 + dragon ] )
+#  define MT_CAP_KING       ( DKing + DKing )
+#  define MT_PRO_PAWN       ( p_value_pm[ 7 + pawn ] )
+#  define MT_PRO_LANCE      ( p_value_pm[ 7 + lance ] )
+#  define MT_PRO_KNIGHT     ( p_value_pm[ 7 + knight ] )
+#  define MT_PRO_SILVER     ( p_value_pm[ 7 + silver ] )
+#  define MT_PRO_BISHOP     ( p_value_pm[ 7 + bishop ] )
+#  define MT_PRO_ROOK       ( p_value_pm[ 7 + rook ] )
+
+void fill_param_zero( void );
+void ini_param( param_t *p );
+void add_param( param_t *p1, const param_t *p2 );
+void inc_param( const tree_t * restrict ptree, param_t * restrict pd,
+		double dinc );
+void param_sym( param_t *p );
+void renovate_param( const param_t *pd );
+int learn( tree_t * restrict ptree, int is_ini, int nsteps,
+	   unsigned int max_games, int max_iterations,
+	   int nworker1, int nworker2 );
+int record_setpos( record_t *pr, const rpos_t *prpos );
+int record_getpos( record_t *pr, rpos_t *prpos );
+int record_rewind( record_t *pr );
+int CONV book_create( tree_t * restrict ptree );
+int out_param( void );
+double calc_penalty( void );
+
+#endif /* no MINIMUM */
+
+#if ( REP_HIST_LEN - PLY_MAX ) < 1
+#  error "REP_HIST_LEN - PLY_MAX is too small."
+#endif
+
+#if defined(CSA_LAN) && '\n' != 0x0a
+#  error "'\n' is not the ASCII code of LF (0x0a)."
+#endif
+
+#if defined(YSS_ZERO)
+int YssZero_com_turn_start( tree_t * restrict ptree );
+int getCmdLineParam(int argc, char *argv[]);
+const char *get_cmd_line_ptr();
+void init_seqence_hash();
+const int SEQUENCE_HASH_SIZE = 512;	// 2^n.   別手順できた同一局面を区別するため
+uint64_t get_sequence_hash_from_to(int moves, int f
