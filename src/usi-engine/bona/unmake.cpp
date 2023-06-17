@@ -96,4 +96,55 @@ unmake_move_b( tree_t * restrict ptree, unsigned int move, int ply )
     else switch ( ipiece_move )
       {
       case pawn:	NocapNopro( BPAWN, pawn );
-                        X
+                        Xor( to-nfile, BB_BPAWN_ATK );
+                        Xor( to,       BB_BPAWN_ATK );          break;
+      case lance:       NocapNopro( BLANCE,  lance );           break;
+      case knight:      NocapNopro( BKNIGHT, knight );          break;
+      case silver:      NocapNopro( BSILVER, silver );          break;
+      case gold:        NocapNopro( BGOLD, gold );
+                        SetClear( BB_BTGOLD );                  break;
+      case bishop:      NocapNopro( BBISHOP, bishop );
+                        SetClear( BB_B_BH );                    break;
+      case rook:        NocapNopro( BROOK, rook);
+                        SetClear( BB_B_RD );                    break;
+      case king:	BOARD[from] = king;
+                        SQ_BKING    = (char)from;
+                        SetClear( BB_B_HDK );                   break;
+      case pro_pawn:    NocapNopro( BPRO_PAWN, pro_pawn );
+                        SetClear( BB_BTGOLD );                  break;
+      case pro_lance:   NocapNopro( BPRO_LANCE,  pro_lance );
+                        SetClear( BB_BTGOLD );                  break;
+      case pro_knight:  NocapNopro( BPRO_KNIGHT, pro_knight );
+                        SetClear( BB_BTGOLD );                  break;
+      case pro_silver:  NocapNopro( BPRO_SILVER, pro_silver );
+                        SetClear( BB_BTGOLD );                  break;
+      case horse:	NocapNopro( BHORSE, horse );
+                        SetClear( BB_B_HDK );
+                        SetClear( BB_B_BH );                    break;
+      default:          assert( ipiece_move == dragon );
+                        NocapNopro( BDRAGON, dragon );
+                        SetClear( BB_B_HDK );
+                        SetClear( BB_B_RD );                    break;
+      }
+
+    if ( ipiece_cap )
+      {
+	switch( ipiece_cap )
+	  {
+	  case pawn:        CapW( PAWN,       pawn,   pawn );
+                            Xor( to+nfile, BB_WPAWN_ATK );        break;
+	  case lance:       CapW( LANCE,      lance,  lance);     break;
+	  case knight:      CapW( KNIGHT,     knight, knight);    break;
+	  case silver:      CapW( SILVER,     silver, silver);    break;
+	  case gold:        CapW( GOLD,       gold,   gold);
+                            Xor( to, BB_WTGOLD );                 break;
+	  case bishop:      CapW( BISHOP,     bishop, bishop);
+			    Xor( to, BB_W_BH );                   break;
+	  case rook:        CapW( ROOK,       rook,   rook);
+                            Xor( to, BB_W_RD );                   break;
+	  case pro_pawn:    CapW( PRO_PAWN,   pawn,   pro_pawn);
+                            Xor( to, BB_WTGOLD );                 break;
+	  case pro_lance:   CapW( PRO_LANCE,  lance,  pro_lance);
+                            Xor( to, BB_WTGOLD );                 break;
+	  case pro_knight:  CapW( PRO_KNIGHT, knight, pro_knight);
+ 
