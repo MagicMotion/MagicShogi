@@ -278,4 +278,59 @@ unmake_move_w( tree_t * restrict ptree, unsigned int move, int ply )
                         SetClear( BB_W_BH );                    break;
       default:          assert( ipiece_move == dragon );
                         NocapNopro( WDRAGON, -dragon );
-                        SetClear
+                        SetClear( BB_W_HDK );
+                        SetClear( BB_W_RD );                    break;
+      }
+    
+    if ( ipiece_cap )
+      {
+	switch( ipiece_cap )
+	  {
+	  case pawn:        CapB( PAWN,      pawn,   pawn );
+	                    Xor( to-nfile, BB_BPAWN_ATK );      break;
+	  case lance:       CapB( LANCE,     lance,  lance );   break;
+	  case knight:      CapB( KNIGHT,    knight, knight );  break;
+	  case silver:      CapB( SILVER,    silver, silver );  break;
+	  case gold:        CapB( GOLD,      gold,   gold );
+                            Xor( to, BB_BTGOLD );              break;
+	  case bishop:      CapB( BISHOP,    bishop, bishop );
+                            Xor( to, BB_B_BH );                 break;
+	  case rook:        CapB( ROOK,      rook,   rook );
+                            Xor( to, BB_B_RD );                 break;
+	  case pro_pawn:    CapB( PRO_PAWN,   pawn,   pro_pawn );
+                            Xor( to, BB_BTGOLD );              break;
+	  case pro_lance:   CapB( PRO_LANCE,  lance,  pro_lance );
+                            Xor( to, BB_BTGOLD );              break;
+	  case pro_knight:  CapB( PRO_KNIGHT, knight, pro_knight );
+                            Xor( to, BB_BTGOLD );              break;
+	  case pro_silver:  CapB( PRO_SILVER, silver, pro_silver );
+                            Xor( to, BB_BTGOLD );              break;
+	  case horse:       CapB( HORSE,     bishop, horse );
+                            Xor( to, BB_B_HDK );
+                            Xor( to, BB_B_BH );                 break;
+	  default:          assert( ipiece_cap == dragon );
+                            CapB( DRAGON,    rook,   dragon);
+                            Xor( to, BB_B_HDK );
+                            Xor( to, BB_B_RD );                 break;
+	  }
+	Xor( to, BB_BOCCUPY );
+	XorFile( from, OCCUPIED_FILE );
+	XorDiag1( from, OCCUPIED_DIAG1 );
+	XorDiag2( from, OCCUPIED_DIAG2 );
+      }
+    else {
+      BOARD[to] = empty;
+      SetClearFile( from, to, OCCUPIED_FILE );
+      SetClearDiag1( from, to, OCCUPIED_DIAG1 );
+      SetClearDiag2( from, to, OCCUPIED_DIAG2 );
+    }
+  }
+
+  assert( exam_bb( ptree ) );
+}
+
+
+#undef CapW
+#undef CapB
+#undef NocapNopro
+#undef NocapPro
