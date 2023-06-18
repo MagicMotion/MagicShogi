@@ -147,4 +147,88 @@ unmake_move_b( tree_t * restrict ptree, unsigned int move, int ply )
 	  case pro_lance:   CapW( PRO_LANCE,  lance,  pro_lance);
                             Xor( to, BB_WTGOLD );                 break;
 	  case pro_knight:  CapW( PRO_KNIGHT, knight, pro_knight);
+                            Xor( to, BB_WTGOLD );                 break;
+	  case pro_silver:  CapW(PRO_SILVER, silver, pro_silver);
+                            Xor( to, BB_WTGOLD );                 break;
+	  case horse:       CapW(HORSE,     bishop, horse);
+                            Xor( to, BB_W_HDK );
+			    Xor( to, BB_W_BH );                   break;
+	  default:          assert( ipiece_cap == dragon );
+                            CapW(DRAGON,    rook,   dragon);
+                            Xor( to, BB_W_HDK );
+                            Xor( to, BB_W_RD );                   break;
+	  }
+      Xor( to, BB_WOCCUPY );
+      XorFile( from, OCCUPIED_FILE );
+      XorDiag1( from, OCCUPIED_DIAG1 );
+      XorDiag2( from, OCCUPIED_DIAG2 );
+      }
+    else {
+      BOARD[to] = empty;
+      SetClearFile( from, to, OCCUPIED_FILE );
+      SetClearDiag1( from, to, OCCUPIED_DIAG1 );
+      SetClearDiag2( from, to, OCCUPIED_DIAG2 );
+    }
+  }
+
+  assert( exam_bb( ptree ) );
+}
+
+
+void CONV
+unmake_move_w( tree_t * restrict ptree, unsigned int move, int ply )
+{
+  int from = (int)I2From(move);
+  int to   = (int)I2To(move);
+  int nrep = ptree->nrep + ply - 1;
+
+  HASH_KEY = ptree->rep_board_list[nrep];
+  MATERIAL = ptree->save_material[ply];
+
+#if defined(YSS_ZERO)
+  ptree->sequence_hash = ptree->keep_sequence_hash[nrep];
+#endif
+
+  if ( from >= nsquare )
+    {
+      switch( From2Drop(from) )
+	{
+	case pawn:    Xor( to, BB_WPAWN );
+                      Xor( to+nfile, BB_WPAWN_ATK );
+                      HAND_W += flag_hand_pawn;    break;
+	case lance:   Xor( to, BB_WLANCE );
+                      HAND_W += flag_hand_lance;   break;
+	case knight:  Xor( to, BB_WKNIGHT );
+                      HAND_W += flag_hand_knight;  break;
+	case silver:  Xor( to, BB_WSILVER );
+                      HAND_W += flag_hand_silver;  break;
+	case gold:    Xor( to, BB_WGOLD );
+                      Xor( to, BB_WTGOLD );
+                      HAND_W += flag_hand_gold;    break;
+	case bishop:  Xor( to, BB_WBISHOP );
+                      Xor( to, BB_W_BH );
+                      HAND_W += flag_hand_bishop;  break;
+	default:      assert( From2Drop(from) == rook );
+                      Xor( to, BB_WROOK );
+                      Xor( to, BB_W_RD );
+                      HAND_W += flag_hand_rook;    break;
+	}
+
+      BOARD[to] = empty;
+      Xor( to, BB_WOCCUPY );
+      XorFile( to, OCCUPIED_FILE );
+      XorDiag2( to, OCCUPIED_DIAG2 );
+      XorDiag1( to, OCCUPIED_DIAG1 );
+    }
+  else {
+    const int ipiece_move = (int)I2PieceMove(move);
+    const int ipiece_cap  = (int)UToCap(move);
+    const int is_promote  = (int)I2IsPromote(move);
+    bitboard_t bb_set_clear;
+
+    BBOr( bb_set_clear, abb_mask[from], abb_mask[to] );
+    SetClear( BB_WOCCUPY );
+
+    if ( is_promote ) switch( ipiece_move )
+      {
  
