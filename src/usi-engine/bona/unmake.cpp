@@ -231,4 +231,51 @@ unmake_move_w( tree_t * restrict ptree, unsigned int move, int ply )
 
     if ( is_promote ) switch( ipiece_move )
       {
- 
+      case pawn:    NocapPro( WPAWN, WPRO_PAWN, -pawn );
+                    Xor( to, BB_WPAWN_ATK );
+                    Xor( to, BB_WTGOLD );                        break;
+      case lance:   NocapPro( WLANCE, WPRO_LANCE, -lance );
+                    Xor( to, BB_WTGOLD );                        break;
+      case knight:  NocapPro( WKNIGHT, WPRO_KNIGHT, -knight );
+                    Xor( to, BB_WTGOLD );                        break;
+      case silver:  NocapPro( WSILVER, WPRO_SILVER, -silver );
+                    Xor( to, BB_WTGOLD );                        break;
+      case bishop:  NocapPro( WBISHOP, WHORSE, -bishop );
+                    Xor( to, BB_W_HDK );
+		    SetClear( BB_W_BH );                         break;
+      default:      assert( ipiece_move == rook );
+                    NocapPro( WROOK, WDRAGON, -rook );
+                    Xor( to, BB_W_HDK );
+		    SetClear( BB_W_RD );                         break;
+      }
+    else switch ( ipiece_move )
+      {
+      case pawn:        NocapNopro( WPAWN, -pawn );
+                        Xor( to+nfile, BB_WPAWN_ATK );
+                        Xor( to,       BB_WPAWN_ATK );          break;
+      case lance:       NocapNopro( WLANCE,  -lance );          break;
+      case knight:      NocapNopro( WKNIGHT, -knight );         break;
+      case silver:      NocapNopro( WSILVER, -silver );         break;
+      case gold:        NocapNopro( WGOLD,   -gold );
+                        SetClear( BB_WTGOLD );                  break;
+      case bishop:      NocapNopro( WBISHOP, -bishop );
+                        SetClear( BB_W_BH );                    break;
+      case rook:        NocapNopro( WROOK, -rook );
+                        SetClear( BB_W_RD );                    break;
+      case king:	BOARD[from] = -king;
+                        SQ_WKING    = (char)from;
+                        SetClear( BB_W_HDK );                   break;
+      case pro_pawn:    NocapNopro( WPRO_PAWN,  -pro_pawn );
+                        SetClear( BB_WTGOLD );                  break;
+      case pro_lance:   NocapNopro( WPRO_LANCE, -pro_lance );
+                        SetClear( BB_WTGOLD );                  break;
+      case pro_knight:  NocapNopro( WPRO_KNIGHT,-pro_knight );
+                        SetClear( BB_WTGOLD );                  break;
+      case pro_silver:  NocapNopro( WPRO_SILVER, -pro_silver );
+                        SetClear( BB_WTGOLD );                  break;
+      case horse:       NocapNopro( WHORSE, -horse );
+                        SetClear( BB_W_HDK );
+                        SetClear( BB_W_BH );                    break;
+      default:          assert( ipiece_move == dragon );
+                        NocapNopro( WDRAGON, -dragon );
+                        SetClear
