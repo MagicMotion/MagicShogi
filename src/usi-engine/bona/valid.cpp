@@ -91,4 +91,109 @@ exam_tree( const tree_t * restrict ptree )
   npawn   = (int)(I2HandPawn( HAND_B )   + I2HandPawn( HAND_W ));
   nlance  = (int)(I2HandLance( HAND_B )  + I2HandLance( HAND_W ));
   nknight = (int)(I2HandKnight( HAND_B ) + I2HandKnight( HAND_W ));
-  nsilver = (int)(I2HandSilver( HAND_B ) + I2HandSilver
+  nsilver = (int)(I2HandSilver( HAND_B ) + I2HandSilver( HAND_W ));
+  ngold   = (int)(I2HandGold( HAND_B )   + I2HandGold( HAND_W ));
+  nbishop = (int)(I2HandBishop( HAND_B ) + I2HandBishop( HAND_W ));
+  nrook   = (int)(I2HandRook( HAND_B )   + I2HandRook( HAND_W ));
+  nwking = nbking = 0;
+
+  for ( isquare = 0; isquare < nsquare; isquare++ )
+    switch ( abs( BOARD[isquare] ) )
+      {
+      case empty:                                 break;
+      case pawn:    case pro_pawn:    npawn++;    break;
+      case lance:   case pro_lance:   nlance++;   break;
+      case knight:  case pro_knight:  nknight++;  break;
+      case silver:  case pro_silver:  nsilver++;  break;
+      case gold:                      ngold++;    break;
+      case bishop:  case horse:       nbishop++;  break;
+      case rook:    case dragon:      nrook++;    break;
+      case king:
+	if ( BOARD[isquare] == king ) { nbking++; }
+	else                            { nwking++; }
+	break;
+      }
+  NpchkReturn( pawn );    NpchkReturn( lance );
+  NpchkReturn( knight );  NpchkReturn( silver );
+  NpchkReturn( gold );    NpchkReturn( bishop );
+  NpchkReturn( rook );
+  if ( nbking != 1 || nwking != 1 )
+    {
+      str_error = "invalid number of kings";
+      return -2;
+    }
+
+  /* double pawns */
+  for ( ifile = 0; ifile < 9; ifile++ )
+    {
+      bcounter = wcounter = 0;
+      for ( irank = 0; irank < 9; irank++ )
+	{
+	  if ( BOARD[ irank*nfile+ifile ] ==  pawn ) { bcounter++; }
+	  if ( BOARD[ irank*nfile+ifile ] == -pawn ) { wcounter++; }
+	}
+      if ( bcounter > 1 )
+	{
+	  str_error = "two black pawns at a file";
+	  return -2;
+	}
+      if ( wcounter > 1 )
+	{
+	  str_error="two white pawns at a file";
+	  return -2;
+	}
+    }
+
+  /* pieces can not move */
+  for ( isquare = 0; isquare < 9; isquare++ )
+    {
+      if ( BOARD[ isquare ] == pawn )
+	{
+	  str_error = "black pawns in rank 1";
+	  return -2;
+	}
+      if ( BOARD[ isquare ] == lance )
+	{
+	  str_error = "black lances in rank 1";
+	  return -2;
+	}
+    }
+  for ( isquare = 0; isquare < 18; isquare++ )
+    if ( BOARD[ isquare ] == knight )
+      {
+	str_error = "black knights in rank 1-2";
+	return -2;
+      }
+
+  for ( isquare = 72; isquare < 81; isquare++ )
+    {
+      if ( BOARD[ isquare ] == -pawn )
+	{
+	  str_error = "white pawns in rank 9";
+	  return -2;
+	}
+      if ( BOARD[ isquare ] == -lance )
+	{
+	  str_error = "white lances in rank 9";
+	  return -2;
+	}
+    }
+  for ( isquare = 63; isquare < 81; isquare++ )
+    if ( BOARD[ isquare ] == -knight )
+      {
+	str_error = "white knights in rank 8-9";
+	return -2;
+      }
+
+  if ( InCheck( Flip(root_turn) ) )
+    {
+      str_error = str_king_hang;
+      return -2;
+    }
+
+  assert( exam_bb( ptree ) );
+
+  return 1;
+}
+
+#undef NpchkReturn
