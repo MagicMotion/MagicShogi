@@ -1319,3 +1319,980 @@ if (0) {
 //		{ PRT("ply=%2d,sideToMove=%d(white=%d),move_num=%3d,v=%.5f\n",ply,sideToMove,white,move_num,v); print_board(ptree); }
 	}
 	if ( sideToMove==white ) v = -v;
+
+	phg->hashcode64     = ptree->sequence_hash;
+	phg->hash64pos      = get_marge_hash(ptree, sideToMove);
+	phg->games_sum      = 0;	// この局面に来た回数(子局面の回数の合計)
+	phg->col            = sideToMove;
+	phg->age            = thinking_age;
+	phg->net_value      = v;
+	phg->deleted        = 0;
+
+//	if ( ! is_main_thread(ptree) && ply==3 ) { PRT("create_node(),ply=%2d,c=%3d,v=%.5f,seqhash=%" PRIx64 "\n",ply,move_num,v,ptree->sequence_hash); print_board(ptree); }
+//PRT("create_node done...ply=%d,sideToMove=%d,games_sum=%d,child_num=%d,slot=%d\n",ply,sideToMove,phg->games_sum,phg->child_num, ptree->tlp_slot);
+
+	{
+		std::lock_guard<std::mutex> guard(g_mtx); 
+ 		hash_shogi_use++;
+	}
+}
+
+double uct_tree(tree_t * restrict ptree, int sideToMove, int ply, int *pExactValue)
+{
+	ptree->reached_ply = ply;
+	HASH_SHOGI *phg = HashShogiReadLock(ptree, sideToMove);	// phgに触る場合は必ずロック！
+
+	if ( phg->deleted ) {
+		if ( ply<=1 ) PRT("not created? ply=%2d,col=%d\n",ply,sideToMove);
+		if ( fClearHashAlways ) { PRT("not created Err\n"); debug(); }
+		create_node(ptree, sideToMove, ply, phg);
+	}
+
+	if ( phg->col != sideToMove ) { PRT("hash col Err. phg->col=%d,col=%d,age=%d(%d),ply=%d,nrep=%d,child_num=%d,games_sum=%d,phg->hash=%" PRIx64 "\n",phg->col,sideToMove,phg->age,thinking_age,ply,ptree->nrep,phg->child_num,phg->games_sum,phg->hashcode64); debug(); }
+
+	int child_num = phg->child_num;
+	int select = -1;
+	int loop;
+	double max_value = -10000;
+
+	if ( ply==1 && is_do_mate3() && InCheck(sideToMove) == 0 && is_mate_in3ply(ptree, sideToMove, ply) ) {
+		PRT("root mate3ply: ply=%2d,col=%d,move=%08x(%s)\n",ply,sideToMove, MOVE_CURR,string_CSA_move(MOVE_CURR).c_str());
+		bool mate3 = true;
+		// 1手詰があるのに3手詰を選び、連続王手の千日手になるのを避ける
+		const int np = ptree->nrep + ply - 2;
+		int i;
+		for (i=np-1; i>=0; i-=2) {
+			if ( ptree->rep_board_list[i] == HASH_KEY && ptree->rep_hand_list[i] == HAND_B ) break;
+		}
+		if ( i>=0 ) {
+			mate3 = false;
+		 	PRT("repetition? ignore mate3\n");
+		}
+		if ( mate3 ) {
+			for (loop=0; loop<child_num; loop++) {
+				CHILD *pc  = &phg->child[loop];
+				if ( (pc->move & MATE3_MASK) != (MOVE_CURR & MATE3_MASK) ) continue;
+				pc->value = +1;
+				pc->games++;
+				pc->exact_value = EX_WIN;
+				phg->games_sum++;
+				break;
+			}
+			if ( loop==child_num ) DEBUG_PRT("Err. no mate3 move.\n");
+
+			UnLock(phg->entry_lock);
+			*pExactValue = EX_LOSS;
+			return +1;
+		}
+	}
+
+select_again:
+ 	for (loop=0; loop<child_num; loop++) {
+		CHILD *pc  = &phg->child[loop];
+		if ( pc->value == ILLEGAL_MOVE ) continue;
+		if ( is_use_exact() && pc->exact_value == EX_LOSS ) continue;
+
+		const double cBASE = 19652.0;
+		const double cINIT = 1.25;
+		// cBASE has little effect on the value of c if games_sum is
+		// sufficiently smaller than x.
+		double c = std::log((1.0 + phg->games_sum + cBASE) / cBASE) + cINIT;
+		
+		// The number of visits to the parent is games_sum + 1.
+		// There may by a bug in pseudocode.py regarding this.
+		double puct = c * pc->bias * std::sqrt(static_cast<double>(phg->games_sum + 1))
+			       / static_cast<double>(pc->games + 1);
+		// all values are initialized to loss value.  http://talkchess.com/forum3/viewtopic.php?f=2&t=69175&start=70#p781765
+		double mean_action_value = (pc->games == 0) ? -1.0 : pc->value;
+		
+		// We must multiply puct by two because the range of
+		// mean_action_value is [-1, 1] instead of [0, 1].
+		double uct_value = mean_action_value + 2.0 * puct;
+
+//		if ( depth==0 && phg->games_sum==500 ) PRT("%3d:v=%5.3f,p=%5.3f,u=%5.3f,g=%4d,s=%5d\n",loop,pc->value,puct,uct_value,pc->games,phg->games_sum);
+		if ( uct_value > max_value ) {
+			max_value = uct_value;
+			select = loop;
+		}
+	}
+	if ( select < 0 ) {
+//		PRT("no legal move. mate? ply=%d,child_num=%d,v=%.0f\n",ply,child_num,v);
+		UnLock(phg->entry_lock);
+		*pExactValue = EX_WIN;	// 1手前に指された手で勝
+		return -1;
+	}
+
+	// 実際に着手
+	CHILD *pc = &phg->child[select];
+	if ( ! is_move_valid( ptree, pc->move, sideToMove ) ) {
+		PRT("illegal move?=%08x(%s),ply=%d,select=%d,sideToMove=%d\n",pc->move,str_CSA_move(pc->move),ply,select,sideToMove); print_board(ptree);
+		// this happens in 64bit sequence hash collision. We met this while 170000 training games. very rare case.
+		pc->value = ILLEGAL_MOVE;
+		select = -1;
+		max_value = -10000;
+		goto select_again;
+	}
+//	PRT("%2d:%s:SHash=%016" PRIx64,ply,str_CSA_move(pc->move),ptree->sequence_hash);
+	MakeMove( sideToMove, pc->move, ply );
+//	PRT(" -> %016" PRIx64 "\n",ptree->sequence_hash);
+
+	MOVE_CURR = pc->move;
+	copy_min_posi(ptree, Flip(sideToMove), ply);
+//	if ( ply==3 ) print_all_min_posi(ptree, ply+1);
+
+//	PRT("%2d:tid=%d:%s(%3d/%5d):select=%3d,v=%6.3f\n",ply,get_thread_id(ptree),string_CSA_move(pc->move).c_str(),pc->games,phg->games_sum,select,max_value);
+
+	int flag_illegal_move = 0;
+
+	if ( InCheck(sideToMove) ) {
+		PRT("escape check err. %2d:%8s(%2d/%3d):selt=%3d,v=%.3f\n",ply,str_CSA_move(pc->move),pc->games,phg->games_sum,select,max_value);
+		flag_illegal_move = 1;
+		debug();
+	}
+
+	int now_in_check = InCheck(Flip(sideToMove));
+
+	enum { SENNITITE_NONE, SENNITITE_DRAW, SENNITITE_WIN };
+	int flag_sennitite = SENNITITE_NONE;
+	if ( flag_illegal_move == 0 ) {
+		const int np = ptree->nrep + ply - 1;
+		// ptree->history_in_check[np] にはこの手を指す前に王手がかかっていたか、が入る
+//		PRT("ptree->nrep=%2d,ply=%2d,sideToMove=%d,nrep=%2d,hist_in_check[]=%x\n",ptree->nrep,ply,sideToMove,np,ptree->history_in_check[np]);
+		// 千日手判定
+		// usiで局面を作るときはmake_move_root()を千日手無視で作っている。
+		// 6手一組以上の連続王手の千日手はある？
+		int i,sum = 0;
+		uint64 key  = HASH_KEY;
+//		uint64 hand = Flip(sideToMove) ? HAND_B : HAND_W;
+		const int SUM_MAX = 3;		// 過去に3回同じ局面。つまり同一局面4回
+		for (i=np-1; i>=0; i-=2) {
+			if ( ptree->rep_board_list[i] == key && ptree->rep_hand_list[i] == HAND_B ) {
+				sum++;
+				if ( sum == SUM_MAX ) break;
+			}
+		}
+		if ( sum == SUM_MAX ) {
+//			PRT("sennnitite=%d,i=%d(%d),nrep=%d,ply=%d,%s\n",sum,i,np-i,ptree->nrep,ply,str_CSA_move(pc->move));
+			flag_sennitite = SENNITITE_DRAW;
+
+			// 連続王手か？。王手をかけた場合と王が逃げた場合、の2通りあり
+			int start_j = np-1;
+			if ( now_in_check==0 ) start_j = np;
+			int j;
+			int flag_consecutive_check = 1;
+//			for (j=0; j<=np; j++) PRT("%d",(ptree->history_in_check[j]!=0)); PRT("\n");
+			for (j=start_j; j>=i; j-=2) {
+				if ( ptree->history_in_check[j]==0 ) { flag_consecutive_check = 0; break; }
+			}
+			if ( flag_consecutive_check ) {
+				if ( now_in_check ) {
+//					PRT("perpetual check! delete this move.  %d -> %d (%d)\n",start_j,i,(start_j-i)+1);
+					flag_illegal_move = 1;
+				} else {
+///					PRT("perpetual check escape! %d -> %d (%d)\n",start_j,i,(start_j-i)+1);
+					flag_sennitite = SENNITITE_WIN;
+				}
+			}
+		}
+	}
+
+	if ( flag_illegal_move ) {
+		UnMakeMove( sideToMove, pc->move, ply );
+		pc->value = ILLEGAL_MOVE;
+		select = -1;
+		max_value = -10000;
+		goto select_again;
+	}
+
+	double win = 0;
+	int skip_search = 0;
+	if ( flag_sennitite != SENNITITE_NONE ) {
+		// 先手なら 勝=+1 負=-1,  後手なら 勝=+1 負=-1
+		win = 0;
+		pc->exact_value = EX_DRAW;
+		if ( flag_sennitite == SENNITITE_WIN ) {
+			win = +1.0;
+			pc->exact_value = EX_WIN;
+		}
+		skip_search = 1;
+//		PRT("flag_sennitite=%d, win=%.1f, ply=%d\n",flag_sennitite,win,ply);
+	}
+
+	if ( !now_in_check ) {	// root(ply=1)では判定しない。自己対局では宣言勝ちはautousi、"-i" では最後に行う。
+		if ( is_declare_win(ptree, Flip(sideToMove)) ) {
+			win = -1.0;	// 宣言されて負け
+			pc->exact_value = EX_LOSS;
+			skip_search = 1;
+		}
+	}
+
+	if ( !now_in_check && is_do_mate3() && is_mate_in3ply(ptree, Flip(sideToMove), ply+1) ) {
+		PRT("mated3ply: ply=%2d,col=%d,move=%08x(%s)\n",ply,sideToMove, MOVE_CURR,string_CSA_move(MOVE_CURR).c_str());	// str_CSA_move() は内部でstaticを持つので複数threadでは未定義
+		win = -1.0;	// 3手で詰まされる
+		pc->exact_value = EX_LOSS;
+		skip_search = 1;
+	}
+
+	if ( nDrawMove ) {
+		int d = ptree->nrep + ply - 1 + 1 + sfen_current_move_number;
+		if ( d >= nDrawMove ) {
+			win = 0;
+			pc->exact_value = EX_DRAW;
+			skip_search = 1;
+//			PRT("nDrawMove=%d over. ply=%d,moves=%d,%s\n",nDrawMove,ply,d,str_CSA_move(pc->move));
+		}
+	}
+
+	if ( ply >= PLY_MAX-10 ) { PRT("depth over=%d\n",ply); debug(); }
+
+	if ( skip_search == 0 ) {
+		int down_tree = 0;
+		int do_playout = 0;
+		int force_do_playout = (ply >= PLY_MAX-11);
+		if ( pc->games == 0 || force_do_playout ) {
+			do_playout = 1;
+		} else {
+			down_tree = 1;
+		}
+		if ( do_playout ) {	// evaluate this position
+			UnLock(phg->entry_lock);
+
+			HASH_SHOGI *phg2 = HashShogiReadLock(ptree, Flip(sideToMove));	// 1手進めた局面のデータ
+			if ( phg2->deleted ) {
+				create_node(ptree, Flip(sideToMove), ply+1, phg2);
+			} else {
+//				static int count; PRT("has come already? ply=%d,%d\n",ply,++count); //debug();	// 手順前後? 複数スレッドの場合
+				if ( force_do_playout == 0 ) down_tree = 1;
+			}
+			win = -phg2->net_value;
+
+			UnLock(phg2->entry_lock);
+			Lock(phg->entry_lock);
+		}
+		if ( down_tree ) {
+			// down tree
+			const int fVirtualLoss = 1;
+			const int VL_N = 1;
+			const int one_win = -1;	// 最初は負け、を仮定
+			if ( fVirtualLoss ) {	// この手が負けた、とする。複数スレッドの時に、なるべく別の手を探索するように
+				pc->value = (float)(((double)pc->games * pc->value + one_win*VL_N) / (pc->games + VL_N));	// games==0 の時はpc->value は無視されるので問題なし
+				pc->games      += VL_N;
+				phg->games_sum += VL_N;	// 末端のノードで減らしても意味がない、のでUCTの木だけで減らす
+				pc->acc_virtual_loss += VL_N;
+			}
+
+			UnLock(phg->entry_lock);
+			int ex_value = EX_NONE;
+			win = -uct_tree(ptree, Flip(sideToMove), ply+1, &ex_value);
+			Lock(phg->entry_lock);
+
+			if ( fVirtualLoss ) {
+				pc->acc_virtual_loss -= VL_N;
+				phg->games_sum -= VL_N;
+				pc->games      -= VL_N;		// gamesを減らすのは非常に危険！ あちこちで games==0 で判定してるので
+				if ( pc->games < 0 ) { PRT("Err pc->games=%d\n",pc->games); debug(); }
+				if ( pc->games == 0 ) pc->value = 0;
+				else                  pc->value = (float)((((double)pc->games+VL_N) * pc->value - one_win*VL_N) / pc->games);
+			}
+			pc->exact_value = ex_value;
+		}
+	}
+
+	UnMakeMove( sideToMove, pc->move, ply );
+
+	if ( is_use_exact() && pc->exact_value == EX_WIN ) {	// この手を指せば勝
+		*pExactValue = EX_LOSS;
+		PRT("mate: ply=%2d,col=%d,move=%08x(%s)win=%.1f -> +1.0\n",ply,sideToMove, MOVE_CURR,string_CSA_move(MOVE_CURR).c_str(),win);
+		win = +1.0;
+	}
+
+	// LCB用 Welford's online algorithm for calculating variance.
+	float eval       = win;								// eval は netの値そのもの。
+	float old_eval   = (float)pc->games * pc->value + pc->acc_virtual_loss * 1;	// 累積。old_accumulate_eval が正しいか
+	float old_visits = pc->games - pc->acc_virtual_loss;
+	if ( old_visits < 0 ) DEBUG_PRT("");
+	float old_delta  = old_visits > 0 ? eval - old_eval / old_visits : 0.0f;
+	float new_delta  = eval - (old_eval + eval) / (old_visits + 1);
+	float delta      = old_delta * new_delta;
+	pc->squared_eval_diff += delta;
+
+
+	double win_prob = ((double)pc->games * pc->value + win) / (pc->games + 1);	// 単純平均
+
+	pc->value = (float)win_prob;
+	pc->games++;			// この手を探索した回数
+	phg->games_sum++;
+	phg->age = thinking_age;
+
+	UnLock(phg->entry_lock);
+	return win;
+}
+
+void init_yss_zero()
+{
+	static int fDone = 0;
+	if ( fDone ) return;
+	fDone = 1;
+
+	if ( is_process_batch() == false ) init_seqence_hash();
+
+	std::random_device rd;
+	init_rnd521( (int)time(NULL)+getpid_YSS() + rd() );		// 起動ごとに異なる乱数列を生成
+	inti_rehash();
+
+	init_network();
+	make_move_id_c_y_x();
+}
+
+void copy_min_posi(tree_t * restrict ptree, int sideToMove, int ply)
+{
+	if ( ptree->nrep < 0 || ptree->nrep >= REP_HIST_LEN ) { PRT("nrep Err=%d\n",ptree->nrep); debug(); }
+	min_posi_t *p = &ptree->record_plus_ply_min_posi[ptree->nrep + ply];
+	p->hand_black = HAND_B;
+	p->hand_white = HAND_W;
+	p->turn_to_move = sideToMove;
+	int i;
+	for (i=0;i<nsquare;i++) {
+		p->asquare[i] = ptree->posi.asquare[i];
+	}
+}
+
+void print_board(min_posi_t *p)
+{
+	const char *koma_kanji[32] = {
+		"・","歩","香","桂","銀","金","角","飛","玉","と","杏","圭","全","","馬","龍",
+  	};
+	int i;
+	for (i=0;i<nsquare;i++) {
+		int k = p->asquare[i];
+//		int ch = k < 0 ? '-' : '+';
+		int ch = k < 0 ? 'v' : ' ';
+//		if ( k < 0 ) k = abs(k) + 16;
+//		PRT("%c%s", ch, astr_table_piece[ abs( k ) ] );
+  	    PRT("%c%s", ch, koma_kanji[ abs( k ) ] );
+		if ( i==8 || i==80 ) {
+			int hand = p->hand_white;
+			if ( i==80 ) hand= p->hand_black;
+			PRT("   FU %2d,KY %2d,KE %2d,GI %2d,KI %2d, KA %2d,HI %2d", (int)I2HandPawn(hand), (int)I2HandLance(hand), (int)I2HandKnight(hand),(int)I2HandSilver(hand),(int)I2HandGold(hand), (int)I2HandBishop(hand), (int)I2HandRook(hand));
+		}
+		if ( ((i+1)%9)==0 ) PRT("\n");
+	}
+}
+void print_all_min_posi(tree_t * restrict ptree, int ply)
+{
+	int i;
+	PRT("depth=%d+%d=%d\n",ptree->nrep, ply, ptree->nrep + ply);
+	for (i=0;i<ptree->nrep + ply; i++) {
+		PRT("-depth=%d\n",i);
+		print_board(&ptree->record_plus_ply_min_posi[i]);
+	}
+}
+
+std::string keep_cmd_line;
+
+int getCmdLineParam(int argc, char *argv[])
+{
+	int i;
+	for (i=1; i<argc; i++) {
+		char sa[2][TMP_BUF_LEN];
+		memset(sa,0,sizeof(sa));
+		strncpy(sa[0], argv[i],TMP_BUF_LEN-1);
+		if ( i+1 < argc ) strncpy(sa[1], argv[i+1],TMP_BUF_LEN-1);
+		keep_cmd_line += sa[0];
+		if ( i < argc-1 ) keep_cmd_line += " ";
+//		PRT("argv[%d]=%s\n",i,sa[0]);
+		char *p = sa[0];
+		char *q = sa[1];
+		if ( strncmp(p,"-",1) != 0 ) continue;
+
+		float nf = (float)atof(q);
+		int n = (int)nf;
+		// 2文字以上は先に判定してcontinueを付けること
+		if ( strstr(p,"-nn_rand") ) {
+			PRT("not use NN. set policy and value with random.\n",q);
+			NOT_USE_NN = 1;
+			continue;
+		}
+		if ( strstr(p,"-mtemp") ) {
+			PRT("cfg_random_temp=%f\n",nf);
+			cfg_random_temp = nf;
+			continue;
+		}
+		if ( strstr(p,"-msafe") ) {
+			nVisitCountSafe = n;
+			PRT("play safe randomly first %d moves\n",n);
+			continue;
+		}
+		if ( strstr(p,"-drawmove") ) {
+			PRT("nDrawMove=%d\n",n);
+			nDrawMove = n;
+			continue;
+		}
+		if ( strstr(p,"-sel_rand") ) {
+			PRT("dSelectRandom=%f\n",nf);
+			dSelectRandom = nf;
+			continue;
+		}
+		if ( strstr(p,"-lcb") ) {
+			fLCB = true;
+			PRT("fLCB=%d\n",fLCB);
+			continue;
+		}
+		if ( strstr(p,"-kldgain") ) {
+			PRT("MinimumKLDGainPerNode=%f\n",nf);
+			MinimumKLDGainPerNode = nf;
+			continue;
+		}
+		if ( strstr(p,"-reset_root_visit") ) {
+			fResetRootVisit = true;
+			PRT("fResetRootVisit=%d\n",fResetRootVisit);
+			continue;
+		}
+		if ( strstr(p,"-diff_root_visit") ) {
+			fDiffRootVisit = true;
+			PRT("fDiffRootVisit=%d\n",fDiffRootVisit);
+			continue;
+		}
+		if ( strstr(p,"-name") ) {
+			strcpy(engine_name, q);
+			PRT("name=%s\n",q);
+			continue;
+		}
+#ifdef USE_OPENCL
+		if ( strstr(p,"-dirtune") ) {
+			PRT("DirTune=%s\n",q);
+			sDirTune = q;
+			continue;
+		}
+		if ( strstr(p,"-u") ) {
+			default_gpus.push_back(n);
+			PRT("default_gpus.size()=%d\n", default_gpus.size());
+        	for (size_t i=0;i<default_gpus.size();i++) {
+        		PRT("default_gpus[%d]=%d\n", i,default_gpus[i]);
+			}
+		}
+		if ( strstr(p,"-b") ) {
+			if ( n < 1 ) n = 1;
+			cfg_batch_size = n;
+			PRT("cfg_batch_size=%d\n",n);
+		}
+		if ( strstr(p,"-e") ) {
+			PRT("nNNetServiceNumber=%d\n",n);
+			if ( n < 0 ) DEBUG_PRT("Err. nNNetServiceNumber.\n");
+			nNNetServiceNumber = n;
+			default_gpus.push_back(n);
+		}
+		if ( strstr(p,"-h") ) {
+			if ( n != 1 && n != 2 ) DEBUG_PRT("Err. set nUseWmma and nUseHalf.\n");
+			if ( n==1 ) nUseWmma = 1;
+			if ( n==2 ) nUseHalf = 1;
+			PRT("nUseWmma=%d,nUseHalf=%d\n",nUseWmma,nUseHalf);
+		}
+#endif
+		if ( strstr(p,"-p") ) {
+			PRT("playouts=%d\n",n);
+			nLimitUctLoop = n;
+			set_Hash_Shogi_Table_Size(n);
+		}
+		if ( strstr(p,"-t") ) {
+			if ( n < 1            ) n = 1;
+			if ( n > TLP_NUM_WORK ) n = TLP_NUM_WORK;
+			cfg_num_threads = n;
+			PRT("cfg_num_threads=%d\n",n);
+		}
+		if ( strstr(p,"-s") ) {
+			if ( nf <= 0 ) nf = 0;
+			PRT("dLimitSec=%.3f\n",nf);
+			dLimitSec = nf;
+		}
+		
+		if ( strstr(p,"-w") ) {
+			PRT("network path=%s\n",q);
+			default_weights = q;
+		}
+		if ( strstr(p,"-q") ) {
+			fVerbose = 0;
+		}
+		if ( strstr(p,"-n") ) {
+			fAddNoise = 1;
+			PRT("add dirichlet noise\n");
+		}
+		if ( strstr(p,"-m") ) {
+			nVisitCount = n;
+			PRT("play randomly first %d moves\n",n);
+		}
+		if ( strstr(p,"-i") ) {
+			PRT("usi info enable\n");
+			fUsiInfo = 1;
+		}
+		if ( strstr(p,"-r") ) {
+			PRT("fAutoResign. resign winrate=%.5f\n",nf);
+			fAutoResign = 1;
+			dAutoResignWinrate = nf;
+		}
+//		PRT("%s,%s\n",sa[0],sa[1]);
+	}
+
+	for (i=0;i<(int)keep_cmd_line.size();i++) {
+		char c = keep_cmd_line.at(i);
+		if ( c < 0x20 || c > 0x7e ) c = '?';
+		keep_cmd_line[i] = c;
+	}
+	if ( keep_cmd_line.size() > 127 ) keep_cmd_line.resize(127);
+//	PRT("%s\n",keep_cmd_line.c_str());
+
+#ifdef USE_OPENCL
+	if ( is_process_batch() == false ) {
+		if ( sDirTune.empty() ) {
+			std::string d_dir = "data";
+			sDirTune = d_dir;
+#if defined(_MSC_VER)
+			char path[MAX_PATH];
+			if (::GetModuleFileNameA(NULL, path, MAX_PATH) != 0) {
+				char *p = strstr(path, "bin\\aobaz.exe");
+//				char *p = strstr(path, "Release\\aobaz.exe");
+				if (p) {
+					*p = 0;
+					sDirTune = std::string(path) + d_dir;
+				}
+//				char drive[MAX_PATH], dir[MAX_PATH], fname[MAX_PATH], ext[MAX_PATH];
+//				::_splitpath_s(path, drive, dir, fname, ext);
+//				PRT("%s\n%s\n%s\n%s\n%s\n", path, drive, dir, fname, ext);
+				PRT("%s\n", sDirTune.c_str());
+			}
+#endif
+		}
+
+		struct stat st_buf;
+		if ( stat(sDirTune.c_str(), &st_buf) != 0 ) {
+			PRT("DirTune does not exit. Tuning every time.\n");
+			sDirTune = "";
+		}
+	}
+#endif
+
+	if ( default_weights.empty() ) {
+		PRT("A network weights file is required to use the program.\n");
+		debug();
+	}
+
+	return 1;
+}
+
+void set_default_param()
+{
+	// スレッド、バッチサイズが未定ならCPU版は最大数、OpenCLはb=7,t=21 を指定
+	// OpenCLでスレッドのみ指定ならバッチサイズはb=3,7,14
+	// OpenCLでバッチサイズのみ指定なら(b=3,t=7), (b=7,t=15),(b=14,t=29),(b=28,t=85)
+	if ( is_process_batch() ) {
+		cfg_num_threads = 1;
+		return;
+	}
+#ifdef USE_OPENCL
+	if ( default_gpus.size() == 0 ) default_gpus.push_back(-1);	// -1 でbestを自動選択
+	int gpus = (int)default_gpus.size();
+	if ( cfg_num_threads == 0 && cfg_batch_size == 0 ) {
+		cfg_batch_size  = 7;
+		cfg_num_threads = 21 * gpus;
+	} else if ( cfg_num_threads == 0 ) {
+		cfg_num_threads = (cfg_batch_size * 3 + 0) * gpus;
+	} else if ( cfg_batch_size == 0 ) {
+		cfg_batch_size  = (cfg_num_threads/gpus - 0) / 3;
+		if ( cfg_batch_size < 1 ) cfg_batch_size = 1;
+	} else {
+		if ( cfg_batch_size > cfg_num_threads ) {
+			DEBUG_PRT("Err. must be threads >= batch_size\n");
+		}
+	}
+#else
+	if ( cfg_num_threads == 0 ) {
+		auto cfg_max_threads = std::min(SMP::get_num_cpus(), size_t{TLP_NUM_WORK});
+		cfg_num_threads = cfg_max_threads;
+	}
+#endif
+	if ( nLimitUctLoop < (int)cfg_num_threads ) {
+		PRT("too small playouts. thread = 1, batch = 1\n");
+		cfg_num_threads = 1;
+		cfg_batch_size  = 1;
+	}
+
+}
+
+const char *get_cmd_line_ptr()
+{
+	return keep_cmd_line.c_str();
+}
+
+int check_stop_input()
+{
+	if ( next_cmdline(0)==0 ) return 0;
+	if ( strstr(str_cmdline,"stop") ) {
+		return 1;
+	}
+	return 0;
+}
+
+int is_ignore_stop()
+{
+	if ( usi_go_count <= usi_bestmove_count ) {
+		PRT("warning stop ignored(go_count=%d,bestmove_count=%d)\n",usi_go_count,usi_bestmove_count);
+		return 1;	// このstopは無視
+	}
+	return 0;
+}
+
+int is_send_usi_info(int /*nodes*/)
+{
+	if ( fUsiInfo == 0 ) return 0;
+	static int prev_send_t = 0;
+	int flag = 0;
+//	if ( nodes ==   1 ) flag = 1;
+	if ( prev_send_t == 0 ) flag = 1;
+	double st = get_spend_time(prev_send_t);
+	if ( st > 1.0 || flag ) {
+		prev_send_t = get_clock();
+		return 1;
+	}
+	return 0;
+}
+// https://twitter.com/issei_y/status/589642166818877440
+// 評価値と勝率の関係。 Ponanzaは評価値と勝率に以下の式の関係があると仮定して学習しています。 大体300点くらいで勝率6割、800点で勝率8割くらいです。
+// 勝率 = 1 / (1 + exp(-評価値/600))
+// 評価値 = 600 * ln(勝率 / (1-勝率))       0.00 <= winrate <= 1.00   -->  -5000 <= value <= +5000
+int winrate_to_score(float winrate)
+{
+	double v = 0;
+	double w = winrate;
+	// w= 0.9997, v= +4866.857
+	if        ( w > 0.9997	) {
+		v = +5000.0;
+	} else if ( w < 0.0003	) {
+		v = -5000.0;
+	} else {
+		v = 600 * log(w / (1-w));
+	}
+//	PRT("w=%8.4f, v=%8.3f\n",w,v);
+	return (int)v;
+}
+
+void send_usi_info(tree_t * restrict ptree, int sideToMove, int ply, int nodes, int nps)
+{
+	HASH_SHOGI *phg = HashShogiReadLock(ptree, sideToMove);
+	int max_i = -1;
+	int max_games = 0;
+	int i;
+	for (i=0;i<phg->child_num;i++) {
+		CHILD *pc = &phg->child[i];
+		if ( pc->games > max_games ) {
+			max_games = pc->games;
+			max_i = i;
+		}
+	}
+	UnLock(phg->entry_lock);
+	if ( max_i < 0 ) return;
+
+	CHILD *pc = &phg->child[max_i];
+	float old_eval   = (float)pc->games * pc->value + pc->acc_virtual_loss * 1;
+	float old_visits = pc->games - pc->acc_virtual_loss;
+	float v          = old_eval / (old_visits + (old_visits==0));
+	float wr =         (v + 1.0f) / 2.0f;	// -1 <= x <= +1   -->   0 <= y <= +1
+	int score = winrate_to_score(wr);
+	
+	char *pv_str = prt_pv_from_hash(ptree, ply, sideToMove, PV_USI);
+//	char *pv_str = prt_pv_from_hash(ptree, ply, sideToMove, PV_CSA);
+	int depth = (int)(1.0+log(nodes+1.0));
+	depth = (1 + (int)strlen(pv_str)) / 5; // 2019.12.7 改造48
+	char str[TMP_BUF_LEN];
+	sprintf(str,"info depth %d score cp %d nodes %d nps %d pv %s",depth,score,nodes,nps,pv_str);
+	strcat(str,"\n");	// info depth 2 score cp 33 nodes 148 pv 7g7f 8c8d
+	USIOut( "%s", str);
+}
+
+bool is_selfplay()
+{
+#ifdef USE_OPENCL
+	if ( nNNetServiceNumber >= 0 && fAddNoise && nVisitCount > 0 ) return true;
+#endif
+	return false;
+}
+
+void usi_newgame()
+{
+	hash_shogi_table_clear();
+	if ( is_selfplay() ) {
+		resign_winrate = FIXED_RESIGN_WINRATE;
+		if ( (rand_m521() % 10) == 0 ) {	// 10%で投了を禁止。間違った投了が5％以下か確認するため
+			resign_winrate = 0;
+		}
+	}
+}
+
+
+void test_dist()
+{
+	static std::mt19937_64 mt64;
+//	std::random_device rd;
+//	mt64.seed(rd());
+	const int N = 10;
+	int count[N];
+	for (int i=0; i<N; i++) count[i] = 0;
+	for (int loop=0; loop < 1000; loop++) {
+		static std::uniform_real_distribution<> dist(0, 1);
+//		double indicator = dist(mt64);
+		double indicator = dist(get_mt_rand);
+
+		double inv_temperature = 1.0 / 1.0;
+		double wheel[N];
+		int games[N] = { 500,250,100,50,30, 20,20,20,9,1 };
+		double w_sum = 0.0;
+		for (int i = 0; i < N; i++) {
+			double d = static_cast<double>(games[i]);
+			wheel[i] = pow(d, inv_temperature);
+			w_sum += wheel[i];
+		}
+		double factor = 1.0 / w_sum;
+
+		int best_i = -1;
+		double sum = 0.0;
+		for (int i = 0; i < N; i++) {
+			sum += factor * wheel[i];
+			if (sum <= indicator && i + 1 < N) continue;	// 誤差が出た場合は最後の手を必ず選ぶ
+			best_i = i;
+			break;
+		}
+		if ( best_i < 0 ) DEBUG_PRT("Err. nVisitCount not found.\n");
+		count[best_i]++;
+	}
+	PRT("\n"); for (int i=0; i<N; i++) PRT("[%2d]=%5d\n",i,count[i]);
+
+}
+void test_dist_loop()
+{
+	for (int i = 0; i<10; i++) test_dist();
+}
+
+int is_declare_win(tree_t * restrict ptree, int sideToMove)
+{
+	int king_in3[2],sum_in3[2],pieces_in3[2];
+	king_in3[0]   = king_in3[1]   = 0;
+	sum_in3[0]    = sum_in3[1]    = 0;
+	pieces_in3[0] = pieces_in3[1] = 0;
+
+	int irank, ifile;
+	for ( irank = rank1; irank <= rank9; irank++ ) {		// rank1 = 0
+		for ( ifile = file1; ifile <= file9; ifile++ ) {	// file1 = 0
+			int i = irank * nfile + ifile;
+			int piece = BOARD[i];
+			if ( piece == 0 ) continue;
+			// "* ", "FU", "KY", "KE", "GI", "KI", "KA", "HI", "OU", "TO", "NY", "NK", "NG", "##", "UM", "RY"
+			int k = abs(piece);	// 1...FU, 2...KY, 3...KE, ..., 15..RY
+			int flag = 0;
+			int sg = 0;
+			if  ( piece > 0 ) {
+				sg = 0;
+				if ( irank <= rank3 ) flag = 1;
+			} else {
+				sg = 1;
+				if ( irank >= rank7 ) flag = 1;
+			}
+			if ( flag == 0 ) continue;
+			if ( k == 8 ) {
+				king_in3[sg] = 1;
+				continue;
+			}
+			pieces_in3[sg]++;
+			if ( (k & 0x07) >= 6 ) {
+				sum_in3[sg] += 5;
+			} else {
+				sum_in3[sg] += 1;
+			}
+		}
+	}
+
+	int hn[2][8];
+	int i;
+	for (i=0;i<2;i++) {
+		unsigned int hand = HAND_B;	// 先手の持駒
+		if ( i==1 )  hand = HAND_W;
+		hn[i][1] = (int)I2HandPawn(  hand);
+		hn[i][2] = (int)I2HandLance( hand);
+		hn[i][3] = (int)I2HandKnight(hand);
+		hn[i][4] = (int)I2HandSilver(hand);
+		hn[i][5] = (int)I2HandGold(  hand);
+		hn[i][6] = (int)I2HandBishop(hand);
+		hn[i][7] = (int)I2HandRook(  hand);
+	}
+
+	sum_in3[0] += hn[0][1] + hn[0][2] + hn[0][3] + hn[0][4] + hn[0][5] + (hn[0][6] + hn[0][7])*5;
+	sum_in3[1] += hn[1][1] + hn[1][2] + hn[1][3] + hn[1][4] + hn[1][5] + (hn[1][6] + hn[1][7])*5;
+
+	if ( nHandicap == 1 ) sum_in3[1] += 1;	// ky
+	if ( nHandicap == 2 ) sum_in3[1] += 5;	// ka
+	if ( nHandicap == 3 ) sum_in3[1] += 5;	// hi
+	if ( nHandicap == 4 ) sum_in3[1] += 10;	// 2mai
+	if ( nHandicap == 5 ) sum_in3[1] += 12;	// 4mai
+	if ( nHandicap == 6 ) sum_in3[1] += 14;	// 6mai
+
+	int declare_ok = 0;
+	if ( sum_in3[0] >= 28 && pieces_in3[0] >= 10 && king_in3[0] && sideToMove==black ) declare_ok = 1;
+	if ( sum_in3[1] >= 27 && pieces_in3[1] >= 10 && king_in3[1] && sideToMove==white ) declare_ok = 1;
+//	PRT("ok=%d,sum[]=%2d,%2d, pieces[]=%2d,%2d, king[]=%d,%d, side=%d\n", declare_ok,sum_in3[0],sum_in3[1],pieces_in3[0],pieces_in3[1],king_in3[0],king_in3[1],sideToMove);
+	return declare_ok;
+}
+
+int is_declare_win_root(tree_t * restrict ptree, int sideToMove)
+{
+	int now_in_check = InCheck(sideToMove);
+	if ( now_in_check ) return 0;
+	return is_declare_win(ptree, sideToMove);
+}
+
+void find_temp_rate_sigmoid()
+{
+	const int TEMP_RATE_N = 13;
+	double xTR[TEMP_RATE_N] = {    5,  13,  80, 194, 273, 639, 906,1123,1273,1372,1407,1470,1503 };
+	double yTR[TEMP_RATE_N] = { 0.01, 0.1, 0.5, 0.7, 0.8, 1.2, 1.7, 2.5, 3.8, 6.0,  10, 100,10000 };
+
+	double err_min = +INT_MAX; 
+	double a,b,c;
+	double ma=5.4480,mb=1444.5,mc=-0.1500;
+	if (0) for (a=4; a<7; a+=0.002) {
+		for (b=1350; b<1550; b+=0.1) {
+			for (c=-0.2; c<=+0; c+=0.001) {
+				double err = 0;
+				for (int i=0;i<TEMP_RATE_N;i++) {
+					double x = xTR[i];
+					double y = log10(yTR[i]);
+					double rate = b * 1.0 / (1.0 + exp( -a*(y+c)));
+					double d = rate - x;
+					err += d*d;
+				}
+				// err=14956.23, a=5.4480,b=1444.5,c=-0.1500
+				// err= 6103.74, a=5.9200,b=1391.0,c=-0.1300 ... 最後の2個を無視
+				if ( err < err_min ) {
+					PRT("err=%.2f, a=%.4f,b=%.1f,c=%.4f\n",err,a,b,c);
+					ma=a; mb=b; mc=c;
+					err_min = err;
+				}
+			}
+		}
+	}
+	for (int i=0;i<TEMP_RATE_N;i++) {
+		double x = xTR[i];
+		double y = log10(yTR[i]);
+		double rate = mb * 1.0 / (1.0 + exp( -ma*(y+mc)));
+		PRT("x=%6.1f log(y)=%8.3f, rate=%6.1f\n",x,y,rate);
+	}
+	for (double r=10;r<1400;r+=20) {
+//		double yb = r / mb;
+//		double logtemp = (1.0/ma)*log(yb / (1-yb)) - mc;
+		double logtemp = (1.0/ma)*log(r / (mb-r)) - mc;
+		PRT("r=%6.1f logtemp=%8.3f, temp=%8.3f\n",r,logtemp,pow(10,logtemp));
+	}
+/*
+err=14956.23, a=5.4480,b=1444.5,c=-0.1500
+x=   5.0 log(y)=  -2.000, rate=   0.0
+x=  13.0 log(y)=  -1.000, rate=   2.7
+x=  80.0 log(y)=  -0.301, rate= 114.0
+x= 194.0 log(y)=  -0.155, rate= 230.6
+x= 273.0 log(y)=  -0.097, rate= 298.5
+x= 639.0 log(y)=   0.079, rate= 584.6
+x= 906.0 log(y)=   0.230, rate= 878.0
+x=1123.0 log(y)=   0.398, rate=1147.3
+x=1273.0 log(y)=   0.580, rate=1317.7
+x=1372.0 log(y)=   0.778, rate=1398.8
+x=1407.0 log(y)=   1.000, rate=1430.6
+x=1470.0 log(y)=   2.000, rate=1444.4
+x=1503.0 log(y)=   4.000, rate=1444.5
+*/
+}
+double get_sigmoid_temperature_from_rate(int rate)
+{
+	double ma=5.4480,mb=1444.5,mc=-0.1500;
+	double r = rate;
+	if ( r > TEMP_RATE_MAX ) DEBUG_PRT("");
+	double logtemp = (1.0/ma)*log(r / (mb-r)) - mc;
+	return pow(10,logtemp);
+}
+
+// mtemp_6.068 で合法手からランダムにある確率で選ぶ、場合のrateと確率xの関係
+// 2次の近似曲線だと rate = 803.6*x*x + 353.6*x,     x=1.0 で1157.2差
+double get_sel_rand_prob_from_rate(int rate)
+{
+	if ( rate < 0 || rate > 1157 ) DEBUG_PRT("");
+	double a = 803.6;
+	double b = 353.6;
+	double c = -rate;
+	// x = (-b +- sqrt(b*b - 4*a*c)) / (2*a) = -353.6 + sqrt(125032.96 + 4*803.6 * rate) / 2*803.6
+	double x = (-b + sqrt(b*b - 4.0*a*c)) / (2.0*a);
+	if ( x < 0 || x > 1 ) DEBUG_PRT("");
+	return x;
+}
+
+/*
+前回の調整から
+過去1000棋譜の勝率が0.60を超えてたら、調整(+70の半分、+35を引く)
+過去2000棋譜の勝率が0.58を超えてたら、調整
+過去4000棋譜の勝率が0.56を超えてたら、調整
+過去8000棋譜の勝率で無条件で        、調整
+*/
+
+
+std::vector<int> prev_dist_;
+int prev_dist_visits_total_;
+
+bool isKLDGainSmall(tree_t * restrict ptree, int sideToMove) {
+	const int KLDGainAverageInterval = 100;
+	if ( MinimumKLDGainPerNode <= 0 ) return false;
+	bool ret = false;
+	HASH_SHOGI *phg = HashShogiReadLock(ptree, sideToMove);
+	UnLock(phg->entry_lock);
+
+ 	if ( phg->games_sum >= KLDGainAverageInterval && prev_dist_.size() == 0 ) {
+		// 探索木の再利用で100以上ならそれを基準に
+	} else {
+	 	if ( phg->games_sum < prev_dist_visits_total_ + KLDGainAverageInterval ) return false;
+	}
+
+	double min_kld;
+	if ( phg->games_sum < 500 ) {
+		min_kld = 0.000001;		// 少ないノード数では厳しい条件の方が強い。総playout数の増加もそれほどなし。
+	} else {
+		min_kld = MinimumKLDGainPerNode;
+	}
+
+	std::vector<int> new_visits;
+    for (int i=0;i<phg->child_num;i++) {
+		new_visits.push_back(phg->child[i].games);
+	}
+
+	if (prev_dist_.size() != 0) {
+		double sum1 = 0.0;
+		double sum2 = 0.0;
+		for (decltype(new_visits)::size_type i = 0; i < new_visits.size(); i++) {
+			sum1 += prev_dist_[i];
+			sum2 += new_visits[i];
+		}
+		if ( sum1==0 || sum2==0 || sum1==sum2 ) return false;
+		double kldgain = 0.0;
+		for (decltype(new_visits)::size_type i = 0; i < new_visits.size(); i++) {
+			double old_p = prev_dist_[i] / sum1;
+			double new_p = new_visits[i] / sum2;
+			if ( old_p != 0 && new_p != 0 ) {
+				kldgain += old_p * log(old_p / new_p);
+			}
+		}
+		double x = kldgain / (sum2 - sum1);
+		if ( x < min_kld ) ret = true;
+		PRT("%8d:kldgain=%.7f,%.7f,sum1=%.0f,sum2=%.0f,ret=%d\n",phg->games_sum,kldgain,x,sum1,sum2,ret);
+	}
+	prev_dist_.swap(new_visits);
+	prev_dist_visits_total_ = phg->games_sum;
+	return ret;
+}
+
+void init_KLDGain_prev_dist_visits_total(int games_sum) {
+	prev_dist_visits_total_ = games_sum;
+	prev_dist_.clear();
+//	PRT("prev_dist_.size()=%d\n",prev_dist_.size());
+}
