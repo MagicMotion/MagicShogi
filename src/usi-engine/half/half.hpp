@@ -98,4 +98,102 @@
 #include <utility>
 #if defined(_LIBCPP_VERSION)								//libc++
 	#if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103
-		#ifndef HALF
+		#ifndef HALF_ENABLE_CPP11_TYPE_TRAITS
+			#define HALF_ENABLE_CPP11_TYPE_TRAITS 1
+		#endif
+		#ifndef HALF_ENABLE_CPP11_CSTDINT
+			#define HALF_ENABLE_CPP11_CSTDINT 1
+		#endif
+		#ifndef HALF_ENABLE_CPP11_CMATH
+			#define HALF_ENABLE_CPP11_CMATH 1
+		#endif
+		#ifndef HALF_ENABLE_CPP11_HASH
+			#define HALF_ENABLE_CPP11_HASH 1
+		#endif
+	#endif
+#elif defined(__GLIBCXX__)									//libstdc++
+	#if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103
+		#ifdef __clang__
+			#if __GLIBCXX__ >= 20080606 && !defined(HALF_ENABLE_CPP11_TYPE_TRAITS)
+				#define HALF_ENABLE_CPP11_TYPE_TRAITS 1
+			#endif
+			#if __GLIBCXX__ >= 20080606 && !defined(HALF_ENABLE_CPP11_CSTDINT)
+				#define HALF_ENABLE_CPP11_CSTDINT 1
+			#endif
+			#if __GLIBCXX__ >= 20080606 && !defined(HALF_ENABLE_CPP11_CMATH)
+				#define HALF_ENABLE_CPP11_CMATH 1
+			#endif
+			#if __GLIBCXX__ >= 20080606 && !defined(HALF_ENABLE_CPP11_HASH)
+				#define HALF_ENABLE_CPP11_HASH 1
+			#endif
+		#else
+			#if HALF_GNUC_VERSION >= 403 && !defined(HALF_ENABLE_CPP11_CSTDINT)
+				#define HALF_ENABLE_CPP11_CSTDINT 1
+			#endif
+			#if HALF_GNUC_VERSION >= 403 && !defined(HALF_ENABLE_CPP11_CMATH)
+				#define HALF_ENABLE_CPP11_CMATH 1
+			#endif
+			#if HALF_GNUC_VERSION >= 403 && !defined(HALF_ENABLE_CPP11_HASH)
+				#define HALF_ENABLE_CPP11_HASH 1
+			#endif
+		#endif
+	#endif
+#elif defined(_CPPLIB_VER)									//Dinkumware/Visual C++
+	#if _CPPLIB_VER >= 520
+		#ifndef HALF_ENABLE_CPP11_TYPE_TRAITS
+			#define HALF_ENABLE_CPP11_TYPE_TRAITS 1
+		#endif
+		#ifndef HALF_ENABLE_CPP11_CSTDINT
+			#define HALF_ENABLE_CPP11_CSTDINT 1
+		#endif
+		#ifndef HALF_ENABLE_CPP11_HASH
+			#define HALF_ENABLE_CPP11_HASH 1
+		#endif
+	#endif
+	#if _CPPLIB_VER >= 610
+		#ifndef HALF_ENABLE_CPP11_CMATH
+			#define HALF_ENABLE_CPP11_CMATH 1
+		#endif
+	#endif
+#endif
+#undef HALF_GNUC_VERSION
+
+//support constexpr
+#if HALF_ENABLE_CPP11_CONSTEXPR
+	#define HALF_CONSTEXPR			constexpr
+	#define HALF_CONSTEXPR_CONST	constexpr
+#else
+	#define HALF_CONSTEXPR
+	#define HALF_CONSTEXPR_CONST	const
+#endif
+
+//support noexcept
+#if HALF_ENABLE_CPP11_NOEXCEPT
+	#define HALF_NOEXCEPT	noexcept
+	#define HALF_NOTHROW	noexcept
+#else
+	#define HALF_NOEXCEPT
+	#define HALF_NOTHROW	throw()
+#endif
+
+#include <algorithm>
+#include <iostream>
+#include <limits>
+#include <climits>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
+#if HALF_ENABLE_CPP11_TYPE_TRAITS
+	#include <type_traits>
+#endif
+#if HALF_ENABLE_CPP11_CSTDINT
+	#include <cstdint>
+#endif
+#if HALF_ENABLE_CPP11_HASH
+	#include <functional>
+#endif
+
+
+/// Default rounding mode.
+/// This specifies the rounding mode used for all conversions between [half](\ref half_float::half)s and `float`s as well as 
+/// for the half_cast() if not specifying a rounding mode explicitly. It can be redefined (before including half.hpp) to
