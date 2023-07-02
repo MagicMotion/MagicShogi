@@ -263,4 +263,78 @@ namespace half_float
 {
 	class half;
 
-#if HALF_ENABLE_CPP11_US
+#if HALF_ENABLE_CPP11_USER_LITERALS
+	/// Library-defined half-precision literals.
+	/// Import this namespace to enable half-precision floating point literals:
+	/// ~~~~{.cpp}
+	/// using namespace half_float::literal;
+	/// half_float::half = 4.2_h;
+	/// ~~~~
+	namespace literal
+	{
+		half operator""_h(long double);
+	}
+#endif
+
+	/// \internal
+	/// \brief Implementation details.
+	namespace detail
+	{
+	#if HALF_ENABLE_CPP11_TYPE_TRAITS
+		/// Conditional type.
+		template<bool B,typename T,typename F> struct conditional : std::conditional<B,T,F> {};
+
+		/// Helper for tag dispatching.
+		template<bool B> struct bool_type : std::integral_constant<bool,B> {};
+		using std::true_type;
+		using std::false_type;
+
+		/// Type traits for floating point types.
+		template<typename T> struct is_float : std::is_floating_point<T> {};
+	#else
+		/// Conditional type.
+		template<bool,typename T,typename> struct conditional { typedef T type; };
+		template<typename T,typename F> struct conditional<false,T,F> { typedef F type; };
+
+		/// Helper for tag dispatching.
+		template<bool> struct bool_type {};
+		typedef bool_type<true> true_type;
+		typedef bool_type<false> false_type;
+
+		/// Type traits for floating point types.
+		template<typename> struct is_float : false_type {};
+		template<typename T> struct is_float<const T> : is_float<T> {};
+		template<typename T> struct is_float<volatile T> : is_float<T> {};
+		template<typename T> struct is_float<const volatile T> : is_float<T> {};
+		template<> struct is_float<float> : true_type {};
+		template<> struct is_float<double> : true_type {};
+		template<> struct is_float<long double> : true_type {};
+	#endif
+
+		/// Type traits for floating point bits.
+		template<typename T> struct bits { typedef unsigned char type; };
+		template<typename T> struct bits<const T> : bits<T> {};
+		template<typename T> struct bits<volatile T> : bits<T> {};
+		template<typename T> struct bits<const volatile T> : bits<T> {};
+
+	#if HALF_ENABLE_CPP11_CSTDINT
+		/// Unsigned integer of (at least) 16 bits width.
+		typedef std::uint_least16_t uint16;
+
+		/// Unsigned integer of (at least) 32 bits width.
+		template<> struct bits<float> { typedef std::uint_least32_t type; };
+
+		/// Unsigned integer of (at least) 64 bits width.
+		template<> struct bits<double> { typedef std::uint_least64_t type; };
+	#else
+		/// Unsigned integer of (at least) 16 bits width.
+		typedef unsigned short uint16;
+
+		/// Unsigned integer of (at least) 32 bits width.
+		template<> struct bits<float> : conditional<std::numeric_limits<unsigned int>::digits>=32,unsigned int,unsigned long> {};
+
+		#if HALF_ENABLE_CPP11_LONG_LONG
+			/// Unsigned integer of (at least) 64 bits width.
+			template<> struct bits<double> : conditional<std::numeric_limits<unsigned long>::digits>=64,unsigned long,unsigned long long> {};
+		#else
+			/
