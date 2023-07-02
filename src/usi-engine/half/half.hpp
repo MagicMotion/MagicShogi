@@ -337,4 +337,64 @@ namespace half_float
 			/// Unsigned integer of (at least) 64 bits width.
 			template<> struct bits<double> : conditional<std::numeric_limits<unsigned long>::digits>=64,unsigned long,unsigned long long> {};
 		#else
-			/
+			/// Unsigned integer of (at least) 64 bits width.
+			template<> struct bits<double> { typedef unsigned long type; };
+		#endif
+	#endif
+
+		/// Tag type for binary construction.
+		struct binary_t {};
+
+		/// Tag for binary construction.
+		HALF_CONSTEXPR_CONST binary_t binary = binary_t();
+
+		/// Temporary half-precision expression.
+		/// This class represents a half-precision expression which just stores a single-precision value internally.
+		struct expr
+		{
+			/// Conversion constructor.
+			/// \param f single-precision value to convert
+			explicit HALF_CONSTEXPR expr(float f) HALF_NOEXCEPT : value_(f) {}
+
+			/// Conversion to single-precision.
+			/// \return single precision value representing expression value
+			HALF_CONSTEXPR operator float() const HALF_NOEXCEPT { return value_; }
+
+		private:
+			/// Internal expression value stored in single-precision.
+			float value_;
+		};
+
+		/// SFINAE helper for generic half-precision functions.
+		/// This class template has to be specialized for each valid combination of argument types to provide a corresponding 
+		/// `type` member equivalent to \a T.
+		/// \tparam T type to return
+		template<typename T,typename,typename=void,typename=void> struct enable {};
+		template<typename T> struct enable<T,half,void,void> { typedef T type; };
+		template<typename T> struct enable<T,expr,void,void> { typedef T type; };
+		template<typename T> struct enable<T,half,half,void> { typedef T type; };
+		template<typename T> struct enable<T,half,expr,void> { typedef T type; };
+		template<typename T> struct enable<T,expr,half,void> { typedef T type; };
+		template<typename T> struct enable<T,expr,expr,void> { typedef T type; };
+		template<typename T> struct enable<T,half,half,half> { typedef T type; };
+		template<typename T> struct enable<T,half,half,expr> { typedef T type; };
+		template<typename T> struct enable<T,half,expr,half> { typedef T type; };
+		template<typename T> struct enable<T,half,expr,expr> { typedef T type; };
+		template<typename T> struct enable<T,expr,half,half> { typedef T type; };
+		template<typename T> struct enable<T,expr,half,expr> { typedef T type; };
+		template<typename T> struct enable<T,expr,expr,half> { typedef T type; };
+		template<typename T> struct enable<T,expr,expr,expr> { typedef T type; };
+
+		/// Return type for specialized generic 2-argument half-precision functions.
+		/// This class template has to be specialized for each valid combination of argument types to provide a corresponding 
+		/// `type` member denoting the appropriate return type.
+		/// \tparam T first argument type
+		/// \tparam U first argument type
+		template<typename T,typename U> struct result : enable<expr,T,U> {};
+		template<> struct result<half,half> { typedef half type; };
+
+		/// \name Classification helpers
+		/// \{
+
+		/// Check for infinity.
+		/// \tparam T arg
