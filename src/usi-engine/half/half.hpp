@@ -196,4 +196,71 @@
 
 /// Default rounding mode.
 /// This specifies the rounding mode used for all conversions between [half](\ref half_float::half)s and `float`s as well as 
-/// for the half_cast() if not specifying a rounding mode explicitly. It can be redefined (before including half.hpp) to
+/// for the half_cast() if not specifying a rounding mode explicitly. It can be redefined (before including half.hpp) to one 
+/// of the standard rounding modes using their respective constants or the equivalent values of `std::float_round_style`:
+///
+/// `std::float_round_style`         | value | rounding
+/// ---------------------------------|-------|-------------------------
+/// `std::round_indeterminate`       | -1    | fastest (default)
+/// `std::round_toward_zero`         | 0     | toward zero
+/// `std::round_to_nearest`          | 1     | to nearest
+/// `std::round_toward_infinity`     | 2     | toward positive infinity
+/// `std::round_toward_neg_infinity` | 3     | toward negative infinity
+///
+/// By default this is set to `-1` (`std::round_indeterminate`), which uses truncation (round toward zero, but with overflows 
+/// set to infinity) and is the fastest rounding mode possible. It can even be set to `std::numeric_limits<float>::round_style` 
+/// to synchronize the rounding mode with that of the underlying single-precision implementation.
+#ifndef HALF_ROUND_STYLE
+	#define HALF_ROUND_STYLE	-1			// = std::round_indeterminate
+#endif
+
+/// Tie-breaking behaviour for round to nearest.
+/// This specifies if ties in round to nearest should be resolved by rounding to the nearest even value. By default this is 
+/// defined to `0` resulting in the faster but slightly more biased behaviour of rounding away from zero in half-way cases (and 
+/// thus equal to the round() function), but can be redefined to `1` (before including half.hpp) if more IEEE-conformant 
+/// behaviour is needed.
+#ifndef HALF_ROUND_TIES_TO_EVEN
+	#define HALF_ROUND_TIES_TO_EVEN	0		// ties away from zero
+#endif
+
+/// Value signaling overflow.
+/// In correspondence with `HUGE_VAL[F|L]` from `<cmath>` this symbol expands to a positive value signaling the overflow of an 
+/// operation, in particular it just evaluates to positive infinity.
+#define HUGE_VALH	std::numeric_limits<half_float::half>::infinity()
+
+/// Fast half-precision fma function.
+/// This symbol is only defined if the fma() function generally executes as fast as, or faster than, a separate 
+/// half-precision multiplication followed by an addition. Due to the internal single-precision implementation of all 
+/// arithmetic operations, this is in fact always the case.
+#define FP_FAST_FMAH	1
+
+#ifndef FP_ILOGB0
+	#define FP_ILOGB0		INT_MIN
+#endif
+#ifndef FP_ILOGBNAN
+	#define FP_ILOGBNAN		INT_MAX
+#endif
+#ifndef FP_SUBNORMAL
+	#define FP_SUBNORMAL	0
+#endif
+#ifndef FP_ZERO
+	#define FP_ZERO			1
+#endif
+#ifndef FP_NAN
+	#define FP_NAN			2
+#endif
+#ifndef FP_INFINITE
+	#define FP_INFINITE		3
+#endif
+#ifndef FP_NORMAL
+	#define FP_NORMAL		4
+#endif
+
+
+/// Main namespace for half precision functionality.
+/// This namespace contains all the functionality provided by the library.
+namespace half_float
+{
+	class half;
+
+#if HALF_ENABLE_CPP11_US
