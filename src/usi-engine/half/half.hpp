@@ -397,4 +397,98 @@ namespace half_float
 		/// \{
 
 		/// Check for infinity.
-		/// \tparam T arg
+		/// \tparam T argument type (builtin floating point type)
+		/// \param arg value to query
+		/// \retval true if infinity
+		/// \retval false else
+		template<typename T> bool builtin_isinf(T arg)
+		{
+		#if HALF_ENABLE_CPP11_CMATH
+			return std::isinf(arg);
+		#elif defined(_MSC_VER)
+			return !::_finite(static_cast<double>(arg)) && !::_isnan(static_cast<double>(arg));
+		#else
+			return arg == std::numeric_limits<T>::infinity() || arg == -std::numeric_limits<T>::infinity();
+		#endif
+		}
+
+		/// Check for NaN.
+		/// \tparam T argument type (builtin floating point type)
+		/// \param arg value to query
+		/// \retval true if not a number
+		/// \retval false else
+		template<typename T> bool builtin_isnan(T arg)
+		{
+		#if HALF_ENABLE_CPP11_CMATH
+			return std::isnan(arg);
+		#elif defined(_MSC_VER)
+			return ::_isnan(static_cast<double>(arg)) != 0;
+		#else
+			return arg != arg;
+		#endif
+		}
+
+		/// Check sign.
+		/// \tparam T argument type (builtin floating point type)
+		/// \param arg value to query
+		/// \retval true if signbit set
+		/// \retval false else
+		template<typename T> bool builtin_signbit(T arg)
+		{
+		#if HALF_ENABLE_CPP11_CMATH
+			return std::signbit(arg);
+		#else
+			return arg < T() || (arg == T() && T(1)/arg < T());
+		#endif
+		}
+
+		/// \}
+		/// \name Conversion
+		/// \{
+
+		/// Convert IEEE single-precision to half-precision.
+		/// Credit for this goes to [Jeroen van der Zijp](ftp://ftp.fox-toolkit.org/pub/fasthalffloatconversion.pdf).
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \param value single-precision value
+		/// \return binary representation of half-precision value
+		template<std::float_round_style R> uint16 float2half_impl(float value, true_type)
+		{
+			typedef bits<float>::type uint32;
+			uint32 bits;// = *reinterpret_cast<uint32*>(&value);		//violating strict aliasing!
+			std::memcpy(&bits, &value, sizeof(float));
+/*			uint16 hbits = (bits>>16) & 0x8000;
+			bits &= 0x7FFFFFFF;
+			int exp = bits >> 23;
+			if(exp == 255)
+				return hbits | 0x7C00 | (0x3FF&-static_cast<unsigned>((bits&0x7FFFFF)!=0));
+			if(exp > 142)
+			{
+				if(R == std::round_toward_infinity)
+					return hbits | 0x7C00 - (hbits>>15);
+				if(R == std::round_toward_neg_infinity)
+					return hbits | 0x7BFF + (hbits>>15);
+				return hbits | 0x7BFF + (R!=std::round_toward_zero);
+			}
+			int g, s;
+			if(exp > 112)
+			{
+				g = (bits>>12) & 1;
+				s = (bits&0xFFF) != 0;
+				hbits |= ((exp-112)<<10) | ((bits>>13)&0x3FF);
+			}
+			else if(exp > 101)
+			{
+				int i = 125 - exp;
+				bits = (bits&0x7FFFFF) | 0x800000;
+				g = (bits>>i) & 1;
+				s = (bits&((1L<<i)-1)) != 0;
+				hbits |= bits >> (i+1);
+			}
+			else
+			{
+				g = 0;
+				s = bits != 0;
+			}
+			if(R == std::round_to_nearest)
+				#if HALF_ROUND_TIES_TO_EVEN
+					hbits += g & (s|
