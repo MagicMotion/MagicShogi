@@ -587,4 +587,97 @@ namespace half_float
 			{
 				if(R == std::round_toward_infinity)
 					return hbits | 0x7C00 - (hbits>>15);
-				if(R 
+				if(R == std::round_toward_neg_infinity)
+					return hbits | 0x7BFF + (hbits>>15);
+				return hbits | 0x7BFF + (R!=std::round_toward_zero);
+			}
+			int g, s = lo != 0;
+			if(exp > 1008)
+			{
+				g = (hi>>9) & 1;
+				s |= (hi&0x1FF) != 0;
+				hbits |= ((exp-1008)<<10) | ((hi>>10)&0x3FF);
+			}
+			else if(exp > 997)
+			{
+				int i = 1018 - exp;
+				hi = (hi&0xFFFFF) | 0x100000;
+				g = (hi>>i) & 1;
+				s |= (hi&((1L<<i)-1)) != 0;
+				hbits |= hi >> (i+1);
+			}
+			else
+			{
+				g = 0;
+				s |= hi != 0;
+			}
+			if(R == std::round_to_nearest)
+				#if HALF_ROUND_TIES_TO_EVEN
+					hbits += g & (s|hbits);
+				#else
+					hbits += g;
+				#endif
+			else if(R == std::round_toward_infinity)
+				hbits += ~(hbits>>15) & (s|g);
+			else if(R == std::round_toward_neg_infinity)
+				hbits += (hbits>>15) & (g|s);
+			return hbits;
+		}
+
+		/// Convert non-IEEE floating point to half-precision.
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \tparam T source type (builtin floating point type)
+		/// \param value floating point value
+		/// \return binary representation of half-precision value
+		template<std::float_round_style R,typename T> uint16 float2half_impl(T value, ...)
+		{
+			uint16 hbits = static_cast<unsigned>(builtin_signbit(value)) << 15;
+			if(value == T())
+				return hbits;
+			if(builtin_isnan(value))
+				return hbits | 0x7FFF;
+			if(builtin_isinf(value))
+				return hbits | 0x7C00;
+			int exp;
+			std::frexp(value, &exp);
+			if(exp > 16)
+			{
+				if(R == std::round_toward_infinity)
+					return hbits | (0x7C00-(hbits>>15));
+				else if(R == std::round_toward_neg_infinity)
+					return hbits | (0x7BFF+(hbits>>15));
+				return hbits | (0x7BFF+(R!=std::round_toward_zero));
+			}
+			if(exp < -13)
+				value = std::ldexp(value, 24);
+			else
+			{
+				value = std::ldexp(value, 11-exp);
+				hbits |= ((exp+13)<<10);
+			}
+			T ival, frac = std::modf(value, &ival);
+			hbits += static_cast<uint16>(std::abs(static_cast<int>(ival)));
+			if(R == std::round_to_nearest)
+			{
+				frac = std::abs(frac);
+				#if HALF_ROUND_TIES_TO_EVEN
+					hbits += (frac>T(0.5)) | ((frac==T(0.5))&hbits);
+				#else
+					hbits += frac >= T(0.5);
+				#endif
+			}
+			else if(R == std::round_toward_infinity)
+				hbits += frac > T();
+			else if(R == std::round_toward_neg_infinity)
+				hbits += frac < T();
+			return hbits;
+		}
+
+		/// Convert floating point to half-precision.
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \tparam T source type (builtin floating point type)
+		/// \param value floating point value
+		/// \return binary representation of half-precision value
+		template<std::float_round_style R,typename T> uint16 float2half(T value)
+		{
+			return float2half
