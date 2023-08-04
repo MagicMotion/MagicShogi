@@ -680,4 +680,79 @@ namespace half_float
 		/// \return binary representation of half-precision value
 		template<std::float_round_style R,typename T> uint16 float2half(T value)
 		{
-			return float2half
+			return float2half_impl<R>(value, bool_type<std::numeric_limits<T>::is_iec559&&sizeof(typename bits<T>::type)==sizeof(T)>());
+		}
+
+		/// Convert integer to half-precision floating point.
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \tparam S `true` if value negative, `false` else
+		/// \tparam T type to convert (builtin integer type)
+		/// \param value non-negative integral value
+		/// \return binary representation of half-precision value
+		template<std::float_round_style R,bool S,typename T> uint16 int2half_impl(T value)
+		{
+		#if HALF_ENABLE_CPP11_STATIC_ASSERT && HALF_ENABLE_CPP11_TYPE_TRAITS
+			static_assert(std::is_integral<T>::value, "int to half conversion only supports builtin integer types");
+		#endif
+			if(S)
+				value = -value;
+			uint16 bits = S << 15;
+			if(value > 0xFFFF)
+			{
+				if(R == std::round_toward_infinity)
+					bits |= 0x7C00 - S;
+				else if(R == std::round_toward_neg_infinity)
+					bits |= 0x7BFF + S;
+				else
+					bits |= 0x7BFF + (R!=std::round_toward_zero);
+			}
+			else if(value)
+			{
+				unsigned int m = value, exp = 24;
+				for(; m<0x400; m<<=1,--exp) ;
+				for(; m>0x7FF; m>>=1,++exp) ;
+				bits |= (exp<<10) + m;
+				if(exp > 24)
+				{
+					if(R == std::round_to_nearest)
+						bits += (value>>(exp-25)) & 1
+						#if HALF_ROUND_TIES_TO_EVEN
+							& (((((1<<(exp-25))-1)&value)!=0)|bits)
+						#endif
+						;
+					else if(R == std::round_toward_infinity)
+						bits += ((value&((1<<(exp-24))-1))!=0) & !S;
+					else if(R == std::round_toward_neg_infinity)
+						bits += ((value&((1<<(exp-24))-1))!=0) & S;
+				}
+			}
+			return bits;
+		}
+
+		/// Convert integer to half-precision floating point.
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \tparam T type to convert (builtin integer type)
+		/// \param value integral value
+		/// \return binary representation of half-precision value
+		template<std::float_round_style R,typename T> uint16 int2half(T value)
+		{
+			return (value<0) ? int2half_impl<R,true>(value) : int2half_impl<R,false>(value);
+		}
+
+		/// Convert half-precision to IEEE single-precision.
+		/// Credit for this goes to [Jeroen van der Zijp](ftp://ftp.fox-toolkit.org/pub/fasthalffloatconversion.pdf).
+		/// \param value binary representation of half-precision value
+		/// \return single-precision value
+		inline float half2float_impl(uint16 value, float, true_type)
+		{
+			typedef bits<float>::type uint32;
+/*			uint32 bits = static_cast<uint32>(value&0x8000) << 16;
+			int abs = value & 0x7FFF;
+			if(abs)
+			{
+				bits |= 0x38000000 << static_cast<unsigned>(abs>=0x7C00);
+				for(; abs<0x400; abs<<=1,bits-=0x800000) ;
+				bits += static_cast<uint32>(abs) << 13;
+			}
+*/			static const uint32 mantissa_table[2048] = { 
+				0x00000000, 0x33800000, 0x34000000, 0x34400000, 0x34800000, 0x34A00000, 0x34C00000, 0x34E00000, 0x35000000, 0x35100000, 0x3
