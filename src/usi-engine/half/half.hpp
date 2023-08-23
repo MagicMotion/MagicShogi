@@ -882,4 +882,53 @@ namespace half_float
 				0x38780000, 0x38782000, 0x38784000, 0x38786000, 0x38788000, 0x3878A000, 0x3878C000, 0x3878E000, 0x38790000, 0x38792000, 0x38794000, 0x38796000, 0x38798000, 0x3879A000, 0x3879C000, 0x3879E000, 
 				0x387A0000, 0x387A2000, 0x387A4000, 0x387A6000, 0x387A8000, 0x387AA000, 0x387AC000, 0x387AE000, 0x387B0000, 0x387B2000, 0x387B4000, 0x387B6000, 0x387B8000, 0x387BA000, 0x387BC000, 0x387BE000, 
 				0x387C0000, 0x387C2000, 0x387C4000, 0x387C6000, 0x387C8000, 0x387CA000, 0x387CC000, 0x387CE000, 0x387D0000, 0x387D2000, 0x387D4000, 0x387D6000, 0x387D8000, 0x387DA000, 0x387DC000, 0x387DE000, 
-				0x387E0000, 0x387E2000, 0x387E4000, 0x387E6000, 0x387E8000, 0x387EA000, 0x387EC000, 0x387EE000, 0x387F0000, 0x387F2000, 0x387F4000, 0x387F6000, 0x387F8000, 0x387FA000, 0x387FC000, 0x387FE000 
+				0x387E0000, 0x387E2000, 0x387E4000, 0x387E6000, 0x387E8000, 0x387EA000, 0x387EC000, 0x387EE000, 0x387F0000, 0x387F2000, 0x387F4000, 0x387F6000, 0x387F8000, 0x387FA000, 0x387FC000, 0x387FE000 };
+			static const uint32 exponent_table[64] = { 
+				0x00000000, 0x00800000, 0x01000000, 0x01800000, 0x02000000, 0x02800000, 0x03000000, 0x03800000, 0x04000000, 0x04800000, 0x05000000, 0x05800000, 0x06000000, 0x06800000, 0x07000000, 0x07800000, 
+				0x08000000, 0x08800000, 0x09000000, 0x09800000, 0x0A000000, 0x0A800000, 0x0B000000, 0x0B800000, 0x0C000000, 0x0C800000, 0x0D000000, 0x0D800000, 0x0E000000, 0x0E800000, 0x0F000000, 0x47800000, 
+				0x80000000, 0x80800000, 0x81000000, 0x81800000, 0x82000000, 0x82800000, 0x83000000, 0x83800000, 0x84000000, 0x84800000, 0x85000000, 0x85800000, 0x86000000, 0x86800000, 0x87000000, 0x87800000, 
+				0x88000000, 0x88800000, 0x89000000, 0x89800000, 0x8A000000, 0x8A800000, 0x8B000000, 0x8B800000, 0x8C000000, 0x8C800000, 0x8D000000, 0x8D800000, 0x8E000000, 0x8E800000, 0x8F000000, 0xC7800000 };
+			static const unsigned short offset_table[64] = { 
+				   0, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 
+				   0, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024 };
+			uint32 bits = mantissa_table[offset_table[value>>10]+(value&0x3FF)] + exponent_table[value>>10];
+//			return *reinterpret_cast<float*>(&bits);			//violating strict aliasing!
+			float out;
+			std::memcpy(&out, &bits, sizeof(float));
+			return out;
+		}
+
+		/// Convert half-precision to IEEE double-precision.
+		/// \param value binary representation of half-precision value
+		/// \return double-precision value
+		inline double half2float_impl(uint16 value, double, true_type)
+		{
+			typedef bits<float>::type uint32;
+			typedef bits<double>::type uint64;
+			uint32 hi = static_cast<uint32>(value&0x8000) << 16;
+			int abs = value & 0x7FFF;
+			if(abs)
+			{
+				hi |= 0x3F000000 << static_cast<unsigned>(abs>=0x7C00);
+				for(; abs<0x400; abs<<=1,hi-=0x100000) ;
+				hi += static_cast<uint32>(abs) << 10;
+			}
+			uint64 bits = static_cast<uint64>(hi) << 32;
+//			return *reinterpret_cast<double*>(&bits);			//violating strict aliasing!
+			double out;
+			std::memcpy(&out, &bits, sizeof(double));
+			return out;
+		}
+
+		/// Convert half-precision to non-IEEE floating point.
+		/// \tparam T type to convert to (builtin integer type)
+		/// \param value binary representation of half-precision value
+		/// \return floating point value
+		template<typename T> T half2float_impl(uint16 value, T, ...)
+		{
+			T out;
+			int abs = value & 0x7FFF;
+			if(abs > 0x7C00)
+				out = std::numeric_limits<T>::has_quiet_NaN ? std::numeric_limits<T>::quiet_NaN() : T();
+			else if(abs == 0x7C00)
+				out = std::nu
