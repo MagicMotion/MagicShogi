@@ -931,4 +931,67 @@ namespace half_float
 			if(abs > 0x7C00)
 				out = std::numeric_limits<T>::has_quiet_NaN ? std::numeric_limits<T>::quiet_NaN() : T();
 			else if(abs == 0x7C00)
-				out = std::nu
+				out = std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity() : std::numeric_limits<T>::max();
+			else if(abs > 0x3FF)
+				out = std::ldexp(static_cast<T>((abs&0x3FF)|0x400), (abs>>10)-25);
+			else
+				out = std::ldexp(static_cast<T>(abs), -24);
+			return (value&0x8000) ? -out : out;
+		}
+
+		/// Convert half-precision to floating point.
+		/// \tparam T type to convert to (builtin integer type)
+		/// \param value binary representation of half-precision value
+		/// \return floating point value
+		template<typename T> T half2float(uint16 value)
+		{
+			return half2float_impl(value, T(), bool_type<std::numeric_limits<T>::is_iec559&&sizeof(typename bits<T>::type)==sizeof(T)>());
+		}
+
+		/// Convert half-precision floating point to integer.
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \tparam E `true` for round to even, `false` for round away from zero
+		/// \tparam T type to convert to (buitlin integer type with at least 16 bits precision, excluding any implicit sign bits)
+		/// \param value binary representation of half-precision value
+		/// \return integral value
+		template<std::float_round_style R,bool E,typename T> T half2int_impl(uint16 value)
+		{
+		#if HALF_ENABLE_CPP11_STATIC_ASSERT && HALF_ENABLE_CPP11_TYPE_TRAITS
+			static_assert(std::is_integral<T>::value, "half to int conversion only supports builtin integer types");
+		#endif
+			unsigned int e = value & 0x7FFF;
+			if(e >= 0x7C00)
+				return (value&0x8000) ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
+			if(e < 0x3800)
+			{
+				if(R == std::round_toward_infinity)
+					return T(~(value>>15)&(e!=0));
+				else if(R == std::round_toward_neg_infinity)
+					return -T(value>0x8000);
+				return T();
+			}
+			unsigned int m = (value&0x3FF) | 0x400;
+			e >>= 10;
+			if(e < 25)
+			{
+				if(R == std::round_to_nearest)
+					m += (1<<(24-e)) - (~(m>>(25-e))&E);
+				else if(R == std::round_toward_infinity)
+					m += ((value>>15)-1) & ((1<<(25-e))-1U);
+				else if(R == std::round_toward_neg_infinity)
+					m += -(value>>15) & ((1<<(25-e))-1U);
+				m >>= 25 - e;
+			}
+			else
+				m <<= e - 25;
+			return (value&0x8000) ? -static_cast<T>(m) : static_cast<T>(m);
+		}
+
+		/// Convert half-precision floating point to integer.
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \tparam T type to convert to (buitlin integer type with at least 16 bits precision, excluding any implicit sign bits)
+		/// \param value binary representation of half-precision value
+		/// \return integral value
+		template<std::float_round_style R,typename T> T half2int(uint16 value) { return half2int_impl<R,HALF_ROUND_TIES_TO_EVEN,T>(value); }
+
+		/// Convert half-precision floating point to integer using round-to-ne
