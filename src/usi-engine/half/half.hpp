@@ -1054,4 +1054,48 @@ namespace half_float
 
 	/// Half-precision floating point type.
 	/// This class implements an IEEE-conformant half-precision floating point type with the usual arithmetic operators and 
-	/// conversions. It is implicitly convertible to single-precision floating point, which makes artihmetic exp
+	/// conversions. It is implicitly convertible to single-precision floating point, which makes artihmetic expressions and 
+	/// functions with mixed-type operands to be of the most precise operand type. Additionally all arithmetic operations 
+	/// (and many mathematical functions) are carried out in single-precision internally. All conversions from single- to 
+	/// half-precision are done using the library's default rounding mode, but temporary results inside chained arithmetic 
+	/// expressions are kept in single-precision as long as possible (while of course still maintaining a strong half-precision type).
+	///
+	/// According to the C++98/03 definition, the half type is not a POD type. But according to C++11's less strict and 
+	/// extended definitions it is both a standard layout type and a trivially copyable type (even if not a POD type), which 
+	/// means it can be standard-conformantly copied using raw binary copies. But in this context some more words about the 
+	/// actual size of the type. Although the half is representing an IEEE 16-bit type, it does not neccessarily have to be of 
+	/// exactly 16-bits size. But on any reasonable implementation the actual binary representation of this type will most 
+	/// probably not ivolve any additional "magic" or padding beyond the simple binary representation of the underlying 16-bit 
+	/// IEEE number, even if not strictly guaranteed by the standard. But even then it only has an actual size of 16 bits if 
+	/// your C++ implementation supports an unsigned integer type of exactly 16 bits width. But this should be the case on 
+	/// nearly any reasonable platform.
+	///
+	/// So if your C++ implementation is not totally exotic or imposes special alignment requirements, it is a reasonable 
+	/// assumption that the data of a half is just comprised of the 2 bytes of the underlying IEEE representation.
+	class half
+	{
+		friend struct detail::functions;
+		friend struct detail::unary_specialized<half>;
+		friend struct detail::binary_specialized<half,half>;
+		template<typename,typename,std::float_round_style> friend struct detail::half_caster;
+		friend class std::numeric_limits<half>;
+	#if HALF_ENABLE_CPP11_HASH
+		friend struct std::hash<half>;
+	#endif
+	#if HALF_ENABLE_CPP11_USER_LITERALS
+		friend half literal::operator""_h(long double);
+	#endif
+
+	public:
+		/// Default constructor.
+		/// This initializes the half to 0. Although this does not match the builtin types' default-initialization semantics 
+		/// and may be less efficient than no initialization, it is needed to provide proper value-initialization semantics.
+		HALF_CONSTEXPR half() HALF_NOEXCEPT : data_() {}
+
+		/// Copy constructor.
+		/// \tparam T type of concrete half expression
+		/// \param rhs half expression to copy from
+		half(detail::expr rhs) : data_(detail::float2half<round_style>(static_cast<float>(rhs))) {}
+
+		/// Conversion constructor.
+		//
