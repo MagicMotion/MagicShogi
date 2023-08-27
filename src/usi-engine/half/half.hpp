@@ -994,4 +994,64 @@ namespace half_float
 		/// \return integral value
 		template<std::float_round_style R,typename T> T half2int(uint16 value) { return half2int_impl<R,HALF_ROUND_TIES_TO_EVEN,T>(value); }
 
-		/// Convert half-precision floating point to integer using round-to-ne
+		/// Convert half-precision floating point to integer using round-to-nearest-away-from-zero.
+		/// \tparam T type to convert to (buitlin integer type with at least 16 bits precision, excluding any implicit sign bits)
+		/// \param value binary representation of half-precision value
+		/// \return integral value
+		template<typename T> T half2int_up(uint16 value) { return half2int_impl<std::round_to_nearest,0,T>(value); }
+
+		/// Round half-precision number to nearest integer value.
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \tparam E `true` for round to even, `false` for round away from zero
+		/// \param value binary representation of half-precision value
+		/// \return half-precision bits for nearest integral value
+		template<std::float_round_style R,bool E> uint16 round_half_impl(uint16 value)
+		{
+			unsigned int e = value & 0x7FFF;
+			uint16 result = value;
+			if(e < 0x3C00)
+			{
+				result &= 0x8000;
+				if(R == std::round_to_nearest)
+					result |= 0x3C00U & -(e>=(0x3800+E));
+				else if(R == std::round_toward_infinity)
+					result |= 0x3C00U & -(~(value>>15)&(e!=0));
+				else if(R == std::round_toward_neg_infinity)
+					result |= 0x3C00U & -(value>0x8000);
+			}
+			else if(e < 0x6400)
+			{
+				e = 25 - (e>>10);
+				unsigned int mask = (1<<e) - 1;
+				if(R == std::round_to_nearest)
+					result += (1<<(e-1)) - (~(result>>e)&E);
+				else if(R == std::round_toward_infinity)
+					result += mask & ((value>>15)-1);
+				else if(R == std::round_toward_neg_infinity)
+					result += mask & -(value>>15);
+				result &= ~mask;
+			}
+			return result;
+		}
+
+		/// Round half-precision number to nearest integer value.
+		/// \tparam R rounding mode to use, `std::round_indeterminate` for fastest rounding
+		/// \param value binary representation of half-precision value
+		/// \return half-precision bits for nearest integral value
+		template<std::float_round_style R> uint16 round_half(uint16 value) { return round_half_impl<R,HALF_ROUND_TIES_TO_EVEN>(value); }
+
+		/// Round half-precision number to nearest integer value using round-to-nearest-away-from-zero.
+		/// \param value binary representation of half-precision value
+		/// \return half-precision bits for nearest integral value
+		inline uint16 round_half_up(uint16 value) { return round_half_impl<std::round_to_nearest,0>(value); }
+		/// \}
+
+		struct functions;
+		template<typename> struct unary_specialized;
+		template<typename,typename> struct binary_specialized;
+		template<typename,typename,std::float_round_style> struct half_caster;
+	}
+
+	/// Half-precision floating point type.
+	/// This class implements an IEEE-conformant half-precision floating point type with the usual arithmetic operators and 
+	/// conversions. It is implicitly convertible to single-precision floating point, which makes artihmetic exp
