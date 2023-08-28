@@ -1098,4 +1098,64 @@ namespace half_float
 		half(detail::expr rhs) : data_(detail::float2half<round_style>(static_cast<float>(rhs))) {}
 
 		/// Conversion constructor.
-		//
+		/// \param rhs float to convert
+		explicit half(float rhs) : data_(detail::float2half<round_style>(rhs)) {}
+	
+		/// Conversion to single-precision.
+		/// \return single precision value representing expression value
+		operator float() const { return detail::half2float<float>(data_); }
+
+		/// Assignment operator.
+		/// \tparam T type of concrete half expression
+		/// \param rhs half expression to copy from
+		/// \return reference to this half
+		half& operator=(detail::expr rhs) { return *this = static_cast<float>(rhs); }
+
+		/// Arithmetic assignment.
+		/// \tparam T type of concrete half expression
+		/// \param rhs half expression to add
+		/// \return reference to this half
+		template<typename T> typename detail::enable<half&,T>::type operator+=(T rhs) { return *this += static_cast<float>(rhs); }
+
+		/// Arithmetic assignment.
+		/// \tparam T type of concrete half expression
+		/// \param rhs half expression to subtract
+		/// \return reference to this half
+		template<typename T> typename detail::enable<half&,T>::type operator-=(T rhs) { return *this -= static_cast<float>(rhs); }
+
+		/// Arithmetic assignment.
+		/// \tparam T type of concrete half expression
+		/// \param rhs half expression to multiply with
+		/// \return reference to this half
+		template<typename T> typename detail::enable<half&,T>::type operator*=(T rhs) { return *this *= static_cast<float>(rhs); }
+
+		/// Arithmetic assignment.
+		/// \tparam T type of concrete half expression
+		/// \param rhs half expression to divide by
+		/// \return reference to this half
+		template<typename T> typename detail::enable<half&,T>::type operator/=(T rhs) { return *this /= static_cast<float>(rhs); }
+
+		/// Assignment operator.
+		/// \param rhs single-precision value to copy from
+		/// \return reference to this half
+		half& operator=(float rhs) { data_ = detail::float2half<round_style>(rhs); return *this; }
+
+		/// Arithmetic assignment.
+		/// \param rhs single-precision value to add
+		/// \return reference to this half
+		half& operator+=(float rhs) { data_ = detail::float2half<round_style>(detail::half2float<float>(data_)+rhs); return *this; }
+
+		/// Arithmetic assignment.
+		/// \param rhs single-precision value to subtract
+		/// \return reference to this half
+		half& operator-=(float rhs) { data_ = detail::float2half<round_style>(detail::half2float<float>(data_)-rhs); return *this; }
+
+		/// Arithmetic assignment.
+		/// \param rhs single-precision value to multiply with
+		/// \return reference to this half
+		half& operator*=(float rhs) { data_ = detail::float2half<round_style>(detail::half2float<float>(data_)*rhs); return *this; }
+
+		/// Arithmetic assignment.
+		/// \param rhs single-precision value to divide by
+		/// \return reference to this half
+		half& operator/=(float rhs) { data_ = d
