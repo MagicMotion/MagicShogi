@@ -1158,4 +1158,84 @@ namespace half_float
 		/// Arithmetic assignment.
 		/// \param rhs single-precision value to divide by
 		/// \return reference to this half
-		half& operator/=(float rhs) { data_ = d
+		half& operator/=(float rhs) { data_ = detail::float2half<round_style>(detail::half2float<float>(data_)/rhs); return *this; }
+
+		/// Prefix increment.
+		/// \return incremented half value
+		half& operator++() { return *this += 1.0f; }
+
+		/// Prefix decrement.
+		/// \return decremented half value
+		half& operator--() { return *this -= 1.0f; }
+
+		/// Postfix increment.
+		/// \return non-incremented half value
+		half operator++(int) { half out(*this); ++*this; return out; }
+
+		/// Postfix decrement.
+		/// \return non-decremented half value
+		half operator--(int) { half out(*this); --*this; return out; }
+	
+	private:
+		/// Rounding mode to use
+		static const std::float_round_style round_style = (std::float_round_style)(HALF_ROUND_STYLE);
+
+		/// Constructor.
+		/// \param bits binary representation to set half to
+		HALF_CONSTEXPR half(detail::binary_t, detail::uint16 bits) HALF_NOEXCEPT : data_(bits) {}
+
+		/// Internal binary representation
+		detail::uint16 data_;
+	};
+
+#if HALF_ENABLE_CPP11_USER_LITERALS
+	namespace literal
+	{
+		/// Half literal.
+		/// While this returns an actual half-precision value, half literals can unfortunately not be constant expressions due 
+		/// to rather involved conversions.
+		/// \param value literal value
+		/// \return half with given value (if representable)
+		inline half operator""_h(long double value) { return half(detail::binary, detail::float2half<half::round_style>(value)); }
+	}
+#endif
+
+	namespace detail
+	{
+		/// Wrapper implementing unspecialized half-precision functions.
+		struct functions
+		{
+			/// Addition implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \return Half-precision sum stored in single-precision
+			static expr plus(float x, float y) { return expr(x+y); }
+
+			/// Subtraction implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \return Half-precision difference stored in single-precision
+			static expr minus(float x, float y) { return expr(x-y); }
+
+			/// Multiplication implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \return Half-precision product stored in single-precision
+			static expr multiplies(float x, float y) { return expr(x*y); }
+
+			/// Division implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \return Half-precision quotient stored in single-precision
+			static expr divides(float x, float y) { return expr(x/y); }
+
+			/// Output implementation.
+			/// \param out stream to write to
+			/// \param arg value to write
+			/// \return reference to stream
+			template<typename charT,typename traits> static std::basic_ostream<charT,traits>& write(std::basic_ostream<charT,traits> &out, float arg) { return out << arg; }
+
+			/// Input implementation.
+			/// \param in stream to read from
+			/// \param arg half to read into
+			/// 
