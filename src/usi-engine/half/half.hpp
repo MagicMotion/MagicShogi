@@ -1238,4 +1238,100 @@ namespace half_float
 			/// Input implementation.
 			/// \param in stream to read from
 			/// \param arg half to read into
-			/// 
+			/// \return reference to stream
+			template<typename charT,typename traits> static std::basic_istream<charT,traits>& read(std::basic_istream<charT,traits> &in, half &arg)
+			{
+				float f;
+				if(in >> f)
+					arg = f;
+				return in;
+			}
+
+			/// Modulo implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \return Half-precision division remainder stored in single-precision
+			static expr fmod(float x, float y) { return expr(std::fmod(x, y)); }
+
+			/// Remainder implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \return Half-precision division remainder stored in single-precision
+			static expr remainder(float x, float y)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::remainder(x, y));
+			#else
+				if(builtin_isnan(x) || builtin_isnan(y))
+					return expr(std::numeric_limits<float>::quiet_NaN());
+				float ax = std::fabs(x), ay = std::fabs(y);
+				if(ax >= 65536.0f || ay < std::ldexp(1.0f, -24))
+					return expr(std::numeric_limits<float>::quiet_NaN());
+				if(ay >= 65536.0f)
+					return expr(x);
+				if(ax == ay)
+					return expr(builtin_signbit(x) ? -0.0f : 0.0f);
+				ax = std::fmod(ax, ay+ay);
+				float y2 = 0.5f * ay;
+				if(ax > y2)
+				{
+					ax -= ay;
+					if(ax >= y2)
+						ax -= ay;
+				}
+				return expr(builtin_signbit(x) ? -ax : ax);
+			#endif
+			}
+
+			/// Remainder implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \param quo address to store quotient bits at
+			/// \return Half-precision division remainder stored in single-precision
+			static expr remquo(float x, float y, int *quo)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::remquo(x, y, quo));
+			#else
+				if(builtin_isnan(x) || builtin_isnan(y))
+					return expr(std::numeric_limits<float>::quiet_NaN());
+				bool sign = builtin_signbit(x), qsign = static_cast<bool>(sign^builtin_signbit(y));
+				float ax = std::fabs(x), ay = std::fabs(y);
+				if(ax >= 65536.0f || ay < std::ldexp(1.0f, -24))
+					return expr(std::numeric_limits<float>::quiet_NaN());
+				if(ay >= 65536.0f)
+					return expr(x);
+				if(ax == ay)
+					return *quo = qsign ? -1 : 1, expr(sign ? -0.0f : 0.0f);
+				ax = std::fmod(ax, 8.0f*ay);
+				int cquo = 0;
+				if(ax >= 4.0f * ay)
+				{
+					ax -= 4.0f * ay;
+					cquo += 4;
+				}
+				if(ax >= 2.0f * ay)
+				{
+					ax -= 2.0f * ay;
+					cquo += 2;
+				}
+				float y2 = 0.5f * ay;
+				if(ax > y2)
+				{
+					ax -= ay;
+					++cquo;
+					if(ax >= y2)
+					{
+						ax -= ay;
+						++cquo;
+					}
+				}
+				return *quo = qsign ? -cquo : cquo, expr(sign ? -ax : ax);
+			#endif
+			}
+
+			/// Positive difference implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \return Positive difference stored in single-precision
+			static expr fdim(float x, float 
