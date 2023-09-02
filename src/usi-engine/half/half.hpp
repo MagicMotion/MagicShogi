@@ -1334,4 +1334,101 @@ namespace half_float
 			/// \param x first operand
 			/// \param y second operand
 			/// \return Positive difference stored in single-precision
-			static expr fdim(float x, float 
+			static expr fdim(float x, float y)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::fdim(x, y));
+			#else
+				return expr((x<=y) ? 0.0f : (x-y));
+			#endif
+			}
+
+			/// Fused multiply-add implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \param z third operand
+			/// \return \a x * \a y + \a z stored in single-precision
+			static expr fma(float x, float y, float z)
+			{
+			#if HALF_ENABLE_CPP11_CMATH && defined(FP_FAST_FMAF)
+				return expr(std::fma(x, y, z));
+			#else
+				return expr(x*y+z);
+			#endif
+			}
+
+			/// Get NaN.
+			/// \return Half-precision quiet NaN
+			static half nanh() { return half(binary, 0x7FFF); }
+
+			/// Exponential implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr exp(float arg) { return expr(std::exp(arg)); }
+
+			/// Exponential implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr expm1(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::expm1(arg));
+			#else
+				return expr(static_cast<float>(std::exp(static_cast<double>(arg))-1.0));
+			#endif
+			}
+
+			/// Binary exponential implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr exp2(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::exp2(arg));
+			#else
+				return expr(static_cast<float>(std::exp(arg*0.69314718055994530941723212145818)));
+			#endif
+			}
+
+			/// Logarithm implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr log(float arg) { return expr(std::log(arg)); }
+
+			/// Common logarithm implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr log10(float arg) { return expr(std::log10(arg)); }
+
+			/// Logarithm implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr log1p(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::log1p(arg));
+			#else
+				return expr(static_cast<float>(std::log(1.0+arg)));
+			#endif
+			}
+
+			/// Binary logarithm implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr log2(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::log2(arg));
+			#else
+				return expr(static_cast<float>(std::log(static_cast<double>(arg))*1.4426950408889634073599246810019));
+			#endif
+			}
+
+			/// Square root implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr sqrt(float arg) { return expr(std::sqrt(arg)); }
+
+			/// Cubic root implementation.
+			/// \param arg function argument
+			/// \return function value
