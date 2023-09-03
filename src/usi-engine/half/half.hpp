@@ -1670,4 +1670,96 @@ namespace half_float
 
 			/// Decompression implementation.
 			/// \param arg number to decompress
-			///
+			/// \param exp address to store exponent at
+			/// \return normalized significant
+			static half frexp(half arg, int *exp)
+			{
+				int m = arg.data_ & 0x7FFF, e = -14;
+				if(m >= 0x7C00 || !m)
+					return *exp = 0, arg;
+				for(; m<0x400; m<<=1,--e) ;
+				return *exp = e+(m>>10), half(binary, (arg.data_&0x8000)|0x3800|(m&0x3FF));
+			}
+
+			/// Decompression implementation.
+			/// \param arg number to decompress
+			/// \param iptr address to store integer part at
+			/// \return fractional part
+			static half modf(half arg, half *iptr)
+			{
+				unsigned int e = arg.data_ & 0x7FFF;
+				if(e >= 0x6400)
+					return *iptr = arg, half(binary, arg.data_&(0x8000U|-(e>0x7C00)));
+				if(e < 0x3C00)
+					return iptr->data_ = arg.data_ & 0x8000, arg;
+				e >>= 10;
+				unsigned int mask = (1<<(25-e)) - 1, m = arg.data_ & mask;
+				iptr->data_ = arg.data_ & ~mask;
+				if(!m)
+					return half(binary, arg.data_&0x8000);
+				for(; m<0x400; m<<=1,--e) ;
+				return half(binary, static_cast<uint16>((arg.data_&0x8000)|(e<<10)|(m&0x3FF)));
+			}
+
+			/// Scaling implementation.
+			/// \param arg number to scale
+			/// \param exp power of two to scale by
+			/// \return scaled number
+			static half scalbln(half arg, long exp)
+			{
+				unsigned int m = arg.data_ & 0x7FFF;
+				if(m >= 0x7C00 || !m)
+					return arg;
+				for(; m<0x400; m<<=1,--exp) ;
+				exp += m >> 10;
+				uint16 value = arg.data_ & 0x8000;
+				if(exp > 30)
+				{
+					if(half::round_style == std::round_toward_zero)
+						value |= 0x7BFF;
+					else if(half::round_style == std::round_toward_infinity)
+						value |= 0x7C00 - (value>>15);
+					else if(half::round_style == std::round_toward_neg_infinity)
+						value |= 0x7BFF + (value>>15);
+					else
+						value |= 0x7C00;
+				}
+				else if(exp > 0)
+					value |= (exp<<10) | (m&0x3FF);
+				else if(exp > -11)
+				{
+					m = (m&0x3FF) | 0x400;
+					if(half::round_style == std::round_to_nearest)
+					{
+						m += 1 << -exp;
+					#if HALF_ROUND_TIES_TO_EVEN
+						m -= (m>>(1-exp)) & 1;
+					#endif
+					}
+					else if(half::round_style == std::round_toward_infinity)
+						m += ((value>>15)-1) & ((1<<(1-exp))-1U);
+					else if(half::round_style == std::round_toward_neg_infinity)
+						m += -(value>>15) & ((1<<(1-exp))-1U);
+					value |= m >> (1-exp);
+				}
+				else if(half::round_style == std::round_toward_infinity)
+					value -= (value>>15) - 1;
+				else if(half::round_style == std::round_toward_neg_infinity)
+					value += value >> 15;
+				return half(binary, value);
+			}
+
+			/// Exponent implementation.
+			/// \param arg number to query
+			/// \return floating point exponent
+			static int ilogb(half arg)
+			{
+				int abs = arg.data_ & 0x7FFF;
+				if(!abs)
+					return FP_ILOGB0;
+				if(abs < 0x7C00)
+				{
+					int exp = (abs>>10) - 15;
+					if(abs < 0x400)
+						for(; abs<0x200; abs<<=1,--exp) ;
+					return ex
