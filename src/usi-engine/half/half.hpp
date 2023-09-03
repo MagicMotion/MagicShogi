@@ -1431,4 +1431,78 @@ namespace half_float
 
 			/// Cubic root implementation.
 			/// \param arg function argument
-			/// \return function value
+			/// \return function value stored in single-preicision
+			static expr cbrt(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::cbrt(arg));
+			#else
+				if(builtin_isnan(arg) || builtin_isinf(arg))
+					return expr(arg);
+				return expr(builtin_signbit(arg) ? -static_cast<float>(std::pow(-static_cast<double>(arg), 1.0/3.0)) : 
+					static_cast<float>(std::pow(static_cast<double>(arg), 1.0/3.0)));
+			#endif
+			}
+
+			/// Hypotenuse implementation.
+			/// \param x first argument
+			/// \param y second argument
+			/// \return function value stored in single-preicision
+			static expr hypot(float x, float y)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::hypot(x, y));
+			#else
+				return expr((builtin_isinf(x) || builtin_isinf(y)) ? std::numeric_limits<float>::infinity() : 
+					static_cast<float>(std::sqrt(static_cast<double>(x)*x+static_cast<double>(y)*y)));
+			#endif
+			}
+
+			/// Power implementation.
+			/// \param base value to exponentiate
+			/// \param exp power to expontiate to
+			/// \return function value stored in single-preicision
+			static expr pow(float base, float exp) { return expr(std::pow(base, exp)); }
+
+			/// Sine implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr sin(float arg) { return expr(std::sin(arg)); }
+
+			/// Cosine implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr cos(float arg) { return expr(std::cos(arg)); }
+
+			/// Tan implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr tan(float arg) { return expr(std::tan(arg)); }
+
+			/// Arc sine implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr asin(float arg) { return expr(std::asin(arg)); }
+
+			/// Arc cosine implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr acos(float arg) { return expr(std::acos(arg)); }
+
+			/// Arc tangent implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr atan(float arg) { return expr(std::atan(arg)); }
+
+			/// Arc tangent implementation.
+			/// \param x first argument
+			/// \param y second argument
+			/// \return function value stored in single-preicision
+			static expr atan2(float x, float y) { return expr(std::atan2(x, y)); }
+
+			/// Hyperbolic sine implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr sinh(float arg) { return expr(std::sinh(arg)); }
+
+			/// Hyperbolic cosine implementa
