@@ -1505,4 +1505,97 @@ namespace half_float
 			/// \return function value stored in single-preicision
 			static expr sinh(float arg) { return expr(std::sinh(arg)); }
 
-			/// Hyperbolic cosine implementa
+			/// Hyperbolic cosine implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr cosh(float arg) { return expr(std::cosh(arg)); }
+
+			/// Hyperbolic tangent implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr tanh(float arg) { return expr(std::tanh(arg)); }
+
+			/// Hyperbolic area sine implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr asinh(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::asinh(arg));
+			#else
+				return expr((arg==-std::numeric_limits<float>::infinity()) ? arg : static_cast<float>(std::log(arg+std::sqrt(arg*arg+1.0))));
+			#endif
+			}
+
+			/// Hyperbolic area cosine implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr acosh(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::acosh(arg));
+			#else
+				return expr((arg<-1.0f) ? std::numeric_limits<float>::quiet_NaN() : static_cast<float>(std::log(arg+std::sqrt(arg*arg-1.0))));
+			#endif
+			}
+
+			/// Hyperbolic area tangent implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr atanh(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::atanh(arg));
+			#else
+				return expr(static_cast<float>(0.5*std::log((1.0+arg)/(1.0-arg))));
+			#endif
+			}
+
+			/// Error function implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr erf(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::erf(arg));
+			#else
+				return expr(static_cast<float>(erf(static_cast<double>(arg))));
+			#endif
+			}
+
+			/// Complementary implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr erfc(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::erfc(arg));
+			#else
+				return expr(static_cast<float>(1.0-erf(static_cast<double>(arg))));
+			#endif
+			}
+
+			/// Gamma logarithm implementation.
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr lgamma(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::lgamma(arg));
+			#else
+				if(builtin_isinf(arg))
+					return expr(std::numeric_limits<float>::infinity());
+				if(arg < 0.0f)
+				{
+					float i, f = std::modf(-arg, &i);
+					if(f == 0.0f)
+						return expr(std::numeric_limits<float>::infinity());
+					return expr(static_cast<float>(1.1447298858494001741434273513531-
+						std::log(std::abs(std::sin(3.1415926535897932384626433832795*f)))-lgamma(1.0-arg)));
+				}
+				return expr(static_cast<float>(lgamma(static_cast<double>(arg))));
+			#endif
+			}
+
+			/// Gamma implementation.
+			/// \param ar
