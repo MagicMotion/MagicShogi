@@ -1598,4 +1598,76 @@ namespace half_float
 			}
 
 			/// Gamma implementation.
-			/// \param ar
+			/// \param arg function argument
+			/// \return function value stored in single-preicision
+			static expr tgamma(float arg)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::tgamma(arg));
+			#else
+				if(arg == 0.0f)
+					return builtin_signbit(arg) ? expr(-std::numeric_limits<float>::infinity()) : expr(std::numeric_limits<float>::infinity());
+				if(arg < 0.0f)
+				{
+					float i, f = std::modf(-arg, &i);
+					if(f == 0.0f)
+						return expr(std::numeric_limits<float>::quiet_NaN());
+					double value = 3.1415926535897932384626433832795 / (std::sin(3.1415926535897932384626433832795*f)*std::exp(lgamma(1.0-arg)));
+					return expr(static_cast<float>((std::fmod(i, 2.0f)==0.0f) ? -value : value));
+				}
+				if(builtin_isinf(arg))
+					return expr(arg);
+				return expr(static_cast<float>(std::exp(lgamma(static_cast<double>(arg)))));
+			#endif
+			}
+
+			/// Floor implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static half floor(half arg) { return half(binary, round_half<std::round_toward_neg_infinity>(arg.data_)); }
+
+			/// Ceiling implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static half ceil(half arg) { return half(binary, round_half<std::round_toward_infinity>(arg.data_)); }
+
+			/// Truncation implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static half trunc(half arg) { return half(binary, round_half<std::round_toward_zero>(arg.data_)); }
+
+			/// Nearest integer implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static half round(half arg) { return half(binary, round_half_up(arg.data_)); }
+
+			/// Nearest integer implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static long lround(half arg) { return detail::half2int_up<long>(arg.data_); }
+
+			/// Nearest integer implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static half rint(half arg) { return half(binary, round_half<half::round_style>(arg.data_)); }
+
+			/// Nearest integer implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static long lrint(half arg) { return detail::half2int<half::round_style,long>(arg.data_); }
+
+		#if HALF_ENABLE_CPP11_LONG_LONG
+			/// Nearest integer implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static long long llround(half arg) { return detail::half2int_up<long long>(arg.data_); }
+
+			/// Nearest integer implementation.
+			/// \param arg value to round
+			/// \return rounded value
+			static long long llrint(half arg) { return detail::half2int<half::round_style,long long>(arg.data_); }
+		#endif
+
+			/// Decompression implementation.
+			/// \param arg number to decompress
+			///
