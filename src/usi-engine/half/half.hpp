@@ -1850,4 +1850,83 @@ namespace half_float
 			/// \param arg value to classify
 			/// \retval true if finite number
 			/// \retval false else
-			static bool isfinite(hal
+			static bool isfinite(half arg) { return (arg.data_&0x7C00) != 0x7C00; }
+
+			/// Classification implementation.
+			/// \param arg value to classify
+			/// \retval true if infinite number
+			/// \retval false else
+			static bool isinf(half arg) { return (arg.data_&0x7FFF) == 0x7C00; }
+
+			/// Classification implementation.
+			/// \param arg value to classify
+			/// \retval true if not a number
+			/// \retval false else
+			static bool isnan(half arg) { return (arg.data_&0x7FFF) > 0x7C00; }
+
+			/// Classification implementation.
+			/// \param arg value to classify
+			/// \retval true if normal number
+			/// \retval false else
+			static bool isnormal(half arg) { return ((arg.data_&0x7C00)!=0) & ((arg.data_&0x7C00)!=0x7C00); }
+
+			/// Sign bit implementation.
+			/// \param arg value to check
+			/// \retval true if signed
+			/// \retval false if unsigned
+			static bool signbit(half arg) { return (arg.data_&0x8000) != 0; }
+
+			/// Comparison implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \retval true if operands equal
+			/// \retval false else
+			static bool isequal(half x, half y) { return (x.data_==y.data_ || !((x.data_|y.data_)&0x7FFF)) && !isnan(x); }
+
+			/// Comparison implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \retval true if operands not equal
+			/// \retval false else
+			static bool isnotequal(half x, half y) { return (x.data_!=y.data_ && ((x.data_|y.data_)&0x7FFF)) || isnan(x); }
+
+			/// Comparison implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \retval true if \a x > \a y
+			/// \retval false else
+			static bool isgreater(half x, half y)
+			{
+				int xabs = x.data_ & 0x7FFF, yabs = y.data_ & 0x7FFF;
+				return xabs<=0x7C00 && yabs<=0x7C00 && (((xabs==x.data_) ? xabs : -xabs) > ((yabs==y.data_) ? yabs : -yabs));
+			}
+
+			/// Comparison implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \retval true if \a x >= \a y
+			/// \retval false else
+			static bool isgreaterequal(half x, half y)
+			{
+				int xabs = x.data_ & 0x7FFF, yabs = y.data_ & 0x7FFF;
+				return xabs<=0x7C00 && yabs<=0x7C00 && (((xabs==x.data_) ? xabs : -xabs) >= ((yabs==y.data_) ? yabs : -yabs));
+			}
+
+			/// Comparison implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \retval true if \a x < \a y
+			/// \retval false else
+			static bool isless(half x, half y)
+			{
+				int xabs = x.data_ & 0x7FFF, yabs = y.data_ & 0x7FFF;
+				return xabs<=0x7C00 && yabs<=0x7C00 && (((xabs==x.data_) ? xabs : -xabs) < ((yabs==y.data_) ? yabs : -yabs));
+			}
+
+			/// Comparison implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \retval true if \a x <= \a y
+			/// \retval false else
+			static bool islessequal(half x, half y)
+			
