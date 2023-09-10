@@ -1929,4 +1929,79 @@ namespace half_float
 			/// \retval true if \a x <= \a y
 			/// \retval false else
 			static bool islessequal(half x, half y)
-			
+			{
+				int xabs = x.data_ & 0x7FFF, yabs = y.data_ & 0x7FFF;
+				return xabs<=0x7C00 && yabs<=0x7C00 && (((xabs==x.data_) ? xabs : -xabs) <= ((yabs==y.data_) ? yabs : -yabs));
+			}
+
+			/// Comparison implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \retval true if either \a x > \a y nor \a x < \a y
+			/// \retval false else
+			static bool islessgreater(half x, half y)
+			{
+				int xabs = x.data_ & 0x7FFF, yabs = y.data_ & 0x7FFF;
+				if(xabs > 0x7C00 || yabs > 0x7C00)
+					return false;
+				int a = (xabs==x.data_) ? xabs : -xabs, b = (yabs==y.data_) ? yabs : -yabs;
+				return a < b || a > b;
+			}
+
+			/// Comparison implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \retval true if operand unordered
+			/// \retval false else
+			static bool isunordered(half x, half y) { return isnan(x) || isnan(y); }
+
+		private:
+			static double erf(double arg)
+			{
+				if(builtin_isinf(arg))
+					return (arg<0.0) ? -1.0 : 1.0;
+				double x2 = arg * arg, ax2 = 0.147 * x2, value = std::sqrt(1.0-std::exp(-x2*(1.2732395447351626861510701069801+ax2)/(1.0+ax2)));
+				return builtin_signbit(arg) ? -value : value;
+			}
+
+			static double lgamma(double arg)
+			{
+				double v = 1.0;
+				for(; arg<8.0; ++arg) v *= arg;
+				double w = 1.0 / (arg*arg);
+				return (((((((-0.02955065359477124183006535947712*w+0.00641025641025641025641025641026)*w+
+					-0.00191752691752691752691752691753)*w+8.4175084175084175084175084175084e-4)*w+
+					-5.952380952380952380952380952381e-4)*w+7.9365079365079365079365079365079e-4)*w+
+					-0.00277777777777777777777777777778)*w+0.08333333333333333333333333333333)/arg + 
+					0.91893853320467274178032973640562 - std::log(v) - arg + (arg-0.5) * std::log(arg);
+			}
+		};
+
+		/// Wrapper for unary half-precision functions needing specialization for individual argument types.
+		/// \tparam T argument type
+		template<typename T> struct unary_specialized
+		{
+			/// Negation implementation.
+			/// \param arg value to negate
+			/// \return negated value
+			static HALF_CONSTEXPR half negate(half arg) { return half(binary, arg.data_^0x8000); }
+
+			/// Absolute value implementation.
+			/// \param arg function argument
+			/// \return absolute value
+			static half fabs(half arg) { return half(binary, arg.data_&0x7FFF); }
+		};
+		template<> struct unary_specialized<expr>
+		{
+			static HALF_CONSTEXPR expr negate(float arg) { return expr(-arg); }
+			static expr fabs(float arg) { return expr(std::fabs(arg)); }
+		};
+
+		/// Wrapper for binary half-precision functions needing specialization for individual argument types.
+		/// \tparam T first argument type
+		/// \tparam U first argument type
+		template<typename T,typename U> struct binary_specialized
+		{
+			/// Minimum implementation.
+			/// \param x first operand
+			/// \param y second operand
