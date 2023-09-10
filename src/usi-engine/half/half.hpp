@@ -1762,4 +1762,92 @@ namespace half_float
 					int exp = (abs>>10) - 15;
 					if(abs < 0x400)
 						for(; abs<0x200; abs<<=1,--exp) ;
-					return ex
+					return exp;
+				}
+				if(abs > 0x7C00)
+					return FP_ILOGBNAN;
+				return INT_MAX;
+			}
+
+			/// Exponent implementation.
+			/// \param arg number to query
+			/// \return floating point exponent
+			static half logb(half arg)
+			{
+				int abs = arg.data_ & 0x7FFF;
+				if(!abs)
+					return half(binary, 0xFC00);
+				if(abs < 0x7C00)
+				{
+					int exp = (abs>>10) - 15;
+					if(abs < 0x400)
+						for(; abs<0x200; abs<<=1,--exp) ;
+					uint16 bits = (exp<0) << 15;
+					if(exp)
+					{
+						unsigned int m = std::abs(exp) << 6, e = 18;
+						for(; m<0x400; m<<=1,--e) ;
+						bits |= (e<<10) + m;
+					}
+					return half(binary, bits);
+				}
+				if(abs > 0x7C00)
+					return arg;
+				return half(binary, 0x7C00);
+			}
+
+			/// Enumeration implementation.
+			/// \param from number to increase/decrease
+			/// \param to direction to enumerate into
+			/// \return next representable number
+			static half nextafter(half from, half to)
+			{
+				uint16 fabs = from.data_ & 0x7FFF, tabs = to.data_ & 0x7FFF;
+				if(fabs > 0x7C00)
+					return from;
+				if(tabs > 0x7C00 || from.data_ == to.data_ || !(fabs|tabs))
+					return to;
+				if(!fabs)
+					return half(binary, (to.data_&0x8000)+1);
+				bool lt = ((fabs==from.data_) ? static_cast<int>(fabs) : -static_cast<int>(fabs)) < 
+					((tabs==to.data_) ? static_cast<int>(tabs) : -static_cast<int>(tabs));
+				return half(binary, from.data_+(((from.data_>>15)^static_cast<unsigned>(lt))<<1)-1);
+			}
+
+			/// Enumeration implementation.
+			/// \param from number to increase/decrease
+			/// \param to direction to enumerate into
+			/// \return next representable number
+			static half nexttoward(half from, long double to)
+			{
+				if(isnan(from))
+					return from;
+				long double lfrom = static_cast<long double>(from);
+				if(builtin_isnan(to) || lfrom == to)
+					return half(static_cast<float>(to));
+				if(!(from.data_&0x7FFF))
+					return half(binary, (static_cast<detail::uint16>(builtin_signbit(to))<<15)+1);
+				return half(binary, from.data_+(((from.data_>>15)^static_cast<unsigned>(lfrom<to))<<1)-1);
+			}
+
+			/// Sign implementation
+			/// \param x first operand
+			/// \param y second operand
+			/// \return composed value
+			static half copysign(half x, half y) { return half(binary, x.data_^((x.data_^y.data_)&0x8000)); }
+
+			/// Classification implementation.
+			/// \param arg value to classify
+			/// \retval true if infinite number
+			/// \retval false else
+			static int fpclassify(half arg)
+			{
+				unsigned int abs = arg.data_ & 0x7FFF;
+				return abs ? ((abs>0x3FF) ? ((abs>=0x7C00) ? ((abs>0x7C00) ? FP_NAN : FP_INFINITE) : FP_NORMAL) :FP_SUBNORMAL) : FP_ZERO;
+			}
+
+			/// Classification implementation.
+			/// \param arg value to classify
+			/// \retval true if finite number
+			/// \retval false else
+			static bool isfinite(hal
