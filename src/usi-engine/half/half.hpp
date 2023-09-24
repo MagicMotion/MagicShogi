@@ -2005,3 +2005,88 @@ namespace half_float
 			/// Minimum implementation.
 			/// \param x first operand
 			/// \param y second operand
+			/// \return minimum value
+			static expr fmin(float x, float y)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::fmin(x, y));
+			#else
+				if(builtin_isnan(x))
+					return expr(y);
+				if(builtin_isnan(y))
+					return expr(x);
+				return expr(std::min(x, y));
+			#endif
+			}
+
+			/// Maximum implementation.
+			/// \param x first operand
+			/// \param y second operand
+			/// \return maximum value
+			static expr fmax(float x, float y)
+			{
+			#if HALF_ENABLE_CPP11_CMATH
+				return expr(std::fmax(x, y));
+			#else
+				if(builtin_isnan(x))
+					return expr(y);
+				if(builtin_isnan(y))
+					return expr(x);
+				return expr(std::max(x, y));
+			#endif
+			}
+		};
+		template<> struct binary_specialized<half,half>
+		{
+			static half fmin(half x, half y)
+			{
+				int xabs = x.data_ & 0x7FFF, yabs = y.data_ & 0x7FFF;
+				if(xabs > 0x7C00)
+					return y;
+				if(yabs > 0x7C00)
+					return x;
+				return (((xabs==x.data_) ? xabs : -xabs) > ((yabs==y.data_) ? yabs : -yabs)) ? y : x;
+			}
+			static half fmax(half x, half y)
+			{
+				int xabs = x.data_ & 0x7FFF, yabs = y.data_ & 0x7FFF;
+				if(xabs > 0x7C00)
+					return y;
+				if(yabs > 0x7C00)
+					return x;
+				return (((xabs==x.data_) ? xabs : -xabs) < ((yabs==y.data_) ? yabs : -yabs)) ? y : x;
+			}
+		};
+
+		/// Helper class for half casts.
+		/// This class template has to be specialized for all valid cast argument to define an appropriate static `cast` member 
+		/// function and a corresponding `type` member denoting its return type.
+		/// \tparam T destination type
+		/// \tparam U source type
+		/// \tparam R rounding mode to use
+		template<typename T,typename U,std::float_round_style R=(std::float_round_style)(HALF_ROUND_STYLE)> struct half_caster {};
+		template<typename U,std::float_round_style R> struct half_caster<half,U,R>
+		{
+		#if HALF_ENABLE_CPP11_STATIC_ASSERT && HALF_ENABLE_CPP11_TYPE_TRAITS
+			static_assert(std::is_arithmetic<U>::value, "half_cast from non-arithmetic type unsupported");
+		#endif
+
+			static half cast(U arg) { return cast_impl(arg, is_float<U>()); };
+
+		private:
+			static half cast_impl(U arg, true_type) { return half(binary, float2half<R>(arg)); }
+			static half cast_impl(U arg, false_type) { return half(binary, int2half<R>(arg)); }
+		};
+		template<typename T,std::float_round_style R> struct half_caster<T,half,R>
+		{
+		#if HALF_ENABLE_CPP11_STATIC_ASSERT && HALF_ENABLE_CPP11_TYPE_TRAITS
+			static_assert(std::is_arithmetic<T>::value, "half_cast to non-arithmetic type unsupported");
+		#endif
+
+			static T cast(half arg) { return cast_impl(arg, is_float<T>()); }
+
+		private:
+			static T cast_impl(half arg, true_type) { return half2float<T>(arg.data_); }
+			static T cast_impl(half arg, false_type) { return half2int<R,T>(arg.data_); }
+		};
+		template<typename T,std::float_round_style R> struct half_cas
