@@ -2089,4 +2089,81 @@ namespace half_float
 			static T cast_impl(half arg, true_type) { return half2float<T>(arg.data_); }
 			static T cast_impl(half arg, false_type) { return half2int<R,T>(arg.data_); }
 		};
-		template<typename T,std::float_round_style R> struct half_cas
+		template<typename T,std::float_round_style R> struct half_caster<T,expr,R>
+		{
+		#if HALF_ENABLE_CPP11_STATIC_ASSERT && HALF_ENABLE_CPP11_TYPE_TRAITS
+			static_assert(std::is_arithmetic<T>::value, "half_cast to non-arithmetic type unsupported");
+		#endif
+
+			static T cast(expr arg) { return cast_impl(arg, is_float<T>()); }
+
+		private:
+			static T cast_impl(float arg, true_type) { return static_cast<T>(arg); }
+			static T cast_impl(half arg, false_type) { return half2int<R,T>(arg.data_); }
+		};
+		template<std::float_round_style R> struct half_caster<half,half,R>
+		{
+			static half cast(half arg) { return arg; }
+		};
+		template<std::float_round_style R> struct half_caster<half,expr,R> : half_caster<half,half,R> {};
+
+		/// \name Comparison operators
+		/// \{
+
+		/// Comparison for equality.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if operands equal
+		/// \retval false else
+		template<typename T,typename U> typename enable<bool,T,U>::type operator==(T x, U y) { return functions::isequal(x, y); }
+
+		/// Comparison for inequality.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if operands not equal
+		/// \retval false else
+		template<typename T,typename U> typename enable<bool,T,U>::type operator!=(T x, U y) { return functions::isnotequal(x, y); }
+
+		/// Comparison for less than.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if \a x less than \a y
+		/// \retval false else
+		template<typename T,typename U> typename enable<bool,T,U>::type operator<(T x, U y) { return functions::isless(x, y); }
+
+		/// Comparison for greater than.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if \a x greater than \a y
+		/// \retval false else
+		template<typename T,typename U> typename enable<bool,T,U>::type operator>(T x, U y) { return functions::isgreater(x, y); }
+
+		/// Comparison for less equal.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if \a x less equal \a y
+		/// \retval false else
+		template<typename T,typename U> typename enable<bool,T,U>::type operator<=(T x, U y) { return functions::islessequal(x, y); }
+
+		/// Comparison for greater equal.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if \a x greater equal \a y
+		/// \retval false else
+		template<typename T,typename U> typename enable<bool,T,U>::type operator>=(T x, U y) { return functions::isgreaterequal(x, y); }
+
+		/// \}
+		/// \name Arithmetic operators
+		/// \{
+
+		/// Add halfs.
+		/// \param x left operand
+		/// \param y right operand
+		/// \return sum of half expressions
+		template<typename T,typename U> typename enable<expr,T,U>::type operator+(T x, U y) { return functions::plus(x, y); }
+
+		/// Subtract halfs.
+		/// \param x left operand
+		/// \param y right operand
+		/// \return difference of half expressions
+		template<typename T,ty
