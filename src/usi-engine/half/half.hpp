@@ -2232,4 +2232,50 @@ namespace half_float
 		/// \return remainder of floating point division.
 //		template<typename T,typename U> typename enable<expr,T,U>::type fmod(T x, U y) { return functions::fmod(x, y); }
 		inline expr fmod(half x, half y) { return functions::fmod(x, y); }
-		inline expr fmod(half x, expr y
+		inline expr fmod(half x, expr y) { return functions::fmod(x, y); }
+		inline expr fmod(expr x, half y) { return functions::fmod(x, y); }
+		inline expr fmod(expr x, expr y) { return functions::fmod(x, y); }
+
+		/// Remainder of division.
+		/// \param x first operand
+		/// \param y second operand
+		/// \return remainder of floating point division.
+//		template<typename T,typename U> typename enable<expr,T,U>::type remainder(T x, U y) { return functions::remainder(x, y); }
+		inline expr remainder(half x, half y) { return functions::remainder(x, y); }
+		inline expr remainder(half x, expr y) { return functions::remainder(x, y); }
+		inline expr remainder(expr x, half y) { return functions::remainder(x, y); }
+		inline expr remainder(expr x, expr y) { return functions::remainder(x, y); }
+
+		/// Remainder of division.
+		/// \param x first operand
+		/// \param y second operand
+		/// \param quo address to store some bits of quotient at
+		/// \return remainder of floating point division.
+//		template<typename T,typename U> typename enable<expr,T,U>::type remquo(T x, U y, int *quo) { return functions::remquo(x, y, quo); }
+		inline expr remquo(half x, half y, int *quo) { return functions::remquo(x, y, quo); }
+		inline expr remquo(half x, expr y, int *quo) { return functions::remquo(x, y, quo); }
+		inline expr remquo(expr x, half y, int *quo) { return functions::remquo(x, y, quo); }
+		inline expr remquo(expr x, expr y, int *quo) { return functions::remquo(x, y, quo); }
+
+		/// Fused multiply add.
+		/// \param x first operand
+		/// \param y second operand
+		/// \param z third operand
+		/// \return ( \a x * \a y ) + \a z rounded as one operation.
+//		template<typename T,typename U,typename V> typename enable<expr,T,U,V>::type fma(T x, U y, V z) { return functions::fma(x, y, z); }
+		inline expr fma(half x, half y, half z) { return functions::fma(x, y, z); }
+		inline expr fma(half x, half y, expr z) { return functions::fma(x, y, z); }
+		inline expr fma(half x, expr y, half z) { return functions::fma(x, y, z); }
+		inline expr fma(half x, expr y, expr z) { return functions::fma(x, y, z); }
+		inline expr fma(expr x, half y, half z) { return functions::fma(x, y, z); }
+		inline expr fma(expr x, half y, expr z) { return functions::fma(x, y, z); }
+		inline expr fma(expr x, expr y, half z) { return functions::fma(x, y, z); }
+		inline expr fma(expr x, expr y, expr z) { return functions::fma(x, y, z); }
+
+		/// Maximum of half expressions.
+		/// \param x first operand
+		/// \param y second operand
+		/// \return maximum of operands
+//		template<typename T,typename U> typename result<T,U>::type fmax(T x, U y) { return binary_specialized<T,U>::fmax(x, y); }
+		inline half fmax(half x, half y) { return binary_specialized<half,half>::fmax(x, y); }
+		inline expr fmax(half x, expr y) { return binary_special
