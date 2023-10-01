@@ -2166,4 +2166,70 @@ namespace half_float
 		/// \param x left operand
 		/// \param y right operand
 		/// \return difference of half expressions
-		template<typename T,ty
+		template<typename T,typename U> typename enable<expr,T,U>::type operator-(T x, U y) { return functions::minus(x, y); }
+
+		/// Multiply halfs.
+		/// \param x left operand
+		/// \param y right operand
+		/// \return product of half expressions
+		template<typename T,typename U> typename enable<expr,T,U>::type operator*(T x, U y) { return functions::multiplies(x, y); }
+
+		/// Divide halfs.
+		/// \param x left operand
+		/// \param y right operand
+		/// \return quotient of half expressions
+		template<typename T,typename U> typename enable<expr,T,U>::type operator/(T x, U y) { return functions::divides(x, y); }
+
+		/// Identity.
+		/// \param arg operand
+		/// \return uncahnged operand
+		template<typename T> HALF_CONSTEXPR typename enable<T,T>::type operator+(T arg) { return arg; }
+
+		/// Negation.
+		/// \param arg operand
+		/// \return negated operand
+		template<typename T> HALF_CONSTEXPR typename enable<T,T>::type operator-(T arg) { return unary_specialized<T>::negate(arg); }
+
+		/// \}
+		/// \name Input and output
+		/// \{
+
+		/// Output operator.
+		/// \param out output stream to write into
+		/// \param arg half expression to write
+		/// \return reference to output stream
+		template<typename T,typename charT,typename traits> typename enable<std::basic_ostream<charT,traits>&,T>::type
+			operator<<(std::basic_ostream<charT,traits> &out, T arg) { return functions::write(out, arg); }
+
+		/// Input operator.
+		/// \param in input stream to read from
+		/// \param arg half to read into
+		/// \return reference to input stream
+		template<typename charT,typename traits> std::basic_istream<charT,traits>&
+			operator>>(std::basic_istream<charT,traits> &in, half &arg) { return functions::read(in, arg); }
+
+		/// \}
+		/// \name Basic mathematical operations
+		/// \{
+
+		/// Absolute value.
+		/// \param arg operand
+		/// \return absolute value of \a arg
+//		template<typename T> typename enable<T,T>::type abs(T arg) { return unary_specialized<T>::fabs(arg); }
+		inline half abs(half arg) { return unary_specialized<half>::fabs(arg); }
+		inline expr abs(expr arg) { return unary_specialized<expr>::fabs(arg); }
+
+		/// Absolute value.
+		/// \param arg operand
+		/// \return absolute value of \a arg
+//		template<typename T> typename enable<T,T>::type fabs(T arg) { return unary_specialized<T>::fabs(arg); }
+		inline half fabs(half arg) { return unary_specialized<half>::fabs(arg); }
+		inline expr fabs(expr arg) { return unary_specialized<expr>::fabs(arg); }
+
+		/// Remainder of division.
+		/// \param x first operand
+		/// \param y second operand
+		/// \return remainder of floating point division.
+//		template<typename T,typename U> typename enable<expr,T,U>::type fmod(T x, U y) { return functions::fmod(x, y); }
+		inline expr fmod(half x, half y) { return functions::fmod(x, y); }
+		inline expr fmod(half x, expr y
