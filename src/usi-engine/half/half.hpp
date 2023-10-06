@@ -2278,4 +2278,61 @@ namespace half_float
 		/// \return maximum of operands
 //		template<typename T,typename U> typename result<T,U>::type fmax(T x, U y) { return binary_specialized<T,U>::fmax(x, y); }
 		inline half fmax(half x, half y) { return binary_specialized<half,half>::fmax(x, y); }
-		inline expr fmax(half x, expr y) { return binary_special
+		inline expr fmax(half x, expr y) { return binary_specialized<half,expr>::fmax(x, y); }
+		inline expr fmax(expr x, half y) { return binary_specialized<expr,half>::fmax(x, y); }
+		inline expr fmax(expr x, expr y) { return binary_specialized<expr,expr>::fmax(x, y); }
+
+		/// Minimum of half expressions.
+		/// \param x first operand
+		/// \param y second operand
+		/// \return minimum of operands
+//		template<typename T,typename U> typename result<T,U>::type fmin(T x, U y) { return binary_specialized<T,U>::fmin(x, y); }
+		inline half fmin(half x, half y) { return binary_specialized<half,half>::fmin(x, y); }
+		inline expr fmin(half x, expr y) { return binary_specialized<half,expr>::fmin(x, y); }
+		inline expr fmin(expr x, half y) { return binary_specialized<expr,half>::fmin(x, y); }
+		inline expr fmin(expr x, expr y) { return binary_specialized<expr,expr>::fmin(x, y); }
+
+		/// Positive difference.
+		/// \param x first operand
+		/// \param y second operand
+		/// \return \a x - \a y or 0 if difference negative
+//		template<typename T,typename U> typename enable<expr,T,U>::type fdim(T x, U y) { return functions::fdim(x, y); }
+		inline expr fdim(half x, half y) { return functions::fdim(x, y); }
+		inline expr fdim(half x, expr y) { return functions::fdim(x, y); }
+		inline expr fdim(expr x, half y) { return functions::fdim(x, y); }
+		inline expr fdim(expr x, expr y) { return functions::fdim(x, y); }
+
+		/// Get NaN value.
+		/// \return quiet NaN
+		inline half nanh(const char*) { return functions::nanh(); }
+
+		/// \}
+		/// \name Exponential functions
+		/// \{
+
+		/// Exponential function.
+		/// \param arg function argument
+		/// \return e raised to \a arg
+//		template<typename T> typename enable<expr,T>::type exp(T arg) { return functions::exp(arg); }
+		inline expr exp(half arg) { return functions::exp(arg); }
+		inline expr exp(expr arg) { return functions::exp(arg); }
+
+		/// Exponential minus one.
+		/// \param arg function argument
+		/// \return e raised to \a arg subtracted by 1
+//		template<typename T> typename enable<expr,T>::type expm1(T arg) { return functions::expm1(arg); }
+		inline expr expm1(half arg) { return functions::expm1(arg); }
+		inline expr expm1(expr arg) { return functions::expm1(arg); }
+
+		/// Binary exponential.
+		/// \param arg function argument
+		/// \return 2 raised to \a arg
+//		template<typename T> typename enable<expr,T>::type exp2(T arg) { return functions::exp2(arg); }
+		inline expr exp2(half arg) { return functions::exp2(arg); }
+		inline expr exp2(expr arg) { return functions::exp2(arg); }
+
+		/// Natural logorithm.
+		/// \param arg function argument
+		/// \return logarithm of \a arg to base e
+//		template<typename T> typename enable<expr,T>::type log(T arg) { return functions::log(arg); }
+		inline expr log(half arg) { return functions::
