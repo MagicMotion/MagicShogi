@@ -2335,4 +2335,63 @@ namespace half_float
 		/// \param arg function argument
 		/// \return logarithm of \a arg to base e
 //		template<typename T> typename enable<expr,T>::type log(T arg) { return functions::log(arg); }
-		inline expr log(half arg) { return functions::
+		inline expr log(half arg) { return functions::log(arg); }
+		inline expr log(expr arg) { return functions::log(arg); }
+
+		/// Common logorithm.
+		/// \param arg function argument
+		/// \return logarithm of \a arg to base 10
+//		template<typename T> typename enable<expr,T>::type log10(T arg) { return functions::log10(arg); }
+		inline expr log10(half arg) { return functions::log10(arg); }
+		inline expr log10(expr arg) { return functions::log10(arg); }
+
+		/// Natural logorithm.
+		/// \param arg function argument
+		/// \return logarithm of \a arg plus 1 to base e
+//		template<typename T> typename enable<expr,T>::type log1p(T arg) { return functions::log1p(arg); }
+		inline expr log1p(half arg) { return functions::log1p(arg); }
+		inline expr log1p(expr arg) { return functions::log1p(arg); }
+
+		/// Binary logorithm.
+		/// \param arg function argument
+		/// \return logarithm of \a arg to base 2
+//		template<typename T> typename enable<expr,T>::type log2(T arg) { return functions::log2(arg); }
+		inline expr log2(half arg) { return functions::log2(arg); }
+		inline expr log2(expr arg) { return functions::log2(arg); }
+
+		/// \}
+		/// \name Power functions
+		/// \{
+
+		/// Square root.
+		/// \param arg function argument
+		/// \return square root of \a arg
+//		template<typename T> typename enable<expr,T>::type sqrt(T arg) { return functions::sqrt(arg); }
+		inline expr sqrt(half arg) { return functions::sqrt(arg); }
+		inline expr sqrt(expr arg) { return functions::sqrt(arg); }
+
+		/// Cubic root.
+		/// \param arg function argument
+		/// \return cubic root of \a arg
+//		template<typename T> typename enable<expr,T>::type cbrt(T arg) { return functions::cbrt(arg); }
+		inline expr cbrt(half arg) { return functions::cbrt(arg); }
+		inline expr cbrt(expr arg) { return functions::cbrt(arg); }
+
+		/// Hypotenuse function.
+		/// \param x first argument
+		/// \param y second argument
+		/// \return square root of sum of squares without internal over- or underflows
+//		template<typename T,typename U> typename enable<expr,T,U>::type hypot(T x, U y) { return functions::hypot(x, y); }
+		inline expr hypot(half x, half y) { return functions::hypot(x, y); }
+		inline expr hypot(half x, expr y) { return functions::hypot(x, y); }
+		inline expr hypot(expr x, half y) { return functions::hypot(x, y); }
+		inline expr hypot(expr x, expr y) { return functions::hypot(x, y); }
+
+		/// Power function.
+		/// \param base first argument
+		/// \param exp second argument
+		/// \return \a base raised to \a exp
+//		template<typename T,typename U> typename enable<expr,T,U>::type pow(T base, U exp) { return functions::pow(base, exp); }
+		inline expr pow(half base, half exp) { return functions::pow(base, exp); }
+		inline expr pow(half base, expr exp) { return functions::pow(base, exp); }
+		inline expr pow(expr base, half exp) { return functions::pow(base, exp
