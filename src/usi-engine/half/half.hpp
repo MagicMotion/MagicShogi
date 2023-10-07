@@ -2461,4 +2461,63 @@ namespace half_float
 		/// \param arg function argument
 		/// \return hyperbolic sine value of \a arg
 //		template<typename T> typename enable<expr,T>::type sinh(T arg) { return functions::sinh(arg); }
-		inline ex
+		inline expr sinh(half arg) { return functions::sinh(arg); }
+		inline expr sinh(expr arg) { return functions::sinh(arg); }
+
+		/// Hyperbolic cosine.
+		/// \param arg function argument
+		/// \return hyperbolic cosine value of \a arg
+//		template<typename T> typename enable<expr,T>::type cosh(T arg) { return functions::cosh(arg); }
+		inline expr cosh(half arg) { return functions::cosh(arg); }
+		inline expr cosh(expr arg) { return functions::cosh(arg); }
+
+		/// Hyperbolic tangent.
+		/// \param arg function argument
+		/// \return hyperbolic tangent value of \a arg
+//		template<typename T> typename enable<expr,T>::type tanh(T arg) { return functions::tanh(arg); }
+		inline expr tanh(half arg) { return functions::tanh(arg); }
+		inline expr tanh(expr arg) { return functions::tanh(arg); }
+
+		/// Hyperbolic area sine.
+		/// \param arg function argument
+		/// \return area sine value of \a arg
+//		template<typename T> typename enable<expr,T>::type asinh(T arg) { return functions::asinh(arg); }
+		inline expr asinh(half arg) { return functions::asinh(arg); }
+		inline expr asinh(expr arg) { return functions::asinh(arg); }
+
+		/// Hyperbolic area cosine.
+		/// \param arg function argument
+		/// \return area cosine value of \a arg
+//		template<typename T> typename enable<expr,T>::type acosh(T arg) { return functions::acosh(arg); }
+		inline expr acosh(half arg) { return functions::acosh(arg); }
+		inline expr acosh(expr arg) { return functions::acosh(arg); }
+
+		/// Hyperbolic area tangent.
+		/// \param arg function argument
+		/// \return area tangent value of \a arg
+//		template<typename T> typename enable<expr,T>::type atanh(T arg) { return functions::atanh(arg); }
+		inline expr atanh(half arg) { return functions::atanh(arg); }
+		inline expr atanh(expr arg) { return functions::atanh(arg); }
+
+		/// \}
+		/// \name Error and gamma functions
+		/// \{
+
+		/// Error function.
+		/// \param arg function argument
+		/// \return error function value of \a arg
+//		template<typename T> typename enable<expr,T>::type erf(T arg) { return functions::erf(arg); }
+		inline expr erf(half arg) { return functions::erf(arg); }
+		inline expr erf(expr arg) { return functions::erf(arg); }
+
+		/// Complementary error function.
+		/// \param arg function argument
+		/// \return 1 minus error function value of \a arg
+//		template<typename T> typename enable<expr,T>::type erfc(T arg) { return functions::erfc(arg); }
+		inline expr erfc(half arg) { return functions::erfc(arg); }
+		inline expr erfc(expr arg) { return functions::erfc(arg); }
+
+		/// Natural logarithm of gamma function.
+		/// \param arg function argument
+		/// \return natural logarith of gamma function for \a arg
+//		template<typename T> typename enable<expr,T>::type lgamma(T arg) { return functions::
