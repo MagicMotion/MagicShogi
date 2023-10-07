@@ -2394,4 +2394,71 @@ namespace half_float
 //		template<typename T,typename U> typename enable<expr,T,U>::type pow(T base, U exp) { return functions::pow(base, exp); }
 		inline expr pow(half base, half exp) { return functions::pow(base, exp); }
 		inline expr pow(half base, expr exp) { return functions::pow(base, exp); }
-		inline expr pow(expr base, half exp) { return functions::pow(base, exp
+		inline expr pow(expr base, half exp) { return functions::pow(base, exp); }
+		inline expr pow(expr base, expr exp) { return functions::pow(base, exp); }
+
+		/// \}
+		/// \name Trigonometric functions
+		/// \{
+
+		/// Sine function.
+		/// \param arg function argument
+		/// \return sine value of \a arg
+//		template<typename T> typename enable<expr,T>::type sin(T arg) { return functions::sin(arg); }
+		inline expr sin(half arg) { return functions::sin(arg); }
+		inline expr sin(expr arg) { return functions::sin(arg); }
+
+		/// Cosine function.
+		/// \param arg function argument
+		/// \return cosine value of \a arg
+//		template<typename T> typename enable<expr,T>::type cos(T arg) { return functions::cos(arg); }
+		inline expr cos(half arg) { return functions::cos(arg); }
+		inline expr cos(expr arg) { return functions::cos(arg); }
+
+		/// Tangent function.
+		/// \param arg function argument
+		/// \return tangent value of \a arg
+//		template<typename T> typename enable<expr,T>::type tan(T arg) { return functions::tan(arg); }
+		inline expr tan(half arg) { return functions::tan(arg); }
+		inline expr tan(expr arg) { return functions::tan(arg); }
+
+		/// Arc sine.
+		/// \param arg function argument
+		/// \return arc sine value of \a arg
+//		template<typename T> typename enable<expr,T>::type asin(T arg) { return functions::asin(arg); }
+		inline expr asin(half arg) { return functions::asin(arg); }
+		inline expr asin(expr arg) { return functions::asin(arg); }
+
+		/// Arc cosine function.
+		/// \param arg function argument
+		/// \return arc cosine value of \a arg
+//		template<typename T> typename enable<expr,T>::type acos(T arg) { return functions::acos(arg); }
+		inline expr acos(half arg) { return functions::acos(arg); }
+		inline expr acos(expr arg) { return functions::acos(arg); }
+
+		/// Arc tangent function.
+		/// \param arg function argument
+		/// \return arc tangent value of \a arg
+//		template<typename T> typename enable<expr,T>::type atan(T arg) { return functions::atan(arg); }
+		inline expr atan(half arg) { return functions::atan(arg); }
+		inline expr atan(expr arg) { return functions::atan(arg); }
+
+		/// Arc tangent function.
+		/// \param x first argument
+		/// \param y second argument
+		/// \return arc tangent value
+//		template<typename T,typename U> typename enable<expr,T,U>::type atan2(T x, U y) { return functions::atan2(x, y); }
+		inline expr atan2(half x, half y) { return functions::atan2(x, y); }
+		inline expr atan2(half x, expr y) { return functions::atan2(x, y); }
+		inline expr atan2(expr x, half y) { return functions::atan2(x, y); }
+		inline expr atan2(expr x, expr y) { return functions::atan2(x, y); }
+
+		/// \}
+		/// \name Hyperbolic functions
+		/// \{
+
+		/// Hyperbolic sine.
+		/// \param arg function argument
+		/// \return hyperbolic sine value of \a arg
+//		template<typename T> typename enable<expr,T>::type sinh(T arg) { return functions::sinh(arg); }
+		inline ex
