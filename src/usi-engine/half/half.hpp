@@ -2578,4 +2578,57 @@ namespace half_float
 		inline half nearbyint(expr arg) { return functions::rint(arg); }
 
 		/// Nearest integer using half's internal rounding mode.
-		/// \param arg half ex
+		/// \param arg half expression to round
+		/// \return nearest integer using default rounding mode
+//		template<typename T> typename enable<half,T>::type rint(T arg) { return functions::rint(arg); }
+		inline half rint(half arg) { return functions::rint(arg); }
+		inline half rint(expr arg) { return functions::rint(arg); }
+
+		/// Nearest integer using half's internal rounding mode.
+		/// \param arg half expression to round
+		/// \return nearest integer using default rounding mode
+//		template<typename T> typename enable<long,T>::type lrint(T arg) { return functions::lrint(arg); }
+		inline long lrint(half arg) { return functions::lrint(arg); }
+		inline long lrint(expr arg) { return functions::lrint(arg); }
+	#if HALF_ENABLE_CPP11_LONG_LONG
+		/// Nearest integer.
+		/// \param arg half to round
+		/// \return nearest integer, rounded away from zero in half-way cases
+//		template<typename T> typename enable<long long,T>::type llround(T arg) { return functions::llround(arg); }
+		inline long long llround(half arg) { return functions::llround(arg); }
+		inline long long llround(expr arg) { return functions::llround(arg); }
+
+		/// Nearest integer using half's internal rounding mode.
+		/// \param arg half expression to round
+		/// \return nearest integer using default rounding mode
+//		template<typename T> typename enable<long long,T>::type llrint(T arg) { return functions::llrint(arg); }
+		inline long long llrint(half arg) { return functions::llrint(arg); }
+		inline long long llrint(expr arg) { return functions::llrint(arg); }
+	#endif
+
+		/// \}
+		/// \name Floating point manipulation
+		/// \{
+
+		/// Decompress floating point number.
+		/// \param arg number to decompress
+		/// \param exp address to store exponent at
+		/// \return significant in range [0.5, 1)
+//		template<typename T> typename enable<half,T>::type frexp(T arg, int *exp) { return functions::frexp(arg, exp); }
+		inline half frexp(half arg, int *exp) { return functions::frexp(arg, exp); }
+		inline half frexp(expr arg, int *exp) { return functions::frexp(arg, exp); }
+
+		/// Multiply by power of two.
+		/// \param arg number to modify
+		/// \param exp power of two to multiply with
+		/// \return \a arg multplied by 2 raised to \a exp
+//		template<typename T> typename enable<half,T>::type ldexp(T arg, int exp) { return functions::scalbln(arg, exp); }
+		inline half ldexp(half arg, int exp) { return functions::scalbln(arg, exp); }
+		inline half ldexp(expr arg, int exp) { return functions::scalbln(arg, exp); }
+
+		/// Extract integer and fractional parts.
+		/// \param arg number to decompress
+		/// \param iptr address to store integer part at
+		/// \return fractional part
+//		template<typename T> typename enable<half,T>::type modf(T arg, half *iptr) { return functions::modf(arg, iptr); }
+		inline half modf(half arg, half *iptr) { retur
