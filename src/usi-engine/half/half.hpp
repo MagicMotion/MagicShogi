@@ -2631,4 +2631,55 @@ namespace half_float
 		/// \param iptr address to store integer part at
 		/// \return fractional part
 //		template<typename T> typename enable<half,T>::type modf(T arg, half *iptr) { return functions::modf(arg, iptr); }
-		inline half modf(half arg, half *iptr) { retur
+		inline half modf(half arg, half *iptr) { return functions::modf(arg, iptr); }
+		inline half modf(expr arg, half *iptr) { return functions::modf(arg, iptr); }
+
+		/// Multiply by power of two.
+		/// \param arg number to modify
+		/// \param exp power of two to multiply with
+		/// \return \a arg multplied by 2 raised to \a exp
+//		template<typename T> typename enable<half,T>::type scalbn(T arg, int exp) { return functions::scalbln(arg, exp); }
+		inline half scalbn(half arg, int exp) { return functions::scalbln(arg, exp); }
+		inline half scalbn(expr arg, int exp) { return functions::scalbln(arg, exp); }
+
+		/// Multiply by power of two.
+		/// \param arg number to modify
+		/// \param exp power of two to multiply with
+		/// \return \a arg multplied by 2 raised to \a exp	
+//		template<typename T> typename enable<half,T>::type scalbln(T arg, long exp) { return functions::scalbln(arg, exp); }
+		inline half scalbln(half arg, long exp) { return functions::scalbln(arg, exp); }
+		inline half scalbln(expr arg, long exp) { return functions::scalbln(arg, exp); }
+
+		/// Extract exponent.
+		/// \param arg number to query
+		/// \return floating point exponent
+		/// \retval FP_ILOGB0 for zero
+		/// \retval FP_ILOGBNAN for NaN
+		/// \retval MAX_INT for infinity
+//		template<typename T> typename enable<int,T>::type ilogb(T arg) { return functions::ilogb(arg); }
+		inline int ilogb(half arg) { return functions::ilogb(arg); }
+		inline int ilogb(expr arg) { return functions::ilogb(arg); }
+
+		/// Extract exponent.
+		/// \param arg number to query
+		/// \return floating point exponent
+//		template<typename T> typename enable<half,T>::type logb(T arg) { return functions::logb(arg); }
+		inline half logb(half arg) { return functions::logb(arg); }
+		inline half logb(expr arg) { return functions::logb(arg); }
+
+		/// Next representable value.
+		/// \param from value to compute next representable value for
+		/// \param to direction towards which to compute next value
+		/// \return next representable value after \a from in direction towards \a to
+//		template<typename T,typename U> typename enable<half,T,U>::type nextafter(T from, U to) { return functions::nextafter(from, to); }
+		inline half nextafter(half from, half to) { return functions::nextafter(from, to); }
+		inline half nextafter(half from, expr to) { return functions::nextafter(from, to); }
+		inline half nextafter(expr from, half to) { return functions::nextafter(from, to); }
+		inline half nextafter(expr from, expr to) { return functions::nextafter(from, to); }
+
+		/// Next representable value.
+		/// \param from value to compute next representable value for
+		/// \param to direction towards which to compute next value
+		/// \return next representable value after \a from in direction towards \a to
+//		template<typename T> typename enable<half,T>::type nexttoward(T from, long double to) { return functions::nexttoward(from, to); }
+		inline half nexttoward(half from, long double to) { r
