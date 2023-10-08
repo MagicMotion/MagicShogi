@@ -2520,4 +2520,62 @@ namespace half_float
 		/// Natural logarithm of gamma function.
 		/// \param arg function argument
 		/// \return natural logarith of gamma function for \a arg
-//		template<typename T> typename enable<expr,T>::type lgamma(T arg) { return functions::
+//		template<typename T> typename enable<expr,T>::type lgamma(T arg) { return functions::lgamma(arg); }
+		inline expr lgamma(half arg) { return functions::lgamma(arg); }
+		inline expr lgamma(expr arg) { return functions::lgamma(arg); }
+
+		/// Gamma function.
+		/// \param arg function argument
+		/// \return gamma function value of \a arg
+//		template<typename T> typename enable<expr,T>::type tgamma(T arg) { return functions::tgamma(arg); }
+		inline expr tgamma(half arg) { return functions::tgamma(arg); }
+		inline expr tgamma(expr arg) { return functions::tgamma(arg); }
+
+		/// \}
+		/// \name Rounding
+		/// \{
+
+		/// Nearest integer not less than half value.
+		/// \param arg half to round
+		/// \return nearest integer not less than \a arg
+//		template<typename T> typename enable<half,T>::type ceil(T arg) { return functions::ceil(arg); }
+		inline half ceil(half arg) { return functions::ceil(arg); }
+		inline half ceil(expr arg) { return functions::ceil(arg); }
+
+		/// Nearest integer not greater than half value.
+		/// \param arg half to round
+		/// \return nearest integer not greater than \a arg
+//		template<typename T> typename enable<half,T>::type floor(T arg) { return functions::floor(arg); }
+		inline half floor(half arg) { return functions::floor(arg); }
+		inline half floor(expr arg) { return functions::floor(arg); }
+
+		/// Nearest integer not greater in magnitude than half value.
+		/// \param arg half to round
+		/// \return nearest integer not greater in magnitude than \a arg
+//		template<typename T> typename enable<half,T>::type trunc(T arg) { return functions::trunc(arg); }
+		inline half trunc(half arg) { return functions::trunc(arg); }
+		inline half trunc(expr arg) { return functions::trunc(arg); }
+
+		/// Nearest integer.
+		/// \param arg half to round
+		/// \return nearest integer, rounded away from zero in half-way cases
+//		template<typename T> typename enable<half,T>::type round(T arg) { return functions::round(arg); }
+		inline half round(half arg) { return functions::round(arg); }
+		inline half round(expr arg) { return functions::round(arg); }
+
+		/// Nearest integer.
+		/// \param arg half to round
+		/// \return nearest integer, rounded away from zero in half-way cases
+//		template<typename T> typename enable<long,T>::type lround(T arg) { return functions::lround(arg); }
+		inline long lround(half arg) { return functions::lround(arg); }
+		inline long lround(expr arg) { return functions::lround(arg); }
+
+		/// Nearest integer using half's internal rounding mode.
+		/// \param arg half expression to round
+		/// \return nearest integer using default rounding mode
+//		template<typename T> typename enable<half,T>::type nearbyint(T arg) { return functions::nearbyint(arg); }
+		inline half nearbyint(half arg) { return functions::rint(arg); }
+		inline half nearbyint(expr arg) { return functions::rint(arg); }
+
+		/// Nearest integer using half's internal rounding mode.
+		/// \param arg half ex
