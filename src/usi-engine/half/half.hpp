@@ -2682,4 +2682,62 @@ namespace half_float
 		/// \param to direction towards which to compute next value
 		/// \return next representable value after \a from in direction towards \a to
 //		template<typename T> typename enable<half,T>::type nexttoward(T from, long double to) { return functions::nexttoward(from, to); }
-		inline half nexttoward(half from, long double to) { r
+		inline half nexttoward(half from, long double to) { return functions::nexttoward(from, to); }
+		inline half nexttoward(expr from, long double to) { return functions::nexttoward(from, to); }
+
+		/// Take sign.
+		/// \param x value to change sign for
+		/// \param y value to take sign from
+		/// \return value equal to \a x in magnitude and to \a y in sign
+//		template<typename T,typename U> typename enable<half,T,U>::type copysign(T x, U y) { return functions::copysign(x, y); }
+		inline half copysign(half x, half y) { return functions::copysign(x, y); }
+		inline half copysign(half x, expr y) { return functions::copysign(x, y); }
+		inline half copysign(expr x, half y) { return functions::copysign(x, y); }
+		inline half copysign(expr x, expr y) { return functions::copysign(x, y); }
+
+		/// \}
+		/// \name Floating point classification
+		/// \{
+
+
+		/// Classify floating point value.
+		/// \param arg number to classify
+		/// \retval FP_ZERO for positive and negative zero
+		/// \retval FP_SUBNORMAL for subnormal numbers
+		/// \retval FP_INFINITY for positive and negative infinity
+		/// \retval FP_NAN for NaNs
+		/// \retval FP_NORMAL for all other (normal) values
+//		template<typename T> typename enable<int,T>::type fpclassify(T arg) { return functions::fpclassify(arg); }
+		inline int fpclassify(half arg) { return functions::fpclassify(arg); }
+		inline int fpclassify(expr arg) { return functions::fpclassify(arg); }
+
+		/// Check if finite number.
+		/// \param arg number to check
+		/// \retval true if neither infinity nor NaN
+		/// \retval false else
+//		template<typename T> typename enable<bool,T>::type isfinite(T arg) { return functions::isfinite(arg); }
+		inline bool isfinite(half arg) { return functions::isfinite(arg); }
+		inline bool isfinite(expr arg) { return functions::isfinite(arg); }
+
+		/// Check for infinity.
+		/// \param arg number to check
+		/// \retval true for positive or negative infinity
+		/// \retval false else
+//		template<typename T> typename enable<bool,T>::type isinf(T arg) { return functions::isinf(arg); }
+		inline bool isinf(half arg) { return functions::isinf(arg); }
+		inline bool isinf(expr arg) { return functions::isinf(arg); }
+
+		/// Check for NaN.
+		/// \param arg number to check
+		/// \retval true for NaNs
+		/// \retval false else
+//		template<typename T> typename enable<bool,T>::type isnan(T arg) { return functions::isnan(arg); }
+		inline bool isnan(half arg) { return functions::isnan(arg); }
+		inline bool isnan(expr arg) { return functions::isnan(arg); }
+
+		/// Check if normal number.
+		/// \param arg number to check
+		/// \retval true if normal number
+		/// \retval false if either subnormal, zero, infinity or NaN
+//		template<typename T> typename enable<bool,T>::type isnormal(T arg) { return functions::isnormal(arg); }
+		inline bool isnormal(hal
