@@ -2796,4 +2796,48 @@ namespace half_float
 //		template<typename T,typename U> typename enable<bool,T,U>::type islessequal(T x, U y) { return functions::islessequal(x, y); }
 		inline bool islessequal(half x, half y) { return functions::islessequal(x, y); }
 		inline bool islessequal(half x, expr y) { return functions::islessequal(x, y); }
-		inline bool
+		inline bool islessequal(expr x, half y) { return functions::islessequal(x, y); }
+		inline bool islessequal(expr x, expr y) { return functions::islessequal(x, y); }
+
+		/// Comarison for less or greater.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if either less or greater
+		/// \retval false else
+//		template<typename T,typename U> typename enable<bool,T,U>::type islessgreater(T x, U y) { return functions::islessgreater(x, y); }
+		inline bool islessgreater(half x, half y) { return functions::islessgreater(x, y); }
+		inline bool islessgreater(half x, expr y) { return functions::islessgreater(x, y); }
+		inline bool islessgreater(expr x, half y) { return functions::islessgreater(x, y); }
+		inline bool islessgreater(expr x, expr y) { return functions::islessgreater(x, y); }
+
+		/// Check if unordered.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if unordered (one or two NaN operands)
+		/// \retval false else
+//		template<typename T,typename U> typename enable<bool,T,U>::type isunordered(T x, U y) { return functions::isunordered(x, y); }
+		inline bool isunordered(half x, half y) { return functions::isunordered(x, y); }
+		inline bool isunordered(half x, expr y) { return functions::isunordered(x, y); }
+		inline bool isunordered(expr x, half y) { return functions::isunordered(x, y); }
+		inline bool isunordered(expr x, expr y) { return functions::isunordered(x, y); }
+
+		/// \name Casting
+		/// \{
+
+		/// Cast to or from half-precision floating point number.
+		/// This casts between [half](\ref half_float::half) and any built-in arithmetic type. The values are converted 
+		/// directly using the given rounding mode, without any roundtrip over `float` that a `static_cast` would otherwise do. 
+		/// It uses the default rounding mode.
+		///
+		/// Using this cast with neither of the two types being a [half](\ref half_float::half) or with any of the two types 
+		/// not being a built-in arithmetic type (apart from [half](\ref half_float::half), of course) results in a compiler 
+		/// error and casting between [half](\ref half_float::half)s is just a no-op.
+		/// \tparam T destination type (half or built-in arithmetic type)
+		/// \tparam U source type (half or built-in arithmetic type)
+		/// \param arg value to cast
+		/// \return \a arg converted to destination type
+		template<typename T,typename U> T half_cast(U arg) { return half_caster<T,U>::cast(arg); }
+
+		/// Cast to or from half-precision floating point number.
+		/// This casts between [half](\ref half_float::half) and any built-in arithmetic type. The values are converted 
+		/// directly using the given rounding mode, without any roundtrip over `float` that a `static_cast` would otherwise do.
