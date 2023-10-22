@@ -2740,4 +2740,60 @@ namespace half_float
 		/// \retval true if normal number
 		/// \retval false if either subnormal, zero, infinity or NaN
 //		template<typename T> typename enable<bool,T>::type isnormal(T arg) { return functions::isnormal(arg); }
-		inline bool isnormal(hal
+		inline bool isnormal(half arg) { return functions::isnormal(arg); }
+		inline bool isnormal(expr arg) { return functions::isnormal(arg); }
+
+		/// Check sign.
+		/// \param arg number to check
+		/// \retval true for negative number
+		/// \retval false for positive number
+//		template<typename T> typename enable<bool,T>::type signbit(T arg) { return functions::signbit(arg); }
+		inline bool signbit(half arg) { return functions::signbit(arg); }
+		inline bool signbit(expr arg) { return functions::signbit(arg); }
+
+		/// \}
+		/// \name Comparison
+		/// \{
+
+		/// Comparison for greater than.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if \a x greater than \a y
+		/// \retval false else
+//		template<typename T,typename U> typename enable<bool,T,U>::type isgreater(T x, U y) { return functions::isgreater(x, y); }
+		inline bool isgreater(half x, half y) { return functions::isgreater(x, y); }
+		inline bool isgreater(half x, expr y) { return functions::isgreater(x, y); }
+		inline bool isgreater(expr x, half y) { return functions::isgreater(x, y); }
+		inline bool isgreater(expr x, expr y) { return functions::isgreater(x, y); }
+
+		/// Comparison for greater equal.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if \a x greater equal \a y
+		/// \retval false else
+//		template<typename T,typename U> typename enable<bool,T,U>::type isgreaterequal(T x, U y) { return functions::isgreaterequal(x, y); }
+		inline bool isgreaterequal(half x, half y) { return functions::isgreaterequal(x, y); }
+		inline bool isgreaterequal(half x, expr y) { return functions::isgreaterequal(x, y); }
+		inline bool isgreaterequal(expr x, half y) { return functions::isgreaterequal(x, y); }
+		inline bool isgreaterequal(expr x, expr y) { return functions::isgreaterequal(x, y); }
+
+		/// Comparison for less than.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if \a x less than \a y
+		/// \retval false else
+//		template<typename T,typename U> typename enable<bool,T,U>::type isless(T x, U y) { return functions::isless(x, y); }
+		inline bool isless(half x, half y) { return functions::isless(x, y); }
+		inline bool isless(half x, expr y) { return functions::isless(x, y); }
+		inline bool isless(expr x, half y) { return functions::isless(x, y); }
+		inline bool isless(expr x, expr y) { return functions::isless(x, y); }
+
+		/// Comparison for less equal.
+		/// \param x first operand
+		/// \param y second operand
+		/// \retval true if \a x less equal \a y
+		/// \retval false else
+//		template<typename T,typename U> typename enable<bool,T,U>::type islessequal(T x, U y) { return functions::islessequal(x, y); }
+		inline bool islessequal(half x, half y) { return functions::islessequal(x, y); }
+		inline bool islessequal(half x, expr y) { return functions::islessequal(x, y); }
+		inline bool
