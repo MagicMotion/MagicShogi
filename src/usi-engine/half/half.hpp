@@ -2841,3 +2841,111 @@ namespace half_float
 		/// Cast to or from half-precision floating point number.
 		/// This casts between [half](\ref half_float::half) and any built-in arithmetic type. The values are converted 
 		/// directly using the given rounding mode, without any roundtrip over `float` that a `static_cast` would otherwise do.
+		///
+		/// Using this cast with neither of the two types being a [half](\ref half_float::half) or with any of the two types 
+		/// not being a built-in arithmetic type (apart from [half](\ref half_float::half), of course) results in a compiler 
+		/// error and casting between [half](\ref half_float::half)s is just a no-op.
+		/// \tparam T destination type (half or built-in arithmetic type)
+		/// \tparam R rounding mode to use.
+		/// \tparam U source type (half or built-in arithmetic type)
+		/// \param arg value to cast
+		/// \return \a arg converted to destination type
+		template<typename T,std::float_round_style R,typename U> T half_cast(U arg) { return half_caster<T,U,R>::cast(arg); }
+		/// \}
+	}
+
+	using detail::operator==;
+	using detail::operator!=;
+	using detail::operator<;
+	using detail::operator>;
+	using detail::operator<=;
+	using detail::operator>=;
+	using detail::operator+;
+	using detail::operator-;
+	using detail::operator*;
+	using detail::operator/;
+	using detail::operator<<;
+	using detail::operator>>;
+
+	using detail::abs;
+	using detail::fabs;
+	using detail::fmod;
+	using detail::remainder;
+	using detail::remquo;
+	using detail::fma;
+	using detail::fmax;
+	using detail::fmin;
+	using detail::fdim;
+	using detail::nanh;
+	using detail::exp;
+	using detail::expm1;
+	using detail::exp2;
+	using detail::log;
+	using detail::log10;
+	using detail::log1p;
+	using detail::log2;
+	using detail::sqrt;
+	using detail::cbrt;
+	using detail::hypot;
+	using detail::pow;
+	using detail::sin;
+	using detail::cos;
+	using detail::tan;
+	using detail::asin;
+	using detail::acos;
+	using detail::atan;
+	using detail::atan2;
+	using detail::sinh;
+	using detail::cosh;
+	using detail::tanh;
+	using detail::asinh;
+	using detail::acosh;
+	using detail::atanh;
+	using detail::erf;
+	using detail::erfc;
+	using detail::lgamma;
+	using detail::tgamma;
+	using detail::ceil;
+	using detail::floor;
+	using detail::trunc;
+	using detail::round;
+	using detail::lround;
+	using detail::nearbyint;
+	using detail::rint;
+	using detail::lrint;
+#if HALF_ENABLE_CPP11_LONG_LONG
+	using detail::llround;
+	using detail::llrint;
+#endif
+	using detail::frexp;
+	using detail::ldexp;
+	using detail::modf;
+	using detail::scalbn;
+	using detail::scalbln;
+	using detail::ilogb;
+	using detail::logb;
+	using detail::nextafter;
+	using detail::nexttoward;
+	using detail::copysign;
+	using detail::fpclassify;
+	using detail::isfinite;
+	using detail::isinf;
+	using detail::isnan;
+	using detail::isnormal;
+	using detail::signbit;
+	using detail::isgreater;
+	using detail::isgreaterequal;
+	using detail::isless;
+	using detail::islessequal;
+	using detail::islessgreater;
+	using detail::isunordered;
+
+	using detail::half_cast;
+}
+
+
+/// Extensions to the C++ standard library.
+namespace std
+{
+	/// Numeric limits for half-precision floats.
+	/// Because of the underlying single-precision implementation of many operatio
