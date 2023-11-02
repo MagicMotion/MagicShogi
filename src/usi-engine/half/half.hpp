@@ -2948,4 +2948,75 @@ namespace half_float
 namespace std
 {
 	/// Numeric limits for half-precision floats.
-	/// Because of the underlying single-precision implementation of many operatio
+	/// Because of the underlying single-precision implementation of many operations, it inherits some properties from 
+	/// `std::numeric_limits<float>`.
+	template<> class numeric_limits<half_float::half> : public numeric_limits<float>
+	{
+	public:
+		/// Supports signed values.
+		static HALF_CONSTEXPR_CONST bool is_signed = true;
+
+		/// Is not exact.
+		static HALF_CONSTEXPR_CONST bool is_exact = false;
+
+		/// Doesn't provide modulo arithmetic.
+		static HALF_CONSTEXPR_CONST bool is_modulo = false;
+
+		/// IEEE conformant.
+		static HALF_CONSTEXPR_CONST bool is_iec559 = true;
+
+		/// Supports infinity.
+		static HALF_CONSTEXPR_CONST bool has_infinity = true;
+
+		/// Supports quiet NaNs.
+		static HALF_CONSTEXPR_CONST bool has_quiet_NaN = true;
+
+		/// Supports subnormal values.
+		static HALF_CONSTEXPR_CONST float_denorm_style has_denorm = denorm_present;
+
+		/// Rounding mode.
+		/// Due to the mix of internal single-precision computations (using the rounding mode of the underlying 
+		/// single-precision implementation) with the rounding mode of the single-to-half conversions, the actual rounding 
+		/// mode might be `std::round_indeterminate` if the default half-precision rounding mode doesn't match the 
+		/// single-precision rounding mode.
+		static HALF_CONSTEXPR_CONST float_round_style round_style = (std::numeric_limits<float>::round_style==
+			half_float::half::round_style) ? half_float::half::round_style : round_indeterminate;
+
+		/// Significant digits.
+		static HALF_CONSTEXPR_CONST int digits = 11;
+
+		/// Significant decimal digits.
+		static HALF_CONSTEXPR_CONST int digits10 = 3;
+
+		/// Required decimal digits to represent all possible values.
+		static HALF_CONSTEXPR_CONST int max_digits10 = 5;
+
+		/// Number base.
+		static HALF_CONSTEXPR_CONST int radix = 2;
+
+		/// One more than smallest exponent.
+		static HALF_CONSTEXPR_CONST int min_exponent = -13;
+
+		/// Smallest normalized representable power of 10.
+		static HALF_CONSTEXPR_CONST int min_exponent10 = -4;
+
+		/// One more than largest exponent
+		static HALF_CONSTEXPR_CONST int max_exponent = 16;
+
+		/// Largest finitely representable power of 10.
+		static HALF_CONSTEXPR_CONST int max_exponent10 = 4;
+
+		/// Smallest positive normal value.
+		static HALF_CONSTEXPR half_float::half min() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0x0400); }
+
+		/// Smallest finite value.
+		static HALF_CONSTEXPR half_float::half lowest() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0xFBFF); }
+
+		/// Largest finite value.
+		static HALF_CONSTEXPR half_float::half max() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0x7BFF); }
+
+		/// Difference between one and next representable value.
+		static HALF_CONSTEXPR half_float::half epsilon() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0x1400); }
+
+		/// Maximum rounding error.
+		static HALF_CONSTEX
