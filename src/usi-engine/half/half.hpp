@@ -3019,4 +3019,50 @@ namespace std
 		static HALF_CONSTEXPR half_float::half epsilon() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0x1400); }
 
 		/// Maximum rounding error.
-		static HALF_CONSTEX
+		static HALF_CONSTEXPR half_float::half round_error() HALF_NOTHROW
+			{ return half_float::half(half_float::detail::binary, (round_style==std::round_to_nearest) ? 0x3800 : 0x3C00); }
+
+		/// Positive infinity.
+		static HALF_CONSTEXPR half_float::half infinity() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0x7C00); }
+
+		/// Quiet NaN.
+		static HALF_CONSTEXPR half_float::half quiet_NaN() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0x7FFF); }
+
+		/// Signalling NaN.
+		static HALF_CONSTEXPR half_float::half signaling_NaN() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0x7DFF); }
+
+		/// Smallest positive subnormal value.
+		static HALF_CONSTEXPR half_float::half denorm_min() HALF_NOTHROW { return half_float::half(half_float::detail::binary, 0x0001); }
+	};
+
+#if HALF_ENABLE_CPP11_HASH
+	/// Hash function for half-precision floats.
+	/// This is only defined if C++11 `std::hash` is supported and enabled.
+	template<> struct hash<half_float::half> //: unary_function<half_float::half,size_t>
+	{
+		/// Type of function argument.
+		typedef half_float::half argument_type;
+
+		/// Function return type.
+		typedef size_t result_type;
+
+		/// Compute hash function.
+		/// \param arg half to hash
+		/// \return hash value
+		result_type operator()(argument_type arg) const
+			{ return hash<half_float::detail::uint16>()(static_cast<unsigned>(arg.data_)&-(arg.data_!=0x8000)); }
+	};
+#endif
+}
+
+
+#undef HALF_CONSTEXPR
+#undef HALF_CONSTEXPR_CONST
+#undef HALF_NOEXCEPT
+#undef HALF_NOTHROW
+#ifdef HALF_POP_WARNINGS
+	#pragma warning(pop)
+	#undef HALF_POP_WARNINGS
+#endif
+
+#endif
