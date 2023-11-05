@@ -57,4 +57,62 @@ R"(
         const int lx = get_local_id(0);
         const int ly = get_local_id(1);
         const int chan_buff_size = 8;
-     
+        const int out_buff_size  = get_local_size(1);
+        const int row_buff_size  = 7;
+        const int chan_shift     = 3;
+        // input = channels * height * width
+        // output = outputs * height * width
+        // weights = output * channels * filter
+        // merge = channels * outputs * height * width
+        const int width = BOARD_SIZE;
+        const int height = BOARD_SIZE;
+        const int strip_size = width;
+        // Copy the input channels (strips) locally
+        if (out_buff_size < BOARD_SIZE && ly == 0) {
+            // strip-row
+            for (int w = 0; w < width; w++) {
+                channel_buff[lx * width + w] =
+                    vload_net_t((c * height + row) * width + w + input_offset, in);
+            }
+        } else if (out_buff_size >= BOARD_SIZE && ly < BOARD_SIZE) {
+            // Every thread copies a column
+            channel_buff[lx * width + ly] = vload_net_t((c * height + row) * width +
+                ly + input_offset, in);
+        }
+        // Copy the filter we are applying locally
+        __private real filter_buff = vload_net_t((o * channels + c), weights);
+        barrier(CLK_LOCAL_MEM_FENCE);
+        int out_lane = 0;
+        int out_cw   = 0;
+        #pragma unroll
+        for (int cw = 0; cw < width; cw++) {
+            int fid = lx * strip_size;
+            real out  = channel_buff[fid + cw] * filter_buff;
+            row_buff[(ly * chan_buff_size + lx) * row_buff_size + out_lane] = out;
+            out_lane++;
+            // Row buffer full or last lane?
+            if (out_lane == row_buff_size || (cw == width - 1)) {
+                barrier(CLK_LOCAL_MEM_FENCE);
+                if (lx < out_lane) {
+                    real val;
+                    val  = row_buff[(ly * chan_buff_size + 0) * row_buff_size + lx];
+                    val += row_buff[(ly * chan_buff_size + 1) * row_buff_size + lx];
+                    val += row_buff[(ly * chan_buff_size + 2) * row_buff_size + lx];
+                    val += row_buff[(ly * chan_buff_size + 3) * row_buff_size + lx];
+                    val += row_buff[(ly * chan_buff_size + 4) * row_buff_size + lx];
+                    val += row_buff[(ly * chan_buff_size + 5) * row_buff_size + lx];
+                    val += row_buff[(ly * chan_buff_size + 6) * row_buff_size + lx];
+                    val += row_buff[(ly * chan_buff_size + 7) * row_buff_size + lx];
+                    vstore_net_t(val, (((c >> chan_shift) * height + row) * width +
+                        out_cw + lx) * outputs + o + merge_offset, merge);
+                }
+                out_cw  += row_buff_size;
+                out_lane = 0;
+           }
+       }
+    }
+
+__kernel void merge(
+                        __global const net_t * restrict in,
+                        __global net_t * restrict out,
+                  
