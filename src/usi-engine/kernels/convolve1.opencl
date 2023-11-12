@@ -115,4 +115,24 @@ R"(
 __kernel void merge(
                         __global const net_t * restrict in,
                         __global net_t * restrict out,
-                  
+                        __private const int channels) {
+        // cl::NDRange global(outputs, NUM_INTERSECTIONS);
+        const int gx = get_global_id(0);
+        const int gy = get_global_id(1);
+        const int batch = get_global_id(2);
+        const int output = gx;
+        const int b = gy;
+        const int outputs = get_global_size(0);
+        const int width = BOARD_SIZE;
+        const int height = BOARD_SIZE;
+        const int o = output;
+        real sum = 0;
+        for (int c = 0; c < channels; c++) {
+            sum += vload_net_t(batch * channels * NUM_INTERSECTIONS * outputs +
+                (c * NUM_INTERSECTIONS + b) * outputs + o, in);
+        }
+        vstore_net_t(sum, batch * outputs * NUM_INTERSECTIONS + o * NUM_INTERSECTIONS + b, out);
+    }
+
+// End of the C++11 raw string literal
+)"
